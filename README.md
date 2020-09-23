@@ -18,7 +18,7 @@ and add the following line to you init file like `.emacs`.
 ### Basics
 
 Call `loophole-set-key` to set the temporary key bindings.
-Binding this command to `global-map` may help you.
+To bind this command in `global-map` may help you.
 
 ``` emacs-lisp
 (global-set-key (kbd "C-c [") 'loophole-set-key)
@@ -93,7 +93,7 @@ It disables all loophole-maps and `loophole-mode`.
 
 #### Key binding entry
 
-`loophole-set-key` ask you the command symbol
+`loophole-set-key` ask you the command symbol to be bound
 by using `read-command` like `global-set-key`.
 However, you can bind not only command
 but also keyboard macro as key binding entry.
@@ -141,7 +141,7 @@ Therefore, it is highly recommended to call `loophole-abort-kmacro`
 even if you abort binding.
 `C-g` (`keyboard-quit`) in recursive edit stops defining keyboard macro,
 but do not abort recursive edit.
-`loophole-abort-kmacro` take care of it, and do both of them.
+`loophole-abort-kmacro` takes care of it, and does both of them.
 
 ##### kmacro by read key
 
@@ -175,9 +175,9 @@ the commands prefixed by `loophole-bind-` may be convenient.
 
 ### Prefix arguments table of key binding commands
 
-As mentioned above, `loophole-set-key` refers prefix arguments table,
+As mentioned above, `loophole-set-key` refers prefix arguments table
 to determine how to specify the entry (and key) of key bindings.
-The table is stored in the `loophole-set-key-order`.
+The table is stored in `loophole-set-key-order`.
 Each element of `loophole-set-key-order` is the function which returns
 the list looks like `(KEY ENTRY)`
 
@@ -216,8 +216,9 @@ Entire customization codes may look like below.
 
 ``` emacs-lisp
 (defun your-specifying-method ()
-  (; Some codes for specifying key and entry
-   (list KEY ENTRY)))
+  (let (key entry)
+    ; Some codes for specifying key and entry
+    (list key entry)))
 (setq loophole-set-key-order
       '(your-specifying-method
         loophole-obtain-key-and-command-by-symbol
@@ -258,7 +259,7 @@ and the number of enabled loophole-maps.
 
 You can change this style by the function `loophole-mode-set-lighter-format`.
 For example, the following line make lighter show the list of tag string of
-enabled loophole-map instead of number.
+enabled loophole-map instead of the number.
 
 ``` emacs-lisp
 (loophole-mode-set-lighter-format 'tag)
@@ -287,7 +288,7 @@ When defining keyboard macro by recursive `read-key`,
 the completing key is the key sequence for `keyboard-quit`.
 The reason why `keyboard-quit` is employed is that
 built-in keyboard macro system treat the key sequence for `keyboard-quit`
-as just `keyboard-quit` not the part of keyboard macro.
+as just `keyboard-quit`, not the part of keyboard macro.
 It can be changed by the following line.
 
 ``` emacs-lisp
@@ -299,17 +300,18 @@ It can be changed by the following line.
 #### loophole-temporary-map-max
 
 Maximum number of temporary keymap.
-`loophole-temporary-map-max` keymaps will be stored temporarily
-even if it is disabled.
-If the number of generated keymaps exceeded `loophole-temporary-map-max`,
-the oldest one is completely abandoned.
+Keymaps will be stored temporarily up to `loophole-temporary-map-max`,
+even if they are disabled.
+When the number of generated keymaps exceeds `loophole-temporary-map-max`
+and thereafter,
+newly generated keymap overwrites the oldest one and completely abandoned it.
 
 Default value of this user option is `8`.
 
 #### loophole-allow-keyboard-quit
 
 The flag if loophole allows `keyboard-quit` during reading key for binding.
-When `keyboard-quit ` is allowed,
+When `keyboard-quit` is allowed,
 loophole cannot set key bindings for the key sequence of `keyboard-quit`,
 which may be `C-g`.
 
