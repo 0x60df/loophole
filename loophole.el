@@ -25,7 +25,7 @@
 
 ;;; Commentary:
 
-;; Loophole provides temporary key bindngs management feature.
+;; Loophole provides temporary key bindings management feature.
 ;; Keys can be set by interactive interface in disposable keymaps
 ;; which are automatically generated for temporary use.
 
@@ -41,9 +41,9 @@
 (defvar loophole-map-alist nil
   "Alist of keymaps for loophole.
 Syntax is same as `minor-mode-map-alist', i.e. each element
-looks like (STATE-VARIABLE . KEYMAP). STATE-VARIABLE is a
+looks like (STATE-VARIABLE . KEYMAP).  STATE-VARIABLE is a
 symbol whose boolean value represents if the KEYMAP is
-active or not. KEYMAP is a keymap object.")
+active or not.  KEYMAP is a keymap object.")
 
 (defvar loophole-map-editing nil
   "When non-nil, Loophole binds keys in the existing keymap.
@@ -59,8 +59,7 @@ overwrites the earliest used one."
   :type 'integer)
 
 (defcustom loophole-allow-keyboard-quit t
-  "If non-nil, binding key commands can be quitted,
-even when reading key"
+  "If non-nil, binding commands can be quit even while reading keys."
   :group 'loophole
   :type 'boolean)
 
@@ -73,8 +72,10 @@ even when reading key"
 (defcustom loophole-bind-command-order
   '(loophole-obtain-key-and-command-by-symbol
     loophole-obtain-key-and-command-by-key-sequence)
-  "The priority of the method for obtaining key and command
-in `loophole-bind-command'.
+  "The priority list of methods to obtain key and command for binding.
+`loophole-bind-command' refers this variable to select
+obtaining method.
+First element gets first priority.
 Each element should return a list looks like (key command)."
   :group 'loophole
   :type '(repeat symbol))
@@ -83,8 +84,10 @@ Each element should return a list looks like (key command)."
   '(loophole-obtain-key-and-kmacro-by-recursive-edit
     loophole-obtain-key-and-kmacro-by-read-key
     loophole-obtain-key-and-kmacro-by-recall-record)
-  "The priority of the method for obtaining key and kmacro
-in `loophole-bind-kmacro'.
+  "The priority list of methods to obtain key and kmacro for binding.
+`loophole-bind-kmacro' refers this variable to select
+obtaining method.
+First element gets first priority.
 Each element should return a list looks like (key kmacro)."
   :group 'loophole
   :type '(repeat symbol))
@@ -95,8 +98,9 @@ Each element should return a list looks like (key kmacro)."
     loophole-obtain-key-and-command-by-key-sequence
     loophole-obtain-key-and-kmacro-by-read-key
     loophole-obtain-key-and-kmacro-by-recall-record)
-  "The priority for obtaining key and entry
-in `loophole-set-key'.
+  "The priority list of methods to obtain key and object for binding.
+`loophole-set-key' refers this to select obtaining method.
+First element gets first priority.
 Each element should return a list looks like (key object)."
   :group 'loophole
   :type '(repeat symbol))
@@ -113,24 +117,25 @@ Each element should return a list looks like (key object)."
 
 (defun loophole-map-variable-list ()
   "Return list of all keymap variables for loophole.
-Elemets are ordered according to `loophole-map-alist'."
+Elements are ordered according to `loophole-map-alist'."
   (mapcar (lambda (e)
             (get (car e) :loophole-map-variable))
           loophole-map-alist))
 
 (defun loophole-state-variable-list ()
   "Return list of all keymap variables for loophole.
-Elemets are ordered according to `loophole-map-alist'."
+Elements are ordered according to `loophole-map-alist'."
   (mapcar #'car loophole-map-alist))
 
 (defun loophole-key-equal (k1 k2)
-  "Return t if two key sequences are equivalent.
+  "Return t if two key sequences K1 and K2 are equivalent.
 Specifically, this function get `key-description' of each
 key, and compare them by `equal'."
   (equal (key-description k1) (key-description k2)))
 
 (defun loophole-read-key (prompt)
-  "Read and return key sequence for bindings."
+  "Read and return key sequence for bindings.
+PROMPT is a string for reading key."
   (let* ((menu-prompting nil)
          (key (read-key-sequence prompt nil t)))
     (or (vectorp key) (stringp key)
@@ -187,7 +192,7 @@ Definition can be finished by calling `loophole-end-kmacro'."
 (defun loophole-generate-map ()
   "Generate temporary keymap which holds temporary key bindings.
 Generated keymap is stored in variable whose name is
-loophole-n-map, and this fuction returns this variable.
+loophole-n-map, and this function returns this variable.
 If the number of temporary keymap has been reached to
 `loophole-temporary-map-max', earliest used one is overwritten."
   (letrec ((find-nonbound-temporary-map-variable
@@ -243,7 +248,7 @@ registered, and they are associated."
 (defun loophole-prioritize-map (map-variable)
   "Give first priority to MAP-VARIABLE.
 This is done by move the entry in `loophole-map-alist' to
-the front. If precedence is changed, quit current editing
+the front.  If precedence is changed, quit current editing
 session."
   (let ((state-variable (get map-variable :loophole-state-variable)))
     (when state-variable
@@ -279,7 +284,7 @@ generate new one and return it."
 In addition to setting t for the state of MAP-VARIABLE,
 this function prioritizes MAP-VARIABLE, and enables
 `loophole-mode'.
-If optional argumnet SET-STATE-ONLY is non-nil,
+If optional argument SET-STATE-ONLY is non-nil,
 this function does not do anything except for setting state.
 
 When interactive call, prefix argument is directly assigned
@@ -313,7 +318,7 @@ this function stops editing if MAP-VARIABLE is the first
 element of `loophole-map-alist',
 and disables `loophole-mode' if MAP-VARIABLE is the only
 one enabled keymap.
-If optional argumnet SET-STATE-ONLY is non-nil,
+If optional argument SET-STATE-ONLY is non-nil,
 this function does not do anything except for setting state.
 
 When interactive call, prefix argument is directly assigned
@@ -353,8 +358,9 @@ according to the same rule as `loophole-disable-map'."
     (if map-variable (loophole-disable-map map-variable))))
 
 (defun loophole-disable-all-maps ()
-  "Disable the all keymaps'
-This function stop editing, but keep `loophole-mode' on."
+  "Disable the all keymaps.
+This function also stops editing but keeps `loophole-mode'
+enabled."
   (interactive)
   (mapc (lambda (map-variable)
           (loophole-disable-map map-variable 'set-state-only))
@@ -362,7 +368,7 @@ This function stop editing, but keep `loophole-mode' on."
   (loophole-stop-edit))
 
 (defun loophole-obtain-key-and-object ()
-  "Return set of key and any lisp object.
+  "Return set of key and any Lisp object.
 Object is obtained as return value of `eval-minibuffer'."
   (let* ((menu-prompting nil)
          (key (loophole-read-key "Set key temporarily: ")))
@@ -377,7 +383,7 @@ Object is obtained as return value of `eval-minibuffer'."
                                     (key-description key))))))
 
 (defun loophole-obtain-key-and-command-by-key-sequence ()
-  "Return set of key and command obtained by key secuensce lookup."
+  "Return set of key and command obtained by key sequence lookup."
   (let* ((menu-prompting nil)
          (key (loophole-read-key "Set key temporarily: ")))
     (list key (let ((binding
@@ -390,10 +396,10 @@ Object is obtained as return value of `eval-minibuffer'."
 
 (defun loophole-obtain-key-and-kmacro-by-read-key ()
   "Return set of key and kmacro obtained by reading key.
-This function `read-key' recursively. If you are finished
+This function `read-key' recursively.  If you are finished
 keyboard macro, type `loophole-kmacro-completing-key'.
-By defualt, `loophole-kmacro-completing-key' is \\[keyboard-quit]
-the key bound to `keyboard-quit'. In this situation, you
+By default, `loophole-kmacro-completing-key' is \\[keyboard-quit]
+the key bound to `keyboard-quit'.  In this situation, you
 cannot use \\[keyboard-quit] for quitting.
 Once `loophole-kmacro-completing-key' is changed, you can
 complete definition of kmacro by new completing key, and
@@ -436,10 +442,10 @@ complete definition of kmacro by new completing key, and
 (defun loophole-obtain-key-and-kmacro-by-recursive-edit ()
   "Return set of key and kmacro obtained by recursive edit.
 \\<loophole-mode-map>
-This function enter recursive edit in
-order to offer keyboard macro defining workspace. Definition
-can be finished by calling `loophole-end-kmacro' which is
-bound to \\[loophole-end-kmacro].
+This function enter recursive edit in order to offer
+keyboard macro defining work space.  Definition can be
+finished by calling `loophole-end-kmacro' which is bound to
+\\[loophole-end-kmacro].
 Besides, Definition can be aborted by calling
 `loophole-end-kmacro' which is bound to \\[loophole-abort-kmacro]."
   (let* ((menu-prompting nil)
@@ -458,7 +464,7 @@ Besides, Definition can be aborted by calling
                                nil t))))
 
 (defun loophole-prefix-rank-value (arg)
-  "Return rank value for raw prefix argument.
+  "Return rank value for raw prefix argument ARG.
 In the context of this function rank of prefix argument is
 defined as follows.
 The rank of no prefix argument is 0.
@@ -472,17 +478,17 @@ Likewise, rank n means C-u * n or C-n."
 
 (defun loophole-bind-entry (key entry &optional keymap define-key-only)
   "Bind KEY to ENTRY temporarily.
-Any lisp object is acceptable for ENTRY, but only few types
-make sense. Meaningful types of ENTRY is completely same as
+Any Lisp object is acceptable for ENTRY, but only few types
+make sense.  Meaningful types of ENTRY is completely same as
 general keymap entry.
 
 By default, KEY is bound in the currently editing keymap or
-generated new one. If optional argument KEYMAP is non-nil,
+generated new one.  If optional argument KEYMAP is non-nil,
 and it is registered to loophole, KEYMAP is used instead.
 
 If optional argument DEFINE-KEY-ONLY is non-nil, this
 function only call `define-key', otherwise this function
-call some other functions as follows. In any case,
+call some other functions as follows.  In any case,
 `loophole-start-edit', and turn on `loophole-mode'.
 If KEYMAP is non-nil `loophole-prioritize-map'."
   (interactive (loophole-obtain-key-and-object))
@@ -505,7 +511,7 @@ If KEYMAP is non-nil `loophole-prioritize-map'."
 (defun loophole-bind-command (key command &optional keymap define-key-only)
   "Bind KEY to COMMAND temporarily.
 This function finally calls `loophole-bind-entry', so that
-The keymap used for binding and the meaming of of optional
+The keymap used for binding and the meaning of optional
 arguments KEYMAP, and DEFINE-KEY-ONLY are same as
 `loophole-bind-entry'.See docstring of `loophole-bind-entry'
 for more details.
@@ -532,7 +538,7 @@ Likewise C-u * n and C-n invoke the nth element."
 (defun loophole-bind-kmacro (key kmacro &optional keymap define-key-only)
   "Bind KEY to KMACRO temporarily.
 This function finally calls `loophole-bind-entry', so that
-The keymap used for binding and the meaming of of optional
+the keymap used for binding and the meaning of optional
 arguments KEYMAP, and DEFINE-KEY-ONLY are same as
 `loophole-bind-entry'.See docstring of `loophole-bind-entry'
 for more details.
@@ -573,9 +579,9 @@ binding."
 This function finally calls `loophole-bind-entry', so that
 The keymap used for binding is the same as
 `loophole-bind-entry', i.e. currently editing keymap or
-generated new one. ENTRY is also same as
-`loophole-bind-entry'. Any lisp object is acceptable for
-ENTRY, although only few types make sense. Meaningful types
+generated new one.  ENTRY is also same as
+`loophole-bind-entry'.  Any Lisp object is acceptable for
+ENTRY, although only few types make sense.  Meaningful types
 of ENTRY is completely same as general keymap entry.
 
 When called interactively, this function determine
@@ -603,7 +609,7 @@ Likewise C-u * n and C-n invoke the nth element."
 
 (defun loophole-quit ()
   "Quit loophole completely.
-Dasable the all keymaps, and turn off `loophole-mode'."
+Disable the all keymaps, and turn off `loophole-mode'."
   (interactive)
   (loophole-disable-all-maps)
   (loophole-mode -1))
@@ -618,8 +624,7 @@ not nil, take effect.
 Loophole mode also offers the bindings for the
 temporary key bindings management command.
 
-\\{loophole-mode-map}
-"
+\\{loophole-mode-map}"
   :group 'loophole
   :global t
   :lighter (""
@@ -660,14 +665,14 @@ temporary key bindings management command.
 
 (defun loophole-mode-set-lighter-format (style &optional format)
   "Set lighter format for loophole mode.
-STYLE is a symbol to specify style of fortmat.
+STYLE is a symbol to specify style of format.
 STYLE can be 'number', 'tag', 'simple', 'static', 'custom',
-and any other lisp object. Each means as follows.
+and any other Lisp object.  Each means as follows.
 number: display lighter-base suffixed with editing status,
-        and number of enabled keymaps. If no keymaps are
+        and number of enabled keymaps.  If no keymaps are
         enabled, numeric suffix is omitted.
 tag:    display lighter-base suffixed with editing status,
-        and concatenated tag strings of keymaps. If no
+        and concatenated tag strings of keymaps.  If no
         keymaps are enabled, tag suffix is omitted.
 simple: display lighter-base suffixed with editing status
 static: display lighter-base with no suffix.
