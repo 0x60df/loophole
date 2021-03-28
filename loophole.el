@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -157,6 +157,7 @@ PROMPT is a string for reading key."
   (interactive)
   (setq loophole-map-editing nil))
 
+;;;###autoload
 (defun loophole-start-kmacro ()
   "Start defining keyboard macro.
 Definition can be finished by calling `loophole-end-kmacro'."
@@ -476,6 +477,7 @@ Likewise, rank n means C-u * n or C-n."
         ((natnump arg) arg)
         (t 0)))
 
+;;;###autoload
 (defun loophole-bind-entry (key entry &optional keymap define-key-only)
   "Bind KEY to ENTRY temporarily.
 Any Lisp object is acceptable for ENTRY, but only few types
@@ -508,6 +510,7 @@ If KEYMAP is non-nil `loophole-prioritize-map'."
     (loophole-start-edit)
     (loophole-mode 1)))
 
+;;;###autoload
 (defun loophole-bind-command (key command &optional keymap define-key-only)
   "Bind KEY to COMMAND temporarily.
 This function finally calls `loophole-bind-entry', so that
@@ -535,6 +538,7 @@ Likewise C-u * n and C-n invoke the nth element."
       (loophole-bind-entry key command keymap define-key-only)
     (error "Invalid command: %s" command)))
 
+;;;###autoload
 (defun loophole-bind-kmacro (key kmacro &optional keymap define-key-only)
   "Bind KEY to KMACRO temporarily.
 This function finally calls `loophole-bind-entry', so that
@@ -564,6 +568,7 @@ Likewise C-u * n and C-n invoke the nth element."
       (loophole-bind-entry key kmacro keymap define-key-only)
     (error "Invalid kmacro: %s" kmacro)))
 
+;;;###autoload
 (defun loophole-bind-last-kmacro (key)
   "Bind KEY to the lastly accessed keyboard macro.
 Currently editing keymap or generated new one is used for
@@ -574,6 +579,7 @@ binding."
      (list key)))
   (loophole-bind-kmacro key (kmacro-lambda-form (kmacro-ring-head))))
 
+;;;###autoload
 (defun loophole-set-key (key entry)
   "Set the temporary binding for KEY and ENTRY.
 This function finally calls `loophole-bind-entry', so that
@@ -614,6 +620,7 @@ Disable the all keymaps, and turn off `loophole-mode'."
   (loophole-disable-all-maps)
   (loophole-mode -1))
 
+;;;###autoload
 (define-minor-mode loophole-mode
   "Toggle temporary key bindings (Loophole mode).
 
