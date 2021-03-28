@@ -453,7 +453,7 @@ Besides, Definition can be aborted by calling
           (key (loophole-read-key "Set key temporarily: ")))
     (list key (completing-read (format "Set key %s to kmacro: "
                                        (key-description (kbd "C-a")))
-                               (mapcar #'car (delq nil (cons (kmacro-ring-head)
+                               (mapcar #'car (remq nil (cons (kmacro-ring-head)
                                                              kmacro-ring)))
                                nil t))))
 
