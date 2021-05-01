@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -53,8 +53,8 @@ used for the binding.")
 (defcustom loophole-temporary-map-max 8
   "Maximum number of temporary keymaps.
 When the number of bound temporary keymaps is
-`loophole-temporary-map-max' or higher,
-`loophole-generate-map' overwrites the earliest used one."
+`loophole-temporary-map-max' or higher, generating new map
+overwrites the earliest used one."
   :group 'loophole
   :type 'integer)
 
@@ -193,43 +193,6 @@ Definition can be finished by calling `loophole-end-kmacro'."
       (abort-recursive-edit))
   (keyboard-quit))
 
-(defun loophole-generate-map ()
-  "Generate temporary keymap for temporary key bindings.
-Generated keymap is stored in variable whose name is
-loophole-n-map, and this function returns this variable.
-If the number of temporary keymap is
-`loophole-temporary-map-max' or higher, earliest used one
-will be overwritten."
-  (letrec ((find-nonbound-temporary-map-variable
-            (lambda (i)
-              (let ((s (intern (format "loophole-%d-map" i))))
-                (cond ((< loophole-temporary-map-max i) nil)
-                      ((boundp s)
-                       (funcall find-nonbound-temporary-map-variable (+ i 1)))
-                      (t s))))))
-    (let* ((nonbound-temporary-map-variable
-            (funcall find-nonbound-temporary-map-variable 1))
-           (earliest-used-disabled-temporary-map-variable
-            (seq-find (lambda (map-variable)
-                        (and (not (symbol-value
-                                   (get map-variable :loophole-state-variable)))
-                             (string-match
-                              "loophole-[0-9]+-map"
-                              (symbol-name map-variable))))
-                      (reverse (loophole-map-variable-list))))
-           (map-variable (or nonbound-temporary-map-variable
-                             earliest-used-disabled-temporary-map-variable
-                             'loophole-1-map)))
-      (set map-variable (make-sparse-keymap))
-      map-variable)))
-
-(defun loophole-generate-state (map-variable)
-  "Generate state for MAP-VARIABLE and assign to state variable.
-This function returns this state variable."
-  (let ((state-variable (intern (concat (symbol-name map-variable) "-state"))))
-    (set state-variable nil)
-    state-variable))
-
 (defun loophole-register (map-variable state-variable &optional tag)
   "Register the set of MAP-VARIABLE and STATE-VARIABLE to loophole.
 Optional argument TAG is tag string which may be shown in
@@ -250,7 +213,7 @@ registered, and they are associated."
        (eq map-variable (get state-variable :loophole-map-variable))
        (assq state-variable loophole-map-alist)))
 
-(defun loophole-prioritize-map (map-variable)
+(defun loophole-prioritize (map-variable)
   "Give first priority to MAP-VARIABLE.
 This is done by move the entry in `loophole-map-alist' to
 the front.  If precedence is changed, quit current editing
@@ -265,6 +228,69 @@ session."
               loophole-map-alist)
         (loophole-stop-edit)))))
 
+(defun loophole-generate ()
+  "Return Loophole map variable which holds newly generated keymap.
+
+Name of map variable is loophole-n-map.
+If the number of temporary keymap is
+`loophole-temporary-map-max' or higher, earliest used one
+will be overwritten by new sparse keymap.
+
+This function also binds state variable for map variable.
+State variable is named as map-variable-state."
+  (let* ((map-variable
+          (let ((reversal-map-variable-list
+                 (reverse (loophole-map-variable-list))))
+            (letrec ((find-nonbound-temporary-map-variable
+                      (lambda (i)
+                        (let ((s (intern (format "loophole-%d-map" i))))
+                          (cond ((< loophole-temporary-map-max i) nil)
+                                ((boundp s)
+                                 (funcall find-nonbound-temporary-map-variable
+                                          (+ i 1)))
+                                (t s)))))
+                     (find-earliest-used-disabled-temporary-map-variable
+                      (lambda ()
+                        (seq-find (lambda (map-var)
+                                    (and (not (symbol-value
+                                               (get map-var
+                                                    :loophole-state-variable)))
+                                         (string-match
+                                          "loophole-[0-9]+-map"
+                                          (symbol-name map-var))))
+                                  reversal-map-variable-list)))
+                     (find-orphan-temporary-map-variable
+                      (lambda (i)
+                        (let ((s (intern
+                                  (format "loophole-%d-map" i))))
+                          (cond ((< loophole-temporary-map-max i) nil)
+                                ((memq s reversal-map-variable-list)
+                                 (funcall find-orphan-temporary-map-variable
+                                          (+ i 1)))
+                                (t s)))))
+                     (find-earliest-used-temporary-map-variable
+                      (lambda ()
+                        (seq-find (lambda (map-var)
+                                    (string-match
+                                     "loophole-[0-9]+-map"
+                                     (symbol-name map-var)))
+                                  reversal-map-variable-list))))
+              (or (funcall find-nonbound-temporary-map-variable 1)
+                  (funcall find-earliest-used-disabled-temporary-map-variable)
+                  (funcall find-orphan-temporary-map-variable 1)
+                  (funcall find-earliest-used-temporary-map-variable)
+                  (error
+                   "Loophole maps or `loophole-map-alist' might be broken")))))
+         (state-variable (intern (concat (symbol-name map-variable) "-state")))
+         (tag (replace-regexp-in-string
+               "loophole-\\([0-9]+\\)-map" "\\1"
+               (symbol-name map-variable))))
+    (set map-variable (make-sparse-keymap))
+    (set state-variable nil)
+    (unless (loophole-registered-p map-variable state-variable)
+      (loophole-register map-variable state-variable tag))
+    map-variable))
+
 (defun loophole-ready-map ()
   "Return available temporary keymap.
 If currently editing keymap exists, return it; otherwise
@@ -272,14 +298,10 @@ generate new one and return it."
   (cond (loophole-map-editing
          (set (caar loophole-map-alist) t)
          (cdar loophole-map-alist))
-        (t (let* ((map-variable (loophole-generate-map))
-                  (state-variable (loophole-generate-state map-variable)))
-             (if (not (loophole-registered-p map-variable state-variable))
-                 (loophole-register map-variable state-variable
-                                    (replace-regexp-in-string
-                                     "loophole-\\([0-9]+\\)-map" "\\1"
-                                     (symbol-name map-variable)))
-               (loophole-prioritize-map map-variable))
+        (t (let* ((map-variable (loophole-generate))
+                  (state-variable (get map-variable :loophole-state-variable)))
+             (loophole-prioritize map-variable)
+             (loophole-start-edit)
              (set state-variable t)
              (symbol-value map-variable)))))
 
@@ -312,7 +334,7 @@ to SET-STATE-ONLY."
         (when state-variable
           (set state-variable t)
           (unless set-state-only
-            (loophole-prioritize-map map-variable)
+            (loophole-prioritize map-variable)
             (loophole-mode 1))))))
 
 (defun loophole-disable-map (map-variable &optional set-state-only)
@@ -496,7 +518,7 @@ If optional argument DEFINE-KEY-ONLY is non-nil, this
 function only call `define-key', otherwise this function
 call some other functions as follows.  In any case,
 `loophole-start-edit', and turn on `loophole-mode'.
-If KEYMAP is non-nil `loophole-prioritize-map'."
+If KEYMAP is non-nil `loophole-prioritize'."
   (interactive (loophole-obtain-key-and-object))
   (if keymap
       (let* ((state-variable (car (rassq keymap loophole-map-alist)))
@@ -508,7 +530,7 @@ If KEYMAP is non-nil `loophole-prioritize-map'."
             (error "Invalid keymap: %s" keymap)
           (define-key keymap key entry)
           (unless define-key-only
-            (loophole-prioritize-map map-variable))))
+            (loophole-prioritize map-variable))))
     (define-key (loophole-ready-map) key entry))
   (unless define-key-only
     (loophole-start-edit)
