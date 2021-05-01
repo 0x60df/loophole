@@ -669,10 +669,10 @@ temporary key bindings management command.
             (define-key map (kbd "C-c #") #'loophole-bind-command)
             (define-key map (kbd "C-c $") #'loophole-bind-kmacro)
             map)
+  (setq emulation-mode-map-alists
+        (delq 'loophole-map-alist emulation-mode-map-alists))
   (if loophole-mode
       (push 'loophole-map-alist emulation-mode-map-alists)
-    (setq emulation-mode-map-alists
-          (delq 'loophole-map-alist emulation-mode-map-alists))
     (loophole-stop-edit)))
 
 (defun loophole-mode-set-lighter-format (style &optional format)
