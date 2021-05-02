@@ -38,16 +38,16 @@
   "Manage temporary key bindings."
   :group 'convenience)
 
-(defvar loophole-map-alist nil
+(defvar loophole--map-alist nil
   "Alist of keymaps for loophole.
 Syntax is same as `minor-mode-map-alist', i.e. each element
 looks like (STATE-VARIABLE . KEYMAP).  STATE-VARIABLE is a
 symbol whose boolean value represents if the KEYMAP is
 active or not.  KEYMAP is a keymap object.")
 
-(defvar loophole-map-editing nil
+(defvar loophole--editing nil
   "When non-nil, Loophole binds keys in the existing keymap.
-Specifically, the first entry of `loophole-map-alist' is
+Specifically, the first entry of `loophole--map-alist' is
 used for the binding.")
 
 (defvar loophole--suspended nil
@@ -133,15 +133,15 @@ Each element should return a list looks like (key object)."
 
 (defun loophole-map-variable-list ()
   "Return list of all keymap variables for loophole.
-Elements are ordered according to `loophole-map-alist'."
+Elements are ordered according to `loophole--map-alist'."
   (mapcar (lambda (e)
             (get (car e) :loophole-map-variable))
-          loophole-map-alist))
+          loophole--map-alist))
 
 (defun loophole-state-variable-list ()
   "Return list of all keymap variables for loophole.
-Elements are ordered according to `loophole-map-alist'."
-  (mapcar #'car loophole-map-alist))
+Elements are ordered according to `loophole--map-alist'."
+  (mapcar #'car loophole--map-alist))
 
 (defun loophole-key-equal (k1 k2)
   "Return t if two key sequences K1 and K2 are equivalent.
@@ -168,21 +168,21 @@ Otherwise, \\[keyboard-quit] will be returned as it is read."
 
 (defun loophole-suspending-p ()
   "Non-nil during suspending Loophole.
-During suspension, `loophole-map-alist' is removed from
+During suspension, `loophole--map-alist' is removed from
 `emulation-mode-map-alists'.
 Consequently, all loophole maps lose effect while its state
 is preserved."
-  (not (memq 'loophole-map-alist emulation-mode-map-alists)))
+  (not (memq 'loophole--map-alist emulation-mode-map-alists)))
 
-(defun loophole-start-edit ()
+(defun loophole-start-editing ()
   "Start keymap edit session."
   (interactive)
-  (setq loophole-map-editing t))
+  (setq loophole--editing t))
 
-(defun loophole-stop-edit ()
+(defun loophole-stop-editing ()
   "Stop keymap edit session."
   (interactive)
-  (setq loophole-map-editing nil))
+  (setq loophole--editing nil))
 
 ;;;###autoload
 (defun loophole-start-kmacro ()
@@ -228,7 +228,7 @@ set as parent keymap for MAP-VARIABLE."
   (put map-variable :loophole-tag tag)
   (unless without-base-map
     (set-keymap-parent (symbol-value map-variable) loophole-base-map))
-  (push `(,state-variable . ,(symbol-value map-variable)) loophole-map-alist))
+  (push `(,state-variable . ,(symbol-value map-variable)) loophole--map-alist))
 
 (defun loophole-registered-p (map-variable &optional state-variable)
   "Return non-nil if MAP-VARIABLE is registered to loophole.
@@ -239,22 +239,22 @@ registered, and they are associated."
            (eq state-variable (get map-variable :loophole-state-variable))
          (setq state-variable (get map-variable :loophole-state-variable)))
        (eq map-variable (get state-variable :loophole-map-variable))
-       (assq state-variable loophole-map-alist)))
+       (assq state-variable loophole--map-alist)))
 
 (defun loophole-prioritize (map-variable)
   "Give first priority to MAP-VARIABLE.
-This is done by move the entry in `loophole-map-alist' to
+This is done by move the entry in `loophole--map-alist' to
 the front.  If precedence is changed, quit current editing
 session."
   (let ((state-variable (get map-variable :loophole-state-variable)))
     (when state-variable
-      (unless (eq (assq state-variable loophole-map-alist)
-                  (car loophole-map-alist))
-        (setq loophole-map-alist
-              (assq-delete-all state-variable loophole-map-alist))
+      (unless (eq (assq state-variable loophole--map-alist)
+                  (car loophole--map-alist))
+        (setq loophole--map-alist
+              (assq-delete-all state-variable loophole--map-alist))
         (push `(,state-variable . ,(symbol-value map-variable))
-              loophole-map-alist)
-        (loophole-stop-edit)))))
+              loophole--map-alist)
+        (loophole-stop-editing)))))
 
 (defun loophole-generate ()
   "Return Loophole map variable which holds newly generated keymap.
@@ -308,7 +308,7 @@ State variable is named as map-variable-state."
                   (funcall find-orphan-temporary-map-variable 1)
                   (funcall find-earliest-used-temporary-map-variable)
                   (error
-                   "Loophole maps or `loophole-map-alist' might be broken")))))
+                   "Loophole maps or `loophole--map-alist' might be broken")))))
          (state-variable (intern (concat (symbol-name map-variable) "-state")))
          (tag (replace-regexp-in-string
                "loophole-\\([0-9]+\\)-map" "\\1"
@@ -323,13 +323,13 @@ State variable is named as map-variable-state."
   "Return available temporary keymap.
 If currently editing keymap exists, return it; otherwise
 generate new one and return it."
-  (cond (loophole-map-editing
-         (set (caar loophole-map-alist) t)
-         (cdar loophole-map-alist))
+  (cond (loophole--editing
+         (set (caar loophole--map-alist) t)
+         (cdar loophole--map-alist))
         (t (let* ((map-variable (loophole-generate))
                   (state-variable (get map-variable :loophole-state-variable)))
              (loophole-prioritize map-variable)
-             (loophole-start-edit)
+             (loophole-start-editing)
              (set state-variable t)
              (symbol-value map-variable)))))
 
@@ -368,7 +368,7 @@ to SET-STATE-ONLY."
 
 In addition to setting nil for the state of MAP-VARIABLE,
 this function stops editing if MAP-VARIABLE is the first
-element of `loophole-map-alist'.
+element of `loophole--map-alist'.
 If optional argument SET-STATE-ONLY is non-nil,
 this function does nothing except for setting state.
 
@@ -392,9 +392,9 @@ to SET-STATE-ONLY."
         (when state-variable
           (set state-variable nil)
           (unless set-state-only
-            (if (eq (assq state-variable loophole-map-alist)
-                    (car loophole-map-alist))
-                (loophole-stop-edit)))))))
+            (if (eq (assq state-variable loophole--map-alist)
+                    (car loophole--map-alist))
+                (loophole-stop-editing)))))))
 
 (defun loophole-disable-last-map ()
   "Disable the lastly enabled keymap.
@@ -414,7 +414,7 @@ enabled."
   (mapc (lambda (map-variable)
           (loophole-disable-map map-variable 'set-state-only))
         (loophole-map-variable-list))
-  (loophole-stop-edit))
+  (loophole-stop-editing))
 
 (defun loophole-obtain-key-and-object ()
   "Return set of key and any Lisp object.
@@ -539,11 +539,11 @@ and it is registered to loophole, KEYMAP is used instead.
 If optional argument DEFINE-KEY-ONLY is non-nil, this
 function only call `define-key', otherwise this function
 call some other functions as follows.
-In any case, `loophole-start-edit';
+In any case, `loophole-start-editing';
 if KEYMAP is non-nil, `loophole-prioritize'."
   (interactive (loophole-obtain-key-and-object))
   (if keymap
-      (let* ((state-variable (car (rassq keymap loophole-map-alist)))
+      (let* ((state-variable (car (rassq keymap loophole--map-alist)))
              (map-variable (get state-variable :loophole-map-variable)))
         (if (not (and keymap
                       map-variable
@@ -555,7 +555,7 @@ if KEYMAP is non-nil, `loophole-prioritize'."
             (loophole-prioritize map-variable))))
     (define-key (loophole-ready-map) key entry))
   (unless define-key-only
-    (loophole-start-edit)))
+    (loophole-start-editing)))
 
 ;;;###autoload
 (defun loophole-bind-command (key command &optional keymap define-key-only)
@@ -657,27 +657,27 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
 (defun loophole-unset-key (key)
   "Unset the temporary biding of KEY."
   (interactive "kUnset key temporarily: ")
-  (if loophole-map-editing
-      (define-key (cdar loophole-map-alist) key nil)))
+  (if loophole--editing
+      (define-key (cdar loophole--map-alist) key nil)))
 
 (defun loophole-suspend ()
   "Suspend Loophole.
 To suspend Loophole, this function delete
-`loophole-map-alist' from `emulation-mode-map-alists'."
+`loophole--map-alist' from `emulation-mode-map-alists'."
   (interactive)
   (setq emulation-mode-map-alists
-        (delq 'loophole-map-alist emulation-mode-map-alists))
+        (delq 'loophole--map-alist emulation-mode-map-alists))
   (setq loophole--suspended t))
 
 (defun loophole-resume ()
   "Resume Loophole.
 To resume Loophole, this functions push
-`loophole-map-alist' to `emulation-mode-map-alists'
-unless `loophole-map-alist' is a member of
+`loophole--map-alist' to `emulation-mode-map-alists'
+unless `loophole--map-alist' is a member of
 `emulation-mode-map-alists'."
   (interactive)
-  (unless (memq 'loophole-map-alist emulation-mode-map-alists)
-    (push 'loophole-map-alist emulation-mode-map-alists))
+  (unless (memq 'loophole--map-alist emulation-mode-map-alists)
+    (push 'loophole--map-alist emulation-mode-map-alists))
   (setq loophole--suspended nil))
 
 (defun loophole-quit ()
@@ -704,12 +704,12 @@ temporary key bindings management command.
   :global t
   :lighter (""
             loophole-mode-lighter-base
-            (loophole-map-editing loophole-mode-lighter-editing-sign)
+            (loophole--editing loophole-mode-lighter-editing-sign)
             (:eval (let ((n (length
                              (delq nil
                                    (mapcar
                                     (lambda (e) (symbol-value (car e)))
-                                    loophole-map-alist)))))
+                                    loophole--map-alist)))))
                      (if (zerop n)
                          ""
                        (format ":%d" n)))))
@@ -719,8 +719,8 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] q") #'loophole-quit)
             (define-key map (kbd "C-c ] ,") #'loophole-suspend)
             (define-key map (kbd "C-c ] .") #'loophole-resume)
-            (define-key map (kbd "C-c ] [") #'loophole-start-edit)
-            (define-key map (kbd "C-c ] ]") #'loophole-stop-edit)
+            (define-key map (kbd "C-c ] [") #'loophole-start-editing)
+            (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
             (define-key map (kbd "C-c ] s") #'loophole-set-key)
             (define-key map (kbd "C-c ] u") #'loophole-unset-key)
             (define-key map (kbd "C-c ] e") #'loophole-enable-map)
@@ -766,12 +766,12 @@ If STYLE is other than above, lighter is omitted."
                   loophole-mode-lighter-base
                   (:eval (if (loophole-suspending-p)
                            loophole-mode-lighter-suspending-sign))
-                  (loophole-map-editing loophole-mode-lighter-editing-sign)
+                  (loophole--editing loophole-mode-lighter-editing-sign)
                   (:eval (let ((n (length
                                    (delq nil
                                          (mapcar
                                           (lambda (e) (symbol-value (car e)))
-                                          loophole-map-alist)))))
+                                          loophole--map-alist)))))
                            (if (zerop n)
                                ""
                              (format ":%d" n))))))
@@ -780,10 +780,10 @@ If STYLE is other than above, lighter is omitted."
                   loophole-mode-lighter-base
                   (:eval (if (loophole-suspending-p)
                            loophole-mode-lighter-suspending-sign))
-                  (loophole-map-editing
+                  (loophole--editing
                    (""
                     loophole-mode-lighter-editing-sign
-                    (:eval (let ((s (caar loophole-map-alist)))
+                    (:eval (let ((s (caar loophole--map-alist)))
                              (or (symbol-value s)
                                  (get (get s :loophole-map-variable)
                                       :loophole-tag))))))
@@ -794,7 +794,7 @@ If STYLE is other than above, lighter is omitted."
                                                (get (get (car e)
                                                          :loophole-map-variable)
                                                     :loophole-tag)))
-                                         loophole-map-alist))))
+                                         loophole--map-alist))))
                            (if (zerop (length l))
                                ""
                              (concat "#" (mapconcat 'identity l ",")))))))
@@ -803,7 +803,7 @@ If STYLE is other than above, lighter is omitted."
                   loophole-mode-lighter-base
                   (:eval (if (loophole-suspending-p)
                            loophole-mode-lighter-suspending-sign))
-                  (loophole-map-editing loophole-mode-lighter-editing-sign)))
+                  (loophole--editing loophole-mode-lighter-editing-sign)))
                ((eq style 'static) loophole-mode-lighter-base)
                ((eq style 'custom) format)
                (t "")))
