@@ -463,6 +463,17 @@ MAP-NAME.  If prefix-argument is non-nil, TAG is also asked."
     (setplist map-variable nil)
     (setplist state-variable nil)))
 
+(defun loophole-edit (map-variable)
+  "Edit MAP-VARIABLE.
+`loophole-prioritize' it and `loophole-start-editing'."
+  (interactive
+   (let ((map-variable-list (loophole-map-variable-list)))
+     (list (cond (map-variable-list
+                  (intern (completing-read "Name keymap: " map-variable-list)))
+                 (t (user-error "There are no loophole maps"))))))
+  (loophole-prioritize map-variable)
+  (loophole-start-editing))
+
 (defun loophole-obtain-key-and-object ()
   "Return set of key and any Lisp object.
 Object is obtained as return value of `eval-minibuffer'."
@@ -769,6 +780,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] [") #'loophole-start-editing)
             (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
             (define-key map (kbd "C-c ] n") #'loophole-name)
+            (define-key map (kbd "C-c ] +") #'loophole-edit)
             (define-key map (kbd "C-c ] s") #'loophole-set-key)
             (define-key map (kbd "C-c ] u") #'loophole-unset-key)
             (define-key map (kbd "C-c ] e") #'loophole-enable-map)
