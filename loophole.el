@@ -416,6 +416,53 @@ enabled."
         (loophole-map-variable-list))
   (loophole-stop-editing))
 
+(defun loophole-name (map-variable map-name &optional tag)
+  "Name Loophole map MAP-VARIABLE as MAP-NAME.
+If optional argument TAG is non-nil, tag string for the map
+is set as TAG; otherwise, initial character of MAP-NAME is
+used as tag string.
+Old MAP-VARIABLE and corresponding state-variable are
+initialized: they are unbound, their plists are set as nil,
+they are removed from `loophole--map-alist'.
+
+When interactive call, this function asks MAP-VARIABLE and
+MAP-NAME.  If prefix-argument is non-nil, TAG is also asked."
+  (interactive
+   (let* ((map-variable-list (loophole-map-variable-list))
+          (arg-map-variable
+           (cond (map-variable-list
+                  (intern (completing-read "Name keymap: " map-variable-list)))
+                 (t (user-error "There are no loophole maps"))))
+          (arg-map-name (read-string (format "New name for keymap %s: "
+                                             arg-map-variable)))
+          (arg-tag (if current-prefix-arg
+                       (read-string (format "New tag for keymap %s: "
+                                            arg-map-variable)))))
+     (list arg-map-variable arg-map-name arg-tag)))
+  (unless (loophole-registered-p map-variable)
+    (user-error "Specified map-variable %s is not registered" map-variable))
+  (let* ((state-variable (get map-variable :loophole-state-variable))
+         (map-variable-name (format "loophole-%s-map" map-name))
+         (state-variable-name (concat map-variable-name "-state"))
+         (tag (or tag (substring map-name 0 1))))
+    (let ((bound (seq-find (lambda (name)
+                             (boundp (intern name)))
+                           (list map-variable-name state-variable-name ))))
+      (if bound (user-error "Specified name %s has already been bound" bound)))
+    (let ((map-var (intern map-variable-name))
+          (state-var (intern state-variable-name)))
+      (set map-var (symbol-value map-variable))
+      (set state-var (symbol-value state-variable))
+      (loophole-register map-var state-var tag))
+    (setq loophole--map-alist
+          (assq-delete-all state-variable loophole--map-alist))
+    (set map-variable nil)
+    (set state-variable nil)
+    (makunbound map-variable)
+    (makunbound state-variable)
+    (setplist map-variable nil)
+    (setplist state-variable nil)))
+
 (defun loophole-obtain-key-and-object ()
   "Return set of key and any Lisp object.
 Object is obtained as return value of `eval-minibuffer'."
@@ -721,6 +768,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] .") #'loophole-resume)
             (define-key map (kbd "C-c ] [") #'loophole-start-editing)
             (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
+            (define-key map (kbd "C-c ] n") #'loophole-name)
             (define-key map (kbd "C-c ] s") #'loophole-set-key)
             (define-key map (kbd "C-c ] u") #'loophole-unset-key)
             (define-key map (kbd "C-c ] e") #'loophole-enable-map)

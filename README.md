@@ -75,6 +75,14 @@ Third one is the keymap for manipulating loophole itself,
 named `loophole-mode-map` which holds some loophole commands.
 This is, as the name suggests, activated when `loophole-mode` is enabled.
 
+#### Naming loophole-map
+
+If you like some loophole-map, naming them may help.
+Loophole-maps are initially named as `loophole-n-map`.
+They can be renamed by `loophole-name`.
+Once loophole-map gets name other than `loophole-n-map`,
+it goes out of range of automatic keymap generation and never overwritten.
+
 #### Loophole mode
 
 `loophole-mode` is the minor mode for managing temporary key bindings.
