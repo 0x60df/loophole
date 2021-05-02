@@ -1,10 +1,10 @@
 ;;; loophole.el --- Manage temporary key bindings in Emacs
 
-;; Copyright (C) 2020 0x60DF
+;; Copyright (C) 2020, 2021 0x60DF
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.1.2
+;; Version: 0.2.0
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -49,6 +49,17 @@ active or not.  KEYMAP is a keymap object.")
   "When non-nil, Loophole binds keys in the existing keymap.
 Specifically, the first entry of `loophole-map-alist' is
 used for the binding.")
+
+(defvar loophole--suspended nil
+  "Non-nil if Loophole is suspended manually.
+Once Loophole is resumed, this comes back to nil.
+To see true state of suspension, use
+`loophole-suspending-p' instead of this variable.")
+
+(defvar loophole-base-map (make-sparse-keymap)
+  "Base keymap for all Loophole maps.
+This keymap will be inherited to all Loophole maps,
+except for the case user explicitly decline inheritance.")
 
 (defcustom loophole-temporary-map-max 8
   "Maximum number of temporary keymaps.
@@ -115,6 +126,11 @@ Each element should return a list looks like (key object)."
   :group 'loophole
   :type 'string)
 
+(defcustom loophole-mode-lighter-suspending-sign "-"
+  "Lighter suspending sign string for mode line."
+  :group 'loophole
+  :type 'string)
+
 (defun loophole-map-variable-list ()
   "Return list of all keymap variables for loophole.
 Elements are ordered according to `loophole-map-alist'."
@@ -150,6 +166,14 @@ Otherwise, \\[keyboard-quit] will be returned as it is read."
          (keyboard-quit))
     key))
 
+(defun loophole-suspending-p ()
+  "Non-nil during suspending Loophole.
+During suspension, `loophole-map-alist' is removed from
+`emulation-mode-map-alists'.
+Consequently, all loophole maps lose effect while its state
+is preserved."
+  (not (memq 'loophole-map-alist emulation-mode-map-alists)))
+
 (defun loophole-start-edit ()
   "Start keymap edit session."
   (interactive)
@@ -165,7 +189,6 @@ Otherwise, \\[keyboard-quit] will be returned as it is read."
   "Start defining keyboard macro.
 Definition can be finished by calling `loophole-end-kmacro'."
   (interactive)
-  (loophole-mode 1)
   (kmacro-start-macro nil)
   (let* ((complete (where-is-internal 'loophole-end-kmacro nil t))
          (abort (where-is-internal 'loophole-abort-kmacro nil t))
@@ -193,13 +216,18 @@ Definition can be finished by calling `loophole-end-kmacro'."
       (abort-recursive-edit))
   (keyboard-quit))
 
-(defun loophole-register (map-variable state-variable &optional tag)
+(defun loophole-register (map-variable state-variable &optional tag
+                                       without-base-map)
   "Register the set of MAP-VARIABLE and STATE-VARIABLE to loophole.
 Optional argument TAG is tag string which may be shown in
-mode line."
+mode line.
+Unless WITHOUT-BASE-MAP is non-nil, `loophole-base-map' is
+set as parent keymap for MAP-VARIABLE."
   (put map-variable :loophole-state-variable state-variable)
   (put state-variable :loophole-map-variable map-variable)
   (put map-variable :loophole-tag tag)
+  (unless without-base-map
+    (set-keymap-parent (symbol-value map-variable) loophole-base-map))
   (push `(,state-variable . ,(symbol-value map-variable)) loophole-map-alist))
 
 (defun loophole-registered-p (map-variable &optional state-variable)
@@ -309,8 +337,7 @@ generate new one and return it."
   "Enable the keymap stored in MAP-VARIABLE.
 
 In addition to setting t for the state of MAP-VARIABLE,
-this function prioritizes MAP-VARIABLE, and enables
-`loophole-mode'.
+this function prioritizes MAP-VARIABLE.
 If optional argument SET-STATE-ONLY is non-nil,
 this function does nothing except for setting state.
 
@@ -334,17 +361,14 @@ to SET-STATE-ONLY."
         (when state-variable
           (set state-variable t)
           (unless set-state-only
-            (loophole-prioritize map-variable)
-            (loophole-mode 1))))))
+            (loophole-prioritize map-variable))))))
 
 (defun loophole-disable-map (map-variable &optional set-state-only)
   "Disable the keymap stored in MAP-VARIABLE.
 
 In addition to setting nil for the state of MAP-VARIABLE,
 this function stops editing if MAP-VARIABLE is the first
-element of `loophole-map-alist',
-and disables `loophole-mode' if MAP-VARIABLE is the only
-one enabled keymap.
+element of `loophole-map-alist'.
 If optional argument SET-STATE-ONLY is non-nil,
 this function does nothing except for setting state.
 
@@ -370,9 +394,7 @@ to SET-STATE-ONLY."
           (unless set-state-only
             (if (eq (assq state-variable loophole-map-alist)
                     (car loophole-map-alist))
-                (loophole-stop-edit))
-            (unless (seq-find #'symbol-value (loophole-state-variable-list))
-              (loophole-mode -1)))))))
+                (loophole-stop-edit)))))))
 
 (defun loophole-disable-last-map ()
   "Disable the lastly enabled keymap.
@@ -516,9 +538,9 @@ and it is registered to loophole, KEYMAP is used instead.
 
 If optional argument DEFINE-KEY-ONLY is non-nil, this
 function only call `define-key', otherwise this function
-call some other functions as follows.  In any case,
-`loophole-start-edit', and turn on `loophole-mode'.
-If KEYMAP is non-nil `loophole-prioritize'."
+call some other functions as follows.
+In any case, `loophole-start-edit';
+if KEYMAP is non-nil, `loophole-prioritize'."
   (interactive (loophole-obtain-key-and-object))
   (if keymap
       (let* ((state-variable (car (rassq keymap loophole-map-alist)))
@@ -533,8 +555,7 @@ If KEYMAP is non-nil `loophole-prioritize'."
             (loophole-prioritize map-variable))))
     (define-key (loophole-ready-map) key entry))
   (unless define-key-only
-    (loophole-start-edit)
-    (loophole-mode 1)))
+    (loophole-start-edit)))
 
 ;;;###autoload
 (defun loophole-bind-command (key command &optional keymap define-key-only)
@@ -639,12 +660,32 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
   (if loophole-map-editing
       (define-key (cdar loophole-map-alist) key nil)))
 
+(defun loophole-suspend ()
+  "Suspend Loophole.
+To suspend Loophole, this function delete
+`loophole-map-alist' from `emulation-mode-map-alists'."
+  (interactive)
+  (setq emulation-mode-map-alists
+        (delq 'loophole-map-alist emulation-mode-map-alists))
+  (setq loophole--suspended t))
+
+(defun loophole-resume ()
+  "Resume Loophole.
+To resume Loophole, this functions push
+`loophole-map-alist' to `emulation-mode-map-alists'
+unless `loophole-map-alist' is a member of
+`emulation-mode-map-alists'."
+  (interactive)
+  (unless (memq 'loophole-map-alist emulation-mode-map-alists)
+    (push 'loophole-map-alist emulation-mode-map-alists))
+  (setq loophole--suspended nil))
+
 (defun loophole-quit ()
   "Quit loophole completely.
 Disable the all keymaps, and turn off `loophole-mode'."
   (interactive)
   (loophole-disable-all-maps)
-  (loophole-mode -1))
+  (loophole-mode 0))
 
 ;;;###autoload
 (define-minor-mode loophole-mode
@@ -673,29 +714,36 @@ temporary key bindings management command.
                          ""
                        (format ":%d" n)))))
   :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "C-c \\") #'loophole-mode)
-            (define-key map (kbd "C-c ,") #'loophole-disable-last-map)
-            (define-key map (kbd "C-c .") #'loophole-quit)
-            (define-key map (kbd "C-c /") #'loophole-stop-edit)
-            (define-key map (kbd "C-c ?") #'loophole-start-edit)
             (define-key map (kbd "C-c [") #'loophole-set-key)
-            (define-key map (kbd "C-c ]") #'loophole-unset-key)
-            (define-key map (kbd "C-c +") #'loophole-enable-map)
-            (define-key map (kbd "C-c -") #'loophole-disable-map)
-            (define-key map (kbd "C-c _") #'loophole-disable-all-maps)
-            (define-key map (kbd "C-c (") #'loophole-start-kmacro)
-            (define-key map (kbd "C-c )") #'loophole-end-kmacro)
-            (define-key map (kbd "C-c !") #'loophole-abort-kmacro)
-            (define-key map (kbd "C-c =") #'loophole-bind-last-kmacro)
-            (define-key map (kbd "C-c @") #'loophole-bind-entry)
-            (define-key map (kbd "C-c #") #'loophole-bind-command)
-            (define-key map (kbd "C-c $") #'loophole-bind-kmacro)
+            (define-key map (kbd "C-c \\") #'loophole-disable-last-map)
+            (define-key map (kbd "C-c ] q") #'loophole-quit)
+            (define-key map (kbd "C-c ] ,") #'loophole-suspend)
+            (define-key map (kbd "C-c ] .") #'loophole-resume)
+            (define-key map (kbd "C-c ] [") #'loophole-start-edit)
+            (define-key map (kbd "C-c ] ]") #'loophole-stop-edit)
+            (define-key map (kbd "C-c ] s") #'loophole-set-key)
+            (define-key map (kbd "C-c ] u") #'loophole-unset-key)
+            (define-key map (kbd "C-c ] e") #'loophole-enable-map)
+            (define-key map (kbd "C-c ] d") #'loophole-disable-map)
+            (define-key map (kbd "C-c ] D") #'loophole-disable-all-maps)
+            (define-key map (kbd "C-c ] \\") #'loophole-disable-last-map)
+            (define-key map (kbd "C-c ] (") #'loophole-start-kmacro)
+            (define-key map (kbd "C-c ] )") #'loophole-end-kmacro)
+            (define-key map (kbd "C-c ] k s") #'loophole-start-kmacro)
+            (define-key map (kbd "C-c ] k e") #'loophole-end-kmacro)
+            (define-key map (kbd "C-c ] k a") #'loophole-abort-kmacro)
+            (define-key map (kbd "C-c ] k b") #'loophole-bind-last-kmacro)
+            (define-key map (kbd "C-c ] b e") #'loophole-bind-entry)
+            (define-key map (kbd "C-c ] b c") #'loophole-bind-command)
+            (define-key map (kbd "C-c ] b k") #'loophole-bind-kmacro)
+            (define-key map (kbd "C-c ] b K") #'loophole-bind-last-kmacro)
             map)
-  (setq emulation-mode-map-alists
-        (delq 'loophole-map-alist emulation-mode-map-alists))
   (if loophole-mode
-      (push 'loophole-map-alist emulation-mode-map-alists)
-    (loophole-stop-edit)))
+      (unless loophole--suspended
+        (loophole-resume))
+    (let ((flag loophole--suspended))
+      (loophole-suspend)
+      (setq loophole--suspended flag))))
 
 (defun loophole-mode-set-lighter-format (style &optional format)
   "Set lighter format for loophole mode.
@@ -716,6 +764,8 @@ If STYLE is other than above, lighter is omitted."
                ((eq style 'number)
                 '(""
                   loophole-mode-lighter-base
+                  (:eval (if (loophole-suspending-p)
+                           loophole-mode-lighter-suspending-sign))
                   (loophole-map-editing loophole-mode-lighter-editing-sign)
                   (:eval (let ((n (length
                                    (delq nil
@@ -728,6 +778,8 @@ If STYLE is other than above, lighter is omitted."
                ((eq style 'tag)
                 '(""
                   loophole-mode-lighter-base
+                  (:eval (if (loophole-suspending-p)
+                           loophole-mode-lighter-suspending-sign))
                   (loophole-map-editing
                    (""
                     loophole-mode-lighter-editing-sign
@@ -749,6 +801,8 @@ If STYLE is other than above, lighter is omitted."
                ((eq style 'simple)
                 '(""
                   loophole-mode-lighter-base
+                  (:eval (if (loophole-suspending-p)
+                           loophole-mode-lighter-suspending-sign))
                   (loophole-map-editing loophole-mode-lighter-editing-sign)))
                ((eq style 'static) loophole-mode-lighter-base)
                ((eq style 'custom) format)

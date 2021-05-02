@@ -11,6 +11,7 @@ and add the following line to you init file like `.emacs`.
 
 ``` emacs-lisp
 (require 'loophole)
+(loophole-mode)
 ```
 
 ## Usage
@@ -18,11 +19,6 @@ and add the following line to you init file like `.emacs`.
 ### Basics
 
 Call `loophole-set-key` to set the temporary key bindings.
-To bind this command in `global-map` may help you.
-
-``` emacs-lisp
-(global-set-key (kbd "C-c [") 'loophole-set-key)
-```
 
 The key binding is set in the disposable keymap generated automatically.
 Once keymap is generated, `loophole-set-key` edit it for a while,
@@ -52,14 +48,14 @@ which save your left little finger.
 * `C-c [` `V` `scroll-down-command`
 
 When you are finished reading the buffer,
-type `C-c ,` (`loophole-disable-last-map`) to abandon the key bindings above.
+type `C-c \` (`loophole-disable-last-map`) to abandon the key bindings above.
 Then, your keymap environment stays clean.
 
 ### Details
 
 #### Keymap cascade
 
-Loophole uses two layers of keymaps.
+Loophole uses three layers of keymaps.
 
 First one is keymaps for temporary key bindings.
 I call them as "loophole-map".
@@ -67,27 +63,36 @@ They are mainly generated automatically,
 and listed in `loophole-map-alist`.
 They take effect by adding `loophole-map-alist` to `emulation-mode-map-alists`.
 
-Second one is the keymap for manipulating loophole itself,
+Second one is `loophole-base-map` which will be inherited to most of
+loophole-map.
+This keymap offers the place for binding which can be used commonly when
+any of loophole-map is activated.
+For example, binding `C-q` to `loophole-disable-last-map` reduces the number
+of typing, and `C-q` recovers the original binding `quoted-insert` immediately
+after all loophole-map are disabled.
+
+Third one is the keymap for manipulating loophole itself,
 named `loophole-mode-map` which holds some loophole commands.
 This is, as the name suggests, activated when `loophole-mode` is enabled.
 
 #### Loophole mode
 
-`loophole-mode` is the minor mode for activating temporary key bindings.
+`loophole-mode` is the minor mode for managing temporary key bindings.
 
-Specifically, when `loophole-mode` is enabled,
-`loophole-map-alist` is added to the head of `emulation-mode-map-alists`.
-If enabling is forced while `loophole-mode` is on by like `(loophole-mode 1)`,
-another `loophole-map-alist` is added
-to the head of `emulation-mode-map-alists`,
-i.e. `loophole-map-alist` gets first priority in `emulation-mode-map-alists`.
-When `loophole-mode` is disabled,
-all `loophole-map-alist` is deleted from `emulation-mode-map-alists`.
+When `loophole-mode` is enabled,
+`loophole-map-alist` is added to the head of `emulation-mode-map-alists`,
+and thus temporary key bindings are activated.
+Furthermore, you can use `loophole-mode-map` for binding loophole commands.
 
-Note that disabling `loophole-mode` just delete `loophole-map-alist` from
-`emulation-mode-map-alists`, and keep each loophole-map activation state.
-Therefore, disabling `loophole-mode` suspend use of loophole-maps and
-re-enabling `loophole-mode` resume them.
+Even while `loophole-mode` is activated, whole temporary key bindings can be
+disabled temporarily by calling `loophole-suspend`,
+which keeps state of each loophole-map.
+`loophole-resume` restores suspended temporary key bindings.
+These functions realize suspension by removing and adding `loophole-map-alist`
+in `emulation-mode-map-alists`.
+
+Note that disabling `loophole-mode` also calls `loophole-suspend` and keeps
+state of each loophole-map.
 If you want to completely disable loophole, use `loophole-quit`.
 It disables all loophole-maps and `loophole-mode`.
 
@@ -254,6 +259,7 @@ overwrite it like the following lines.
 
 Loophole shows its status on mode-line dynamically.
 By default, it shows `loophole-mode-lighter-base`,
+`loophole-mode-lighter-suspending-sign` when suspending loophole,
 `loophole-mode-lighter-editing-sign` when editing loophole-map,
 and the number of enabled loophole-maps.
 
