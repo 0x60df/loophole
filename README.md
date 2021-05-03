@@ -23,11 +23,10 @@ Call `loophole-set-key` to set the temporary key bindings.
 The key binding is set in the disposable keymap generated automatically.
 Once keymap is generated, `loophole-set-key` edit it for a while,
 i.e. bindings will be set in it.
-Some actions or explicit call for `loophole-stop-edit` stop editing,
-then next `loophole-set-key` generates another keymap.
-You can see editing status on the mode-line.
-If `loophole-mode-lighter-editing-sign` (is "+" by default)
-is shown in mode-line, the latest keymap is been edited.
+`loophole-stop-editing` stops editing, and then next `loophole-set-key`
+generates another keymap.
+You can see editing status on the mode-line as
+`loophole-mode-lighter-editing-sign` (is "+" by default).
 
 If you done your operation with temporary key bindings,
 call `loophole-disable-last-map` to abandon that one.
@@ -173,6 +172,15 @@ and can abort by the key sequence bound to `keyboard-quit`.
 `competing-read` the `kmacro-ring`.
 Therefore, the keyboard macro which defined in outside of loophole
 also can be bound.
+
+#### Editing keymap
+
+Old keymap can be edit afterwards by calling `loophole-edit`.
+When you want to see which keymap you are editing,
+try `(loophole-mode-set-lighter-format 'tag)` in your init file.
+This setting show tag string of editing keymap
+after `loophole-mode-lighter-editing-sign`.
+Details of mode line format is described below.
 
 #### Alternative binding commands
 
