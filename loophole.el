@@ -382,9 +382,10 @@ MAP-NAME.  If prefix-argument is non-nil, TAG is also asked."
           (state-var (intern state-variable-name)))
       (set map-var (symbol-value map-variable))
       (set state-var (symbol-value state-variable))
-      (loophole-register map-var state-var tag))
-    (setq loophole--map-alist
-          (assq-delete-all state-variable loophole--map-alist))
+      (put map-var :loophole-state-variable state-var)
+      (put state-var :loophole-map-variable map-var)
+      (put map-var :loophole-tag tag)
+      (setcar (assq state-variable loophole--map-alist) state-var))
     (set map-variable nil)
     (set state-variable nil)
     (makunbound map-variable)
