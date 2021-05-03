@@ -243,7 +243,7 @@ Entire customization codes may look like below.
 
 `loophole-bind-command` and `loophole-bind-kmacro` accept
 more complex specifying method,
-whose return value can contain two more additional element.
+whose return value can contain one more additional element.
 They are assigned to the arguments of
 `loophole-bind-command` and `loophole-bind-kmacro`.
 See documentation string of these functions for more details.

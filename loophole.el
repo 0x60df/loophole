@@ -246,6 +246,11 @@ registered, and they are associated."
 This is done by move the entry in `loophole--map-alist' to
 the front.  If precedence is changed, quit current editing
 session."
+  (interactive
+   (let ((map-variable-list (loophole-map-variable-list)))
+     (list (cond (map-variable-list
+                  (intern (completing-read "Name keymap: " map-variable-list)))
+                 (t (user-error "There are no loophole maps"))))))
   (let ((state-variable (get map-variable :loophole-state-variable)))
     (when state-variable
       (unless (eq (assq state-variable loophole--map-alist)
@@ -333,16 +338,8 @@ generate new one and return it."
              (set state-variable t)
              (symbol-value map-variable)))))
 
-(defun loophole-enable-map (map-variable &optional set-state-only)
-  "Enable the keymap stored in MAP-VARIABLE.
-
-In addition to setting t for the state of MAP-VARIABLE,
-this function prioritizes MAP-VARIABLE.
-If optional argument SET-STATE-ONLY is non-nil,
-this function does nothing except for setting state.
-
-When interactive call, prefix argument is directly assigned
-to SET-STATE-ONLY."
+(defun loophole-enable-map (map-variable)
+  "Enable the keymap stored in MAP-VARIABLE."
   (interactive
    (let ((disabled-map-variable-list
           (seq-filter (lambda (map-variable)
@@ -354,26 +351,14 @@ to SET-STATE-ONLY."
              (intern (completing-read "Enable keymap temporarily: "
                                       disabled-map-variable-list)))
             (t (message "There are no disabled loophole maps.")
-               nil))
-      current-prefix-arg)))
+               nil)))))
   (if map-variable
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (when state-variable
-          (set state-variable t)
-          (unless set-state-only
-            (loophole-prioritize map-variable))))))
+          (set state-variable t)))))
 
-(defun loophole-disable-map (map-variable &optional set-state-only)
-  "Disable the keymap stored in MAP-VARIABLE.
-
-In addition to setting nil for the state of MAP-VARIABLE,
-this function stops editing if MAP-VARIABLE is the first
-element of `loophole--map-alist'.
-If optional argument SET-STATE-ONLY is non-nil,
-this function does nothing except for setting state.
-
-When interactive call, prefix argument is directly assigned
-to SET-STATE-ONLY."
+(defun loophole-disable-map (map-variable)
+  "Disable the keymap stored in MAP-VARIABLE."
   (interactive
    (let ((enabled-map-variable-list
           (seq-filter (lambda (map-variable)
@@ -385,21 +370,14 @@ to SET-STATE-ONLY."
              (intern (completing-read "Disable keymap temporarily: "
                                       enabled-map-variable-list)))
             (t (message "There are no enabled loophole maps.")
-               nil))
-      current-prefix-arg)))
+               nil)))))
   (if map-variable
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (when state-variable
-          (set state-variable nil)
-          (unless set-state-only
-            (if (eq (assq state-variable loophole--map-alist)
-                    (car loophole--map-alist))
-                (loophole-stop-editing)))))))
+          (set state-variable nil)))))
 
 (defun loophole-disable-last-map ()
-  "Disable the lastly enabled keymap.
-Stopping edit and disabling `loophole-mode' may occur
-according to the same rule as `loophole-disable-map'."
+  "Disable the lastly enabled keymap."
   (interactive)
   (let* ((state-variable
           (seq-find #'symbol-value (loophole-state-variable-list)))
@@ -407,14 +385,11 @@ according to the same rule as `loophole-disable-map'."
     (if map-variable (loophole-disable-map map-variable))))
 
 (defun loophole-disable-all-maps ()
-  "Disable the all keymaps.
-This function also stops editing but keeps `loophole-mode'
-enabled."
+  "Disable the all keymaps."
   (interactive)
   (mapc (lambda (map-variable)
-          (loophole-disable-map map-variable 'set-state-only))
-        (loophole-map-variable-list))
-  (loophole-stop-editing))
+          (loophole-disable-map map-variable))
+        (loophole-map-variable-list)))
 
 (defun loophole-name (map-variable map-name &optional tag)
   "Name Loophole map MAP-VARIABLE as MAP-NAME.
@@ -584,7 +559,7 @@ Likewise, rank n means C-u * n or C-n."
         (t 0)))
 
 ;;;###autoload
-(defun loophole-bind-entry (key entry &optional keymap define-key-only)
+(defun loophole-bind-entry (key entry &optional keymap)
   "Bind KEY to ENTRY temporarily.
 Any Lisp object is acceptable for ENTRY, but only few types
 make sense.  Meaningful types of ENTRY is completely same as
@@ -592,37 +567,29 @@ general keymap entry.
 
 By default, KEY is bound in the currently editing keymap or
 generated new one.  If optional argument KEYMAP is non-nil,
-and it is registered to loophole, KEYMAP is used instead.
-
-If optional argument DEFINE-KEY-ONLY is non-nil, this
-function only call `define-key', otherwise this function
-call some other functions as follows.
-In any case, `loophole-start-editing';
-if KEYMAP is non-nil, `loophole-prioritize'."
+and it is registered to loophole, KEYMAP is used instead."
   (interactive (loophole-obtain-key-and-object))
-  (if keymap
-      (let* ((state-variable (car (rassq keymap loophole--map-alist)))
-             (map-variable (get state-variable :loophole-map-variable)))
-        (if (not (and keymap
-                      map-variable
-                      (loophole-registered-p map-variable)
-                      (eq (symbol-value map-variable) keymap)))
-            (error "Invalid keymap: %s" keymap)
-          (define-key keymap key entry)
-          (unless define-key-only
-            (loophole-prioritize map-variable))))
-    (define-key (loophole-ready-map) key entry))
-  (unless define-key-only
-    (loophole-start-editing)))
+  (define-key
+    (if keymap
+        (let* ((state-variable (car (rassq keymap loophole--map-alist)))
+               (map-variable (get state-variable :loophole-map-variable)))
+          (if (and keymap
+                   map-variable
+                   (loophole-registered-p map-variable)
+                   (eq (symbol-value map-variable) keymap))
+              keymap
+            (error "Invalid keymap: %s" keymap)))
+      (loophole-ready-map))
+    key
+    entry))
 
 ;;;###autoload
-(defun loophole-bind-command (key command &optional keymap define-key-only)
+(defun loophole-bind-command (key command &optional keymap)
   "Bind KEY to COMMAND temporarily.
 This function finally calls `loophole-bind-entry', so that
-The keymap used for binding and the meaning of optional
-arguments KEYMAP, and DEFINE-KEY-ONLY are same as
-`loophole-bind-entry'.See docstring of `loophole-bind-entry'
-for more details.
+the keymap used for binding and the meaning of optional
+arguments KEYMAP are same as `loophole-bind-entry'.
+See docstring of `loophole-bind-entry'for more details.
 
 When called interactively, this function determines
 obtaining method for KEY and COMMAND according to
@@ -640,17 +607,16 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
          (user-error "Undefined prefix argument"))
      (funcall obtaining-method)))
   (if (commandp command)
-      (loophole-bind-entry key command keymap define-key-only)
+      (loophole-bind-entry key command keymap)
     (error "Invalid command: %s" command)))
 
 ;;;###autoload
-(defun loophole-bind-kmacro (key kmacro &optional keymap define-key-only)
+(defun loophole-bind-kmacro (key kmacro &optional keymap)
   "Bind KEY to KMACRO temporarily.
 This function finally calls `loophole-bind-entry', so that
 the keymap used for binding and the meaning of optional
-arguments KEYMAP, and DEFINE-KEY-ONLY are same as
-`loophole-bind-entry'.See docstring of `loophole-bind-entry'
-for more details.
+arguments KEYMAP are same as `loophole-bind-entry'.
+See docstring of `loophole-bind-entry' for more details.
 
 When called interactively, this function determines
 obtaining method for KEY and KMACRO according to
@@ -670,7 +636,7 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
   (if (or (vectorp kmacro)
           (stringp kmacro)
           (kmacro-p kmacro))
-      (loophole-bind-entry key kmacro keymap define-key-only)
+      (loophole-bind-entry key kmacro keymap)
     (error "Invalid kmacro: %s" kmacro)))
 
 ;;;###autoload
@@ -777,6 +743,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] q") #'loophole-quit)
             (define-key map (kbd "C-c ] ,") #'loophole-suspend)
             (define-key map (kbd "C-c ] .") #'loophole-resume)
+            (define-key map (kbd "C-c ] ^") #'loophole-prioritize)
             (define-key map (kbd "C-c ] [") #'loophole-start-editing)
             (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
             (define-key map (kbd "C-c ] n") #'loophole-name)
