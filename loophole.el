@@ -856,6 +856,56 @@ Remove advices added by `loophole-turn-on-auto-prioritize'."
                                    (intern
                                     (format "loophole-%s-map" map-name))))))
 
+(defun loophole-turn-on-auto-stop-editing ()
+  "Turn on auto stop-editing.
+Add advices to call `loophole-stop-editing' for
+`loophole-prioritize', `loophole-enable-map',
+`loophole-disable-map', `loophole-disable-all-maps' and
+`loophole-name'.
+ `loophole-disable-latest-map' is also affected by the
+advice for `loophole-disable-map'."
+  (advice-add 'loophole-prioritize
+              :after (lambda (map-variable)
+                       (unless (eq map-variable loophole--editing-map-variable)
+                         (loophole-stop-editing))))
+  (advice-add 'loophole-enable-map
+              :after (lambda (map-variable)
+                       (unless (eq map-variable loophole--editing-map-variable)
+                         (loophole-stop-editing))))
+  (advice-add 'loophole-disable-map
+              :after (lambda (map-variable)
+                       (if (eq map-variable loophole--editing-map-variable)
+                           (loophole-stop-editing))))
+  (advice-add 'loophole-disable-all-maps :after #'loophole-stop-editing)
+  (advice-add 'loophole-name
+              :after (lambda (map-variable map-name tag)
+                       (let ((map-var (intern
+                                       (format "loophole-%s-map" map-name))))
+                         (unless (eq map-var loophole--editing-map-variable)
+                           (loophole-stop-editing))))))
+
+(defun loophole-turn-off-auto-stop-editing ()
+  "Turn off auto stop-editing.
+Remove advices added by `loophole-turn-on-auto-stop-editing'."
+  (advice-remove 'loophole-prioritize
+                 (lambda (map-variable)
+                   (unless (eq map-variable loophole--editing-map-variable)
+                     (loophole-stop-editing))))
+  (advice-remove 'loophole-enable-map
+                 (lambda (map-variable)
+                   (unless (eq map-variable loophole--editing-map-variable)
+                     (loophole-stop-editing))))
+  (advice-remove 'loophole-disable-map
+                 (lambda (map-variable)
+                   (if (eq map-variable loophole--editing-map-variable)
+                       (loophole-stop-editing))))
+  (advice-remove 'loophole-disable-all-maps  #'loophole-stop-editing)
+  (advice-remove 'loophole-name
+                 (lambda (map-variable map-name tag)
+                   (let ((map-var (intern (format "loophole-%s-map" map-name))))
+                     (unless (eq map-var loophole--editing-map-variable)
+                       (loophole-stop-editing))))))
+
 (provide 'loophole)
 
 ;;; loophole.el ends here
