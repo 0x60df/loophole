@@ -33,6 +33,7 @@
 
 (require 'seq)
 (require 'kmacro)
+(require 'nadvice)
 
 (defgroup loophole nil
   "Manage temporary key bindings."
@@ -825,6 +826,33 @@ If STYLE is other than above, lighter is omitted."
                (t "")))
         (cell (assq 'loophole-mode minor-mode-alist)))
     (if cell (setcdr cell (list form)))))
+
+(defun loophole-turn-on-auto-prioritize ()
+  "Turn on auto prioritize.
+Add advices to call `loophole-prioritize' for
+`loophole-enable-map', `loophole-name' and
+`loophole-start-editing'."
+  (advice-add 'loophole-enable-map
+              :after (lambda (map-variable) (loophole-prioritize map-variable)))
+  (advice-add 'loophole-start-editing
+              :after (lambda (map-variable) (loophole-prioritize map-variable)))
+  (advice-add 'loophole-name
+              :after (lambda (map-variable map-name tag)
+                       (loophole-prioritize
+                        (intern
+                         (format "loophole-%s-map" map-name))))))
+
+(defun loophole-turn-off-auto-prioritize ()
+  "Turn off auto prioritize.
+Remove advices added by `loophole-turn-on-auto-prioritize'."
+  (advice-remove 'loophole-enable-map
+                 (lambda (map-variable) (loophole-prioritize map-variable)))
+  (advice-remove 'loophole-start-editing
+                 (lambda (map-variable) (loophole-prioritize map-variable)))
+  (advice-remove 'loophole-name (lambda (map-variable map-name tag)
+                                  (loophole-prioritize
+                                   (intern
+                                    (format "loophole-%s-map" map-name))))))
 
 (provide 'loophole)
 
