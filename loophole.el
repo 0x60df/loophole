@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.2.2
+;; Version: 0.2.3
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -933,6 +933,15 @@ Remove advices added by `loophole-turn-on-auto-resume'."
   (advice-remove 'loophole-name (lambda (&rest _) (loophole-resume)))
   (advice-remove 'loophole-start-editing (lambda (&rest _) (loophole-resume)))
   (advice-remove 'loophole-bind-entry (lambda (&rest _) (loophole-resume))))
+
+(defalias 'loophole-dig 'loophole-set-key)
+(defalias 'loophole-bury 'loophole-unset-key)
+(defalias 'loophole-cover 'loophole-disable)
+(defalias 'loophole-cover-latest 'loophole-disable-latest)
+(defalias 'loophole-cover-all 'loophole-disable-all)
+(defalias 'loophole-reveal 'loophole-enable)
+(defalias 'loophole-edit 'loophole-start-editing)
+(defalias 'loophole-break 'loophole-stop-editing)
 
 (provide 'loophole)
 
