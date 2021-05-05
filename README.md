@@ -7,11 +7,19 @@ which are automatically generated for temporary use.
 ## Installation
 
 Download and save loophole.el to your `load-path`,
-and add the following line to you init file like `.emacs`.
+and add the following lines to you init file like `.emacs`.
 
 ``` emacs-lisp
 (require 'loophole)
 (loophole-mode)
+```
+
+The following settings in init file may be useful.
+
+``` emacs-lisp
+(loophole-turn-on-auto-prioritize)
+(loophole-turn-on-auto-stop-editing)
+(loophole-turn-on-auto-resume)
 ```
 
 ## Usage

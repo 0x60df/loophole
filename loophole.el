@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.2.1
+;; Version: 0.2.2
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -905,6 +905,34 @@ Remove advices added by `loophole-turn-on-auto-stop-editing'."
                    (let ((map-var (intern (format "loophole-%s-map" map-name))))
                      (unless (eq map-var loophole--editing-map-variable)
                        (loophole-stop-editing))))))
+
+(defun loophole-turn-on-auto-resume ()
+  "Turn on auto resume .
+Add advices to call `loophole-resume' for
+`loophole-prioritize', `loophole-enable-map',
+`loophole-name', `loophole-start-editing' and
+`loophole-bind-entry'.
+Binding commands including `loophole-set-key' also affected
+by the advice of `loophole-bind-entry'."
+  (advice-add 'loophole-prioritize
+              :after (lambda (&rest _) (loophole-resume)))
+  (advice-add 'loophole-enable-map
+              :after (lambda (&rest _) (loophole-resume)))
+  (advice-add 'loophole-name
+              :after (lambda (&rest _) (loophole-resume)))
+  (advice-add 'loophole-start-editing
+              :after (lambda (&rest _) (loophole-resume)))
+  (advice-add 'loophole-bind-entry
+              :after (lambda (&rest _) (loophole-resume))))
+
+(defun loophole-turn-off-auto-resume ()
+  "Turn off auto prioritize.
+Remove advices added by `loophole-turn-on-auto-resume'."
+  (advice-remove 'loophole-prioritize (lambda (&rest _) (loophole-resume)))
+  (advice-remove 'loophole-enable-map (lambda (&rest _) (loophole-resume)))
+  (advice-remove 'loophole-name (lambda (&rest _) (loophole-resume)))
+  (advice-remove 'loophole-start-editing (lambda (&rest _) (loophole-resume)))
+  (advice-remove 'loophole-bind-entry (lambda (&rest _) (loophole-resume))))
 
 (provide 'loophole)
 
