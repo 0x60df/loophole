@@ -1,10 +1,10 @@
-;;; loophole.el --- Manage temporary key bindings in Emacs
+;;; loophole.el --- Manage temporary key bindings in Emacs -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2020, 2021 0x60DF
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.3.0
+;; Version: 0.3.1
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -935,7 +935,7 @@ Add advices to call `loophole-prioritize' for
   (advice-add 'loophole-start-editing
               :after (lambda (map-variable) (loophole-prioritize map-variable)))
   (advice-add 'loophole-name
-              :after (lambda (map-variable map-name tag)
+              :after (lambda (_map-variable map-name _tag)
                        (loophole-prioritize
                         (intern
                          (format "loophole-%s-map" map-name))))))
@@ -947,7 +947,7 @@ Remove advices added by `loophole-turn-on-auto-prioritize'."
                  (lambda (map-variable) (loophole-prioritize map-variable)))
   (advice-remove 'loophole-start-editing
                  (lambda (map-variable) (loophole-prioritize map-variable)))
-  (advice-remove 'loophole-name (lambda (map-variable map-name tag)
+  (advice-remove 'loophole-name (lambda (_map-variable map-name _tag)
                                   (loophole-prioritize
                                    (intern
                                     (format "loophole-%s-map" map-name))))))
@@ -974,7 +974,7 @@ advice for `loophole-disable'."
                            (loophole-stop-editing))))
   (advice-add 'loophole-disable-all :after #'loophole-stop-editing)
   (advice-add 'loophole-name
-              :after (lambda (map-variable map-name tag)
+              :after (lambda (_map-variable map-name _tag)
                        (let ((map-var (intern
                                        (format "loophole-%s-map" map-name))))
                          (unless (eq map-var loophole--editing-map-variable)
@@ -997,7 +997,7 @@ Remove advices added by `loophole-turn-on-auto-stop-editing'."
                        (loophole-stop-editing))))
   (advice-remove 'loophole-disable-all  #'loophole-stop-editing)
   (advice-remove 'loophole-name
-                 (lambda (map-variable map-name tag)
+                 (lambda (_map-variable map-name _tag)
                    (let ((map-var (intern (format "loophole-%s-map" map-name))))
                      (unless (eq map-var loophole--editing-map-variable)
                        (loophole-stop-editing))))))
