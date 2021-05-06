@@ -82,6 +82,13 @@ Third one is the keymap for manipulating loophole itself,
 named `loophole-mode-map` which holds some loophole commands.
 This is, as the name suggests, activated when `loophole-mode` is enabled.
 
+#### Buffer local behavior
+
+All loophole-maps are shared globally but their activating states are buffer
+local.
+Order of loophole-maps and editing state are also buffer local.
+You can control these conditions for each buffer.
+
 #### Naming loophole-map
 
 If you like some loophole-map, naming them may help.

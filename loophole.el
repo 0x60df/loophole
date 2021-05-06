@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.2.3
+;; Version: 0.3.0
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -39,14 +39,24 @@
   "Manage temporary key bindings."
   :group 'convenience)
 
-(defvar loophole--map-alist nil
+(defvar-local loophole--map-alist nil
   "Alist of keymaps for loophole.
 Syntax is same as `minor-mode-map-alist', i.e. each element
 looks like (STATE-VARIABLE . KEYMAP).  STATE-VARIABLE is a
 symbol whose boolean value represents if the KEYMAP is
 active or not.  KEYMAP is a keymap object.")
 
-(defvar loophole--editing-map-variable nil
+(defvar loophole--state-alist nil
+  "Alist of states for loophole.
+Each element looks like (MAP-VARIABLE . (BUFFERS...)).
+MAP-VARIABLE is a symbol which holds keymap.
+BUFFERS is a list of buffers on which the state of
+MAP-VARIABLE is active.")
+
+(defvar loophole--buffer-list nil
+  "List of buffers which have local loophole map.")
+
+(defvar-local loophole--editing-map-variable nil
   "Variable of keymap which is currently being edited.
 Loophole binds keys in this keymap.  When this value is nil,
 Loophole may generate new keymap and bind keys in it.")
@@ -175,6 +185,18 @@ Consequently, all loophole maps lose effect while its state
 is preserved."
   (not (memq 'loophole--map-alist emulation-mode-map-alists)))
 
+(defun loophole--follow-buffer-local-condition ()
+  "Update variables for buffer local information.
+This function is intended to be added to
+`change-major-mode-hook' and `kill-buffer-hook'.
+`loophole--state-alist' and `loophole--buffer-list' will be
+modified."
+  (when (memq (current-buffer) loophole--buffer-list)
+    (mapc (lambda (cell)
+            (setcdr cell (delq (current-buffer) (cdr cell))))
+          loophole--state-alist)
+    (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))))
+
 (defun loophole-register (map-variable state-variable &optional tag
                                        without-base-map)
   "Register the set of MAP-VARIABLE and STATE-VARIABLE to loophole.
@@ -185,9 +207,19 @@ set as parent keymap for MAP-VARIABLE."
   (put map-variable :loophole-state-variable state-variable)
   (put state-variable :loophole-map-variable map-variable)
   (put map-variable :loophole-tag tag)
+  (unless (local-variable-if-set-p state-variable)
+    (make-variable-buffer-local state-variable))
   (unless without-base-map
     (set-keymap-parent (symbol-value map-variable) loophole-base-map))
-  (push `(,state-variable . ,(symbol-value map-variable)) loophole--map-alist))
+  (setq-default loophole--map-alist
+                (cons `(,state-variable . ,(symbol-value map-variable))
+                      (default-value 'loophole--map-alist)))
+  (mapc (lambda (buffer)
+          (with-current-buffer buffer
+                  (push `(,state-variable . ,(symbol-value map-variable))
+                        loophole--map-alist)))
+        loophole--buffer-list)
+  (push `(,map-variable . ()) loophole--state-alist))
 
 (defun loophole-registered-p (map-variable &optional state-variable)
   "Return non-nil if MAP-VARIABLE is registered to loophole.
@@ -198,7 +230,8 @@ registered, and they are associated."
            (eq state-variable (get map-variable :loophole-state-variable))
          (setq state-variable (get map-variable :loophole-state-variable)))
        (eq map-variable (get state-variable :loophole-map-variable))
-       (assq state-variable loophole--map-alist)))
+       (assq state-variable (default-value 'loophole--map-alist))
+       (assq map-variable loophole--state-alist)))
 
 (defun loophole-prioritize (map-variable)
   "Give first priority to MAP-VARIABLE.
@@ -213,10 +246,24 @@ the front."
     (when state-variable
       (unless (eq (assq state-variable loophole--map-alist)
                   (car loophole--map-alist))
+        (unless (local-variable-p 'loophole--map-alist)
+          (add-to-list 'loophole--buffer-list (current-buffer) nil #'eq)
+          (add-hook 'change-major-mode-hook
+                    #'loophole--follow-buffer-local-condition nil t)
+          (add-hook 'kill-buffer-hook
+                    #'loophole--follow-buffer-local-condition nil t))
         (setq loophole--map-alist
-              (assq-delete-all state-variable loophole--map-alist))
+              (seq-filter (lambda (cell)
+                            (not (eq (car cell) state-variable)))
+                          loophole--map-alist))
         (push `(,state-variable . ,(symbol-value map-variable))
-              loophole--map-alist)))))
+              loophole--map-alist)
+        (setq-default
+         loophole--map-alist
+         (cons `(,state-variable . ,(symbol-value map-variable))
+               (seq-filter (lambda (cell)
+                             (not (eq (car cell) state-variable)))
+                           (default-value 'loophole--map-alist))))))))
 
 (defun loophole-generate ()
   "Return Loophole map variable which holds newly generated keymap.
@@ -230,7 +277,9 @@ This function also binds state variable for map variable.
 State variable is named as map-variable-state."
   (let* ((map-variable
           (let ((reversal-map-variable-list
-                 (reverse (loophole-map-variable-list))))
+                 (reverse (mapcar (lambda (e)
+                                    (get (car e) :loophole-map-variable))
+                                  (default-value 'loophole--map-alist)))))
             (letrec ((find-nonbound-temporary-map-variable
                       (lambda (i)
                         (let ((s (intern (format "loophole-%d-map" i))))
@@ -242,9 +291,8 @@ State variable is named as map-variable-state."
                      (find-earliest-used-disabled-temporary-map-variable
                       (lambda ()
                         (seq-find (lambda (map-var)
-                                    (and (not (symbol-value
-                                               (get map-var
-                                                    :loophole-state-variable)))
+                                    (and (null (assq map-var
+                                                     loophole--state-alist))
                                          (string-match
                                           "loophole-[0-9]+-map"
                                           (symbol-name map-var))))
@@ -276,7 +324,14 @@ State variable is named as map-variable-state."
                "loophole-\\([0-9]+\\)-map" "\\1"
                (symbol-name map-variable))))
     (set map-variable (make-sparse-keymap))
+    (mapc (lambda (buffer)
+            (with-current-buffer buffer
+              (loophole-disable map-variable)
+              (force-mode-line-update)))
+          (cdr (assq map-variable loophole--state-alist)))
     (set state-variable nil)
+    (unless (local-variable-if-set-p state-variable)
+      (make-variable-buffer-local state-variable))
     (unless (loophole-registered-p map-variable state-variable)
       (loophole-register map-variable state-variable tag))
     map-variable))
@@ -291,6 +346,16 @@ generate new one and return it."
              (loophole-prioritize map-variable)
              (loophole-start-editing map-variable)
              (set (get map-variable :loophole-state-variable) t)
+             (let ((cell (assq map-variable loophole--state-alist)))
+               (unless (memq (current-buffer) (cdr cell))
+                 (push (current-buffer) (cdr cell))))
+             (unless (local-variable-p 'loophole--map-alist)
+               (add-to-list 'loophole--buffer-list (current-buffer) nil #'eq)
+               (add-hook 'change-major-mode-hook
+                         #'loophole--follow-buffer-local-condition nil t)
+               (add-hook 'kill-buffer-hook
+                         #'loophole--follow-buffer-local-condition nil t)
+               (make-local-variable 'loophole--map-alist))
              (symbol-value map-variable)))))
 
 (defun loophole-enable (map-variable)
@@ -307,10 +372,21 @@ generate new one and return it."
                                       disabled-map-variable-list)))
             (t (message "There are no disabled loophole maps.")
                nil)))))
-  (if map-variable
+  (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (when state-variable
-          (set state-variable t)))))
+          (set state-variable t)
+          (let ((cell (assq map-variable loophole--state-alist)))
+            (unless (memq (current-buffer) (cdr cell))
+              (push (current-buffer) (cdr cell))))
+          (unless (local-variable-p 'loophole--map-alist)
+            (add-to-list 'loophole--buffer-list (current-buffer) nil #'eq)
+            (add-hook 'change-major-mode-hook
+                      #'loophole--follow-buffer-local-condition nil t)
+            (add-hook 'kill-buffer-hook
+                      #'loophole--follow-buffer-local-condition nil t)
+            (make-local-variable 'loophole--map-alist))))
+    (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable (map-variable)
   "Disable the keymap stored in MAP-VARIABLE."
@@ -326,10 +402,13 @@ generate new one and return it."
                                       enabled-map-variable-list)))
             (t (message "There are no enabled loophole maps.")
                nil)))))
-  (if map-variable
+  (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (when state-variable
-          (set state-variable nil)))))
+          (set state-variable nil)
+          (let ((cell (assq map-variable loophole--state-alist)))
+            (setcdr cell (delq (current-buffer) (cdr cell))))))
+    (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable-latest ()
   "Disable the lastly added or prioritized active keymap."
@@ -379,16 +458,33 @@ MAP-NAME.  If prefix-argument is non-nil, TAG is also asked."
                              (boundp (intern name)))
                            (list map-variable-name state-variable-name ))))
       (if bound (user-error "Specified name %s has already been bound" bound)))
-    (let ((map-var (intern map-variable-name))
-          (state-var (intern state-variable-name)))
-      (set map-var (symbol-value map-variable))
-      (set state-var (symbol-value state-variable))
-      (put map-var :loophole-state-variable state-var)
-      (put state-var :loophole-map-variable map-var)
-      (put map-var :loophole-tag tag)
-      (setcar (assq state-variable loophole--map-alist) state-var)
-      (if (eq map-variable loophole--editing-map-variable)
-          (setq loophole--editing-map-variable map-var)))
+    (let ((named-map-variable (intern map-variable-name))
+          (named-state-variable (intern state-variable-name)))
+      (set named-map-variable (symbol-value map-variable))
+      (make-variable-buffer-local named-state-variable)
+      (set-default named-state-variable nil)
+      (mapc
+       (lambda (buffer)
+         (with-current-buffer buffer
+           (set named-state-variable (symbol-value state-variable))))
+       loophole--buffer-list)
+      (put named-map-variable :loophole-state-variable named-state-variable)
+      (put named-state-variable :loophole-map-variable named-map-variable)
+      (put named-map-variable :loophole-tag tag)
+      (let ((cell (assq state-variable (default-value 'loophole--map-alist))))
+        (setcar cell named-state-variable))
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (let ((cell (assq state-variable loophole--map-alist)))
+                  (if (consp cell)
+                      (setcar cell named-state-variable)))))
+            loophole--buffer-list)
+      (setcar (assq map-variable loophole--state-alist) named-map-variable)
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (if (eq map-variable loophole--editing-map-variable)
+                  (setq loophole--editing-map-variable named-map-variable))))
+            loophole--buffer-list))
     (set map-variable nil)
     (set state-variable nil)
     (makunbound map-variable)
