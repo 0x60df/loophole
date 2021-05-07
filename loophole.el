@@ -136,6 +136,16 @@ Each element should return a list looks like (key keymap)."
   :group 'loophole
   :type '(repeat symbol))
 
+(defcustom loophole-bind-symbol-order
+  '(loophole-obtain-key-and-object)
+  "The priority list of methods to obtain key and symbol for binding.
+`loophole-bind-symbol' refers this variable to select
+obtaining method.
+First element gets first priority.
+Each element should return a list looks like (key symbol)."
+  :group 'loophole
+  :type '(repeat symbol))
+
 (defcustom loophole-set-key-order
   '(loophole-obtain-key-and-command-by-symbol
     loophole-obtain-key-and-kmacro-by-recursive-edit
@@ -883,6 +893,45 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
       (loophole-bind-entry key another-keymap keymap)
     (error "Invalid keymap : %s" another-keymap)))
 
+(defun loophole-bind-symbol (key symbol &optional keymap)
+  "Bind KEY to SYMBOL temporarily.
+SYMBOL must be a symbol whose function cell is a keymap,
+a command , a keyboard macro or a symbol whose function
+cell is ultimately either of above when scanned recursively.
+
+This function finally calls `loophole-bind-entry', so that
+the keymap used for binding and the meaning of optional
+arguments KEYMAP are same as `loophole-bind-entry'.
+See docstring of `loophole-bind-entry'for more details.
+
+When called interactively, this function determines
+obtaining method for KEY and SYMBOL according to
+`loophole-bind-symbol-order'.
+When this function called without prefix argument,
+the first element of `loophole-bind-symbol-order' is
+employed as obtaining method.
+C-u and C-1 invokes the second element,
+C-u C-u and C-2 invokes the third one.
+Likewise C-u * n and C-n invoke the (n+1)th element."
+  (interactive
+   (let* ((n (loophole-prefix-rank-value current-prefix-arg))
+          (obtaining-method (elt loophole-bind-symbol-order n)))
+     (if (null obtaining-method)
+         (user-error "Undefined prefix argument"))
+     (funcall obtaining-method)))
+  (letrec ((inspect-function-cell
+            (lambda (symbol)
+              (let ((function-cell (symbol-function symbol)))
+                (or (keymapp function-cell)
+                    (commandp function-cell)
+                    (arrayp function-cell)
+                    (if (and function-cell (symbolp function-cell))
+                        (funcall inspect-function-cell function-cell)))))))
+    (if (and (symbolp symbol)
+             (funcall inspect-function-cell symbol))
+        (loophole-bind-entry key symbol keymap)
+      (error "Invalid symbol : %s" symbol))))
+
 ;;;###autoload
 (defun loophole-set-key (key entry)
   "Set the temporary binding for KEY and ENTRY.
@@ -998,6 +1047,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] b K") #'loophole-bind-last-kmacro)
             (define-key map (kbd "C-c ] b a") #'loophole-bind-array)
             (define-key map (kbd "C-c ] b m") #'loophole-bind-keymap)
+            (define-key map (kbd "C-c ] b s") #'loophole-bind-symbol)
             map)
   (if loophole-mode
       (unless loophole--suspended
