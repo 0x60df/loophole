@@ -126,6 +126,16 @@ Each element should return a list looks like (key array)."
   :group 'loophole
   :type '(repeat symbol))
 
+(defcustom loophole-bind-keymap-order
+  '(loophole-obtain-key-and-object)
+  "The priority list of methods to obtain key and keymap for binding.
+`loophole-bind-keymap' refers this variable to select
+obtaining method.
+First element gets first priority.
+Each element should return a list looks like (key keymap)."
+  :group 'loophole
+  :type '(repeat symbol))
+
 (defcustom loophole-set-key-order
   '(loophole-obtain-key-and-command-by-symbol
     loophole-obtain-key-and-kmacro-by-recursive-edit
@@ -845,6 +855,35 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
     (error "Invalid array : %s" array)))
 
 ;;;###autoload
+(defun loophole-bind-keymap (key another-keymap &optional keymap)
+  "Bind KEY to ANOTHER-KEYMAP temporarily.
+ANOTHER-KEYMAP is a keymap object, and KEY will be a prefix
+key for ANOTHER-KEYMAP.
+This function finally calls `loophole-bind-entry', so that
+the keymap used for binding and the meaning of optional
+arguments KEYMAP are same as `loophole-bind-entry'.
+See docstring of `loophole-bind-entry'for more details.
+
+When called interactively, this function determines
+obtaining method for KEY and ANOTHER-KEYMAP according to
+`loophole-bind-keymap-order'.
+When this function called without prefix argument,
+the first element of `loophole-bind-keymap-order' is
+employed as obtaining method.
+C-u and C-1 invokes the second element,
+C-u C-u and C-2 invokes the third one.
+Likewise C-u * n and C-n invoke the (n+1)th element."
+  (interactive
+   (let* ((n (loophole-prefix-rank-value current-prefix-arg))
+          (obtaining-method (elt loophole-bind-keymap-order n)))
+     (if (null obtaining-method)
+         (user-error "Undefined prefix argument"))
+     (funcall obtaining-method)))
+  (if (keymapp another-keymap)
+      (loophole-bind-entry key another-keymap keymap)
+    (error "Invalid keymap : %s" another-keymap)))
+
+;;;###autoload
 (defun loophole-set-key (key entry)
   "Set the temporary binding for KEY and ENTRY.
 This function finally calls `loophole-bind-entry', so that
@@ -958,6 +997,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] b k") #'loophole-bind-kmacro)
             (define-key map (kbd "C-c ] b K") #'loophole-bind-last-kmacro)
             (define-key map (kbd "C-c ] b a") #'loophole-bind-array)
+            (define-key map (kbd "C-c ] b m") #'loophole-bind-keymap)
             map)
   (if loophole-mode
       (unless loophole--suspended
