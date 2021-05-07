@@ -141,6 +141,7 @@ Details of customization is described in the customization section below.
 | `C-u` `C-u`, `C-2`  | command | key sequence      |
 | `C-u`\*3, `C-3`     | kmacro  | read key          |
 | `C-u`\*4, `C-4`     | kmacro  | recall record     |
+| `C-u`\*5, `C-5`     | object  | eval minibuffer   |
 
 ##### command by symbol
 
@@ -188,6 +189,11 @@ and can abort by the key sequence bound to `keyboard-quit`.
 Therefore, the keyboard macro which defined in outside of loophole
 also can be bound.
 
+##### object
+
+Fallback method.
+`eval-minibuffer` and use returned object.
+
 #### Editing keymap
 
 Old keymap can be edit afterwards by calling `loophole-edit`.
@@ -224,7 +230,8 @@ Default value of `loophole-set-key-order` is
  loophole-obtain-key-and-kmacro-by-recursive-edit
  loophole-obtain-key-and-command-by-key-sequence
  loophole-obtain-key-and-kmacro-by-read-key
- loophole-obtain-key-and-kmacro-by-recall-record)
+ loophole-obtain-key-and-kmacro-by-recall-record
+ loophole-obtain-key-and-object)
 ```
 
 If you prefer binding command by key sequence and keyboard macro by read key,
@@ -240,9 +247,12 @@ use the following lines.
         loophole-obtain-key-and-kmacro-by-recall-record))
 ```
 
-Some other commands (`loophole-bind-command`, `loophole-bind-kmacro`) also use
+Some other commands (`loophole-bind-command`, `loophole-bind-kmacro`,
+`loophole-bind-array`, `loophole-bind-keymap`, `loophole-bind-symbol`) also use
 the prefix arguments table
-(`loophole-bind-command-order`, `loophole-bind-kmacro-order`).
+(`loophole-bind-command-order`, `loophole-bind-kmacro-order`,
+`loophole-bind-array-order`, `loophole-bind-keymap-order`,
+`loophole-bind-symbol-order`).
 It also can be customized by the same way.
 
 You can also define your specifying method for entry (and key).
@@ -264,11 +274,9 @@ Entire customization codes may look like below.
         loophole-obtain-key-and-kmacro-by-recall-record))
 ```
 
-`loophole-bind-command` and `loophole-bind-kmacro` accept
-more complex specifying method,
+`loophole-bind-` commands accept more complex specifying method,
 whose return value can contain one more additional element.
-They are assigned to the arguments of
-`loophole-bind-command` and `loophole-bind-kmacro`.
+They are assigned to the arguments of these commands.
 See documentation string of these functions for more details.
 
 ### Loophole mode map
@@ -332,7 +340,7 @@ It can be changed by the following line.
 (setq loophole-kmacro-completing-key (kbd "C-c C-c"))
 ```
 
-### Other user option
+### Other considerable user options
 
 #### loophole-temporary-map-max
 

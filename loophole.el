@@ -97,9 +97,11 @@ overwrites the earliest used one."
     loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and command for binding.
 `loophole-bind-command' refers this variable to select
-obtaining method.
-First element gets first priority.
-Each element should return a list looks like (key command)."
+obtaining method.  First element gets first priority.
+
+Each element should return a list looks like (key command).
+Optionally, return value can contain keymap to bind; in this
+case, the list looks like (key command keymap)."
   :group 'loophole
   :type '(repeat symbol))
 
@@ -110,9 +112,11 @@ Each element should return a list looks like (key command)."
     loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and kmacro for binding.
 `loophole-bind-kmacro' refers this variable to select
-obtaining method.
-First element gets first priority.
-Each element should return a list looks like (key kmacro)."
+obtaining method.  First element gets first priority.
+
+Each element should return a list looks like (key kmacro).
+Optionally, return value can contain keymap to bind; in this
+case, the list looks like (key kmacro keymap)."
   :group 'loophole
   :type '(repeat symbol))
 
@@ -120,9 +124,11 @@ Each element should return a list looks like (key kmacro)."
   '(loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and array for binding.
 `loophole-bind-array' refers this variable to select
-obtaining method.
-First element gets first priority.
-Each element should return a list looks like (key array)."
+obtaining method.  First element gets first priority.
+
+Each element should return a list looks like (key array).
+Optionally, return value can contain keymap to bind; in this
+case, the list looks like (key array keymap)."
   :group 'loophole
   :type '(repeat symbol))
 
@@ -130,9 +136,11 @@ Each element should return a list looks like (key array)."
   '(loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and keymap for binding.
 `loophole-bind-keymap' refers this variable to select
-obtaining method.
-First element gets first priority.
-Each element should return a list looks like (key keymap)."
+obtaining method.  First element gets first priority.
+
+Each element should return a list looks like (key keymap).
+Optionally, return value can contain keymap to bind; in this
+case, the list looks like (key keymap keymap)."
   :group 'loophole
   :type '(repeat symbol))
 
@@ -140,9 +148,11 @@ Each element should return a list looks like (key keymap)."
   '(loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and symbol for binding.
 `loophole-bind-symbol' refers this variable to select
-obtaining method.
-First element gets first priority.
-Each element should return a list looks like (key symbol)."
+obtaining method.  First element gets first priority.
+
+Each element should return a list looks like (key symbol).
+Optionally, return value can contain keymap to bind; in this
+case, the list looks like (key symbol keymap)."
   :group 'loophole
   :type '(repeat symbol))
 
@@ -772,6 +782,8 @@ and it is registered to loophole, KEYMAP is used instead."
 ;;;###autoload
 (defun loophole-bind-command (key command &optional keymap)
   "Bind KEY to COMMAND temporarily.
+COMMAND must be a command.
+
 This function finally calls `loophole-bind-entry', so that
 the keymap used for binding and the meaning of optional
 arguments KEYMAP are same as `loophole-bind-entry'.
@@ -799,6 +811,8 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
 ;;;###autoload
 (defun loophole-bind-kmacro (key kmacro &optional keymap)
   "Bind KEY to KMACRO temporarily.
+KMACRO must be a `kmacro' object.
+
 This function finally calls `loophole-bind-entry', so that
 the keymap used for binding and the meaning of optional
 arguments KEYMAP are same as `loophole-bind-entry'.
@@ -839,7 +853,9 @@ binding."
 ;;;###autoload
 (defun loophole-bind-array (key array &optional keymap)
   "Bind KEY to ARRAY temporarily.
-ARRAY is either a string or vector.
+ARRAY must be either a string or vector, which work as
+a basic keyboard macro.
+
 This function finally calls `loophole-bind-entry', so that
 the keymap used for binding and the meaning of optional
 arguments KEYMAP are same as `loophole-bind-entry'.
@@ -867,8 +883,9 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
 ;;;###autoload
 (defun loophole-bind-keymap (key another-keymap &optional keymap)
   "Bind KEY to ANOTHER-KEYMAP temporarily.
-ANOTHER-KEYMAP is a keymap object, and KEY will be a prefix
-key for ANOTHER-KEYMAP.
+ANOTHER-KEYMAP must be a keymap object, and KEY will be
+a prefix key for ANOTHER-KEYMAP.
+
 This function finally calls `loophole-bind-entry', so that
 the keymap used for binding and the meaning of optional
 arguments KEYMAP are same as `loophole-bind-entry'.
