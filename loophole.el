@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.3.1
+;; Version: 0.3.2
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -127,6 +127,11 @@ Each element should return a list looks like (key object)."
   :group 'loophole
   :type '(repeat symbol))
 
+(defcustom loophole-tag-sign "#"
+  "String indicating tag string of loophole-map."
+  :group 'loophole
+  :type 'string)
+
 (defcustom loophole-mode-lighter-base " L"
   "Lighter base string for mode line."
   :group 'loophole
@@ -220,8 +225,10 @@ modified."
 (defun loophole-register (map-variable state-variable &optional tag
                                        without-base-map)
   "Register the set of MAP-VARIABLE and STATE-VARIABLE to loophole.
-Optional argument TAG is tag string which may be shown in
-mode line.
+Optional argument TAG is a tag string which may be shown in
+mode line.  TAG should not contain `loophole-tag-sign',
+because tag will be prefixed by `loophole-tag-sign' on the
+mode-line.
 Unless WITHOUT-BASE-MAP is non-nil, `loophole-base-map' is
 set as parent keymap for MAP-VARIABLE."
   (put map-variable :loophole-state-variable state-variable)
@@ -455,18 +462,29 @@ initialized: they are unbound, their plists are set as nil,
 they are removed from `loophole--map-alist'.
 
 When interactive call, this function asks MAP-VARIABLE and
-MAP-NAME.  If prefix-argument is non-nil, TAG is also asked."
+MAP-NAME.  If prefix-argument is non-nil, TAG is also asked.
+If MAP-NAME contains `loophole-tag-sign', use a following
+string as TAG regardless of the value of prefix-argument."
   (interactive
    (let* ((map-variable-list (loophole-map-variable-list))
           (arg-map-variable
            (cond (map-variable-list
                   (intern (completing-read "Name keymap: " map-variable-list)))
                  (t (user-error "There are no loophole maps"))))
-          (arg-map-name (read-string (format "New name for keymap %s: "
+          (arg-map-name (read-string (format "New name[%stag] for keymap %s: "
+                                             loophole-tag-sign
                                              arg-map-variable)))
-          (arg-tag (if current-prefix-arg
-                       (read-string (format "New tag for keymap %s: "
-                                            arg-map-variable)))))
+          (arg-tag (let ((match (string-match loophole-tag-sign arg-map-name)))
+                     (cond (match
+                            (prog1
+                                (substring arg-map-name
+                                           (+ match 1)
+                                           (length arg-map-name))
+                              (setq arg-map-name
+                                    (substring arg-map-name 0 match))))
+                           (current-prefix-arg
+                            (read-string (format "New tag for keymap %s: "
+                                                 arg-map-variable)))))))
      (list arg-map-variable arg-map-name arg-tag)))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
@@ -956,7 +974,8 @@ If STYLE is other than above, lighter is omitted."
                               loophole--map-alist))))
                      (if (zerop (length l))
                          ""
-                       (concat "#" (mapconcat 'identity l ",")))))))
+                       (concat loophole-tag-sign
+                               (mapconcat 'identity l ",")))))))
                ((eq style 'simple)
                 '(""
                   loophole-mode-lighter-base
