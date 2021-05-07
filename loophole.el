@@ -623,31 +623,33 @@ complete definition of kmacro by new completing key, and
         (user-error "Neither completing key nor quitting key is invalid"))
     (let* ((menu-prompting nil)
            (key (loophole-read-key "Set key temporarily: ")))
-      (list
-       key
-       (letrec
-           ((read-arbitrary-key-sequence
-             (lambda (v)
-               (let* ((k (vector
-                          (read-key
-                           (format "Set key %s to kmacro: (%s to complete) [%s]"
-                                   (key-description key)
-                                   (key-description complete)
-                                   (mapconcat (lambda (e)
-                                                (key-description (vector e)))
-                                              (reverse v)
-                                              " ")))))
-                      (v (vconcat k v)))
-                 (cond ((loophole-key-equal
-                         (seq-take v (length complete))
-                         complete)
-                        (reverse (seq-drop v (length complete))))
-                       ((loophole-key-equal
-                         (seq-take v (length quit))
-                         quit)
-                        (keyboard-quit))
-                       (t (funcall read-arbitrary-key-sequence v)))))))
-         (funcall read-arbitrary-key-sequence nil))))))
+      (letrec
+          ((read-arbitrary-key-sequence
+            (lambda (v)
+              (let* ((k (vector
+                         (read-key
+                          (format "Set key %s to kmacro: (%s to complete) [%s]"
+                                  (key-description key)
+                                  (key-description complete)
+                                  (mapconcat (lambda (e)
+                                               (key-description (vector e)))
+                                             (reverse v)
+                                             " ")))))
+                     (v (vconcat k v)))
+                (cond ((loophole-key-equal
+                        (seq-take v (length complete))
+                        complete)
+                       (reverse (seq-drop v (length complete))))
+                      ((loophole-key-equal
+                        (seq-take v (length quit))
+                        quit)
+                       (keyboard-quit))
+                      (t (funcall read-arbitrary-key-sequence v)))))))
+        (let ((macro (funcall read-arbitrary-key-sequence nil)))
+          (kmacro-start-macro nil)
+          (end-kbd-macro nil #'kmacro-loop-setup-function)
+          (setq last-kbd-macro macro)
+          (list key (kmacro-lambda-form (kmacro-ring-head))))))))
 
 (defun loophole-obtain-key-and-kmacro-by-recursive-edit ()
   "Return set of key and kmacro obtained by recursive edit.
@@ -661,17 +663,40 @@ Besides, Definition can be aborted by calling
   (let* ((menu-prompting nil)
           (key (loophole-read-key "Set key temporarily: ")))
     (list key (progn (loophole-start-kmacro)
-                     last-kbd-macro))))
+                     (kmacro-lambda-form (kmacro-ring-head))))))
 
 (defun loophole-obtain-key-and-kmacro-by-recall-record ()
   "Return set of key and kmacro obtained by recalling record."
   (let* ((menu-prompting nil)
-          (key (loophole-read-key "Set key temporarily: ")))
-    (list key (completing-read (format "Set key %s to kmacro: "
-                                       (key-description (kbd "C-a")))
-                               (mapcar #'car (remq nil (cons (kmacro-ring-head)
-                                                             kmacro-ring)))
-                               nil t))))
+         (key (loophole-read-key "Set key temporarily: ")))
+    (letrec
+        ((make-label-kmacro-alist
+          (lambda (ring counter)
+            (let* ((raw-label (key-description (car (car ring))))
+                   (entry (assoc raw-label counter))
+                   (label (if entry
+                              (format "%s <%d>" raw-label (+ (cdr entry) 1))
+                            raw-label)))
+              (cond ((null ring) ring)
+                    (t (cons
+                        `(,label . ,(car ring))
+                        (funcall make-label-kmacro-alist
+                                 (cdr ring)
+                                 (cons (if entry
+                                           `(,raw-label . ,(+ (cdr entry) 1))
+                                         `(,raw-label . 1))
+                                       counter)))))))))
+      (let* ((head (kmacro-ring-head))
+             (alist (funcall make-label-kmacro-alist
+                             (if head
+                                 (cons head kmacro-ring)
+                               kmacro-ring)
+                             nil))
+             (read (completing-read (format "Set key %s to kmacro: "
+                                            (key-description key))
+                                    alist nil t))
+             (kmacro (kmacro-lambda-form (cdr (assoc read alist)))))
+        (list key kmacro)))))
 
 (defun loophole-prefix-rank-value (arg)
   "Return rank value for raw prefix argument ARG.
