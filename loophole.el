@@ -93,7 +93,8 @@ overwrites the earliest used one."
 
 (defcustom loophole-bind-command-order
   '(loophole-obtain-key-and-command-by-symbol
-    loophole-obtain-key-and-command-by-key-sequence)
+    loophole-obtain-key-and-command-by-key-sequence
+    loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and command for binding.
 `loophole-bind-command' refers this variable to select
 obtaining method.
@@ -105,7 +106,8 @@ Each element should return a list looks like (key command)."
 (defcustom loophole-bind-kmacro-order
   '(loophole-obtain-key-and-kmacro-by-recursive-edit
     loophole-obtain-key-and-kmacro-by-read-key
-    loophole-obtain-key-and-kmacro-by-recall-record)
+    loophole-obtain-key-and-kmacro-by-recall-record
+    loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and kmacro for binding.
 `loophole-bind-kmacro' refers this variable to select
 obtaining method.
@@ -119,7 +121,8 @@ Each element should return a list looks like (key kmacro)."
     loophole-obtain-key-and-kmacro-by-recursive-edit
     loophole-obtain-key-and-command-by-key-sequence
     loophole-obtain-key-and-kmacro-by-read-key
-    loophole-obtain-key-and-kmacro-by-recall-record)
+    loophole-obtain-key-and-kmacro-by-recall-record
+    loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and object for binding.
 `loophole-set-key' refers this to select obtaining method.
 First element gets first priority.
