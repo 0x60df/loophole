@@ -142,6 +142,26 @@ Each element should return a list looks like (key object)."
   :group 'loophole
   :type 'string)
 
+(defcustom loophole-mode-lighter-use-face nil
+  "Flag if lighter use face."
+  :group 'loophole
+  :type 'boolean)
+
+(defface loophole-using
+  '((t :inherit error))
+  "Face used for section of lighter showing active loophole-map."
+  :group 'loophole)
+
+(defface loophole-editing
+  '((t))
+  "Face used for section of lighter showing editing loophole-map."
+  :group 'loophole)
+
+(defface loophole-suspending
+  '((t :inherit shadow))
+  "Face used for suffixes of lighter while loophole is suspending."
+  :group 'loophole)
+
 (defun loophole-map-variable-list ()
   "Return list of all keymap variables for loophole.
 Elements are ordered according to `loophole--map-alist'."
@@ -880,7 +900,8 @@ If STYLE is other than above, lighter is omitted."
                ((eq style 'number)
                 '(""
                   loophole-mode-lighter-base
-                  (:eval (if (loophole-suspending-p)
+                  (:eval (if (and (loophole-suspending-p)
+                                  (not loophole-mode-lighter-use-face))
                            loophole-mode-lighter-suspending-sign))
                   (loophole--editing-map-variable
                    loophole-mode-lighter-editing-sign)
@@ -891,27 +912,51 @@ If STYLE is other than above, lighter is omitted."
                                           loophole--map-alist)))))
                            (if (zerop n)
                                ""
-                             (format ":%d" n))))))
+                             (concat ":"
+                                     (let ((s (int-to-string n)))
+                                       (if loophole-mode-lighter-use-face
+                                           (propertize
+                                            s 'face
+                                            (if (loophole-suspending-p)
+                                                'loophole-suspending
+                                              'loophole-using))
+                                           s))))))))
                ((eq style 'tag)
                 '(""
                   loophole-mode-lighter-base
-                  (:eval (if (loophole-suspending-p)
+                  (:eval (if (and (loophole-suspending-p)
+                                  (not loophole-mode-lighter-use-face))
                            loophole-mode-lighter-suspending-sign))
                   (loophole--editing-map-variable
                    (""
                     loophole-mode-lighter-editing-sign
-                    (:eval (get loophole--editing-map-variable :loophole-tag))))
-                  (:eval (let ((l (delq nil
-                                        (mapcar
-                                         (lambda (e)
-                                           (if (symbol-value (car e))
-                                               (get (get (car e)
-                                                         :loophole-map-variable)
-                                                    :loophole-tag)))
-                                         loophole--map-alist))))
-                           (if (zerop (length l))
-                               ""
-                             (concat "#" (mapconcat 'identity l ",")))))))
+                    (:eval (let ((tag (get loophole--editing-map-variable
+                                         :loophole-tag)))
+                             (if (and loophole-mode-lighter-use-face
+                                      (stringp tag))
+                                 (propertize tag 'face nil)
+                               tag)))))
+                  (:eval
+                   (let ((l (delq
+                             nil
+                             (mapcar
+                              (lambda (a)
+                                (if (symbol-value (car a))
+                                    (let ((e (get (get (car a)
+                                                       :loophole-map-variable)
+                                                  :loophole-tag)))
+                                      (if (and loophole-mode-lighter-use-face
+                                               (stringp e))
+                                          (propertize
+                                           e 'face
+                                           (if (loophole-suspending-p)
+                                               'loophole-suspending
+                                             'loophole-using))
+                                        e))))
+                              loophole--map-alist))))
+                     (if (zerop (length l))
+                         ""
+                       (concat "#" (mapconcat 'identity l ",")))))))
                ((eq style 'simple)
                 '(""
                   loophole-mode-lighter-base
