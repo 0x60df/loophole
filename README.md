@@ -67,7 +67,7 @@ Loophole uses three layers of keymaps.
 First one is keymaps for temporary key bindings.
 I call them as "loophole-map".
 They are mainly generated automatically,
-and listed in `loophole-map-alist`.
+and listed in `loophole--map-alist`.
 They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
 
 Second one is `loophole-base-map` which will be inherited to most of
