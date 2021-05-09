@@ -68,7 +68,7 @@ First one is keymaps for temporary key bindings.
 I call them as "loophole-map".
 They are mainly generated automatically,
 and listed in `loophole-map-alist`.
-They take effect by adding `loophole-map-alist` to `emulation-mode-map-alists`.
+They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
 
 Second one is `loophole-base-map` which will be inherited to most of
 loophole-map.
@@ -102,7 +102,7 @@ it goes out of range of automatic keymap generation and never overwritten.
 `loophole-mode` is the minor mode for managing temporary key bindings.
 
 When `loophole-mode` is enabled,
-`loophole-map-alist` is added to the head of `emulation-mode-map-alists`,
+`loophole--map-alist` is added to the head of `emulation-mode-map-alists`,
 and thus temporary key bindings are activated.
 Furthermore, you can use `loophole-mode-map` for binding loophole commands.
 
@@ -110,7 +110,7 @@ Even while `loophole-mode` is activated, whole temporary key bindings can be
 disabled temporarily by calling `loophole-suspend`,
 which keeps state of each loophole-map.
 `loophole-resume` restores suspended temporary key bindings.
-These functions realize suspension by removing and adding `loophole-map-alist`
+These functions realize suspension by removing and adding `loophole--map-alist`
 in `emulation-mode-map-alists`.
 
 Note that disabling `loophole-mode` also calls `loophole-suspend` and keeps
@@ -164,7 +164,7 @@ Then, buffer contents will be read and evaluated,
 and returned object will be bound.
 When you want to abort, type `C-c C-k` (`loophole-abort-writing-lisp`).
 
-Actually, buffer contents can be any lisp form.
+Actually, buffer contents can be any lisp forms other than sole lambda form.
 If returned value is a valid command, it will be bound anyway.
 
 Note that while you are in recursive edit, it looks like top-level of Emacs
@@ -180,8 +180,8 @@ Similar to built-in keyboard macro defining environment except that
 we are in recursive edit.
 In recursive edit, you can define your keyboard macro while you are getting
 the feedback on your eyes.
-When you are finished, type `C-c )` (`loophole-end-kmacro`),
-or you want to abort, type `C-c !` (`loophole-abort-kmacro`).
+When you are finished, type `C-c ] )` (`loophole-end-kmacro`),
+or you want to abort, type `C-c k a` (`loophole-abort-kmacro`).
 
 While you are defining keyboard macro, not only recursive edit but also
 kbd-macro environment is enabled.
@@ -227,7 +227,8 @@ Details of mode line format is described below.
 
 Loophole provides some binding commands other than `loophole-set-key`.
 For example, `loophole-bind-entry`, `loophole-bind-command`,
-and `loophole-bind-kmacro`.
+`loophole-bind-kmacro` `loophole-bind-array`, `loophole-bind-keymap`
+and `loophole-bind-symbol`.
 They are a little more primitive or specific than `loophole-set-key`.
 In most case, `loophole-set-key` may be sufficient,
 but when you focused on specific binding entry,
@@ -257,8 +258,7 @@ Default value of `loophole-set-key-order` is
 
 If you prefer binding command by key sequence and keyboard macro by read key,
 (They tends to need fewer input to bind something.)
-and you do not need recursive edit environment for defining keyboard macro
-and some other obtaining method, use the following lines.
+and you do not need some other obtaining method, use the following lines.
 
 ``` emacs-lisp
 (setq loophole-set-key-order
@@ -268,7 +268,7 @@ and some other obtaining method, use the following lines.
         loophole-obtain-key-and-kmacro-by-recall-record))
 ```
 
-Some other commands (`loophole-bind-command`, `loophole-bind-kmacro`,
+Some other binding commands (`loophole-bind-command`, `loophole-bind-kmacro`,
 `loophole-bind-array`, `loophole-bind-keymap`, `loophole-bind-symbol`) also use
 the prefix arguments table
 (`loophole-bind-command-order`, `loophole-bind-kmacro-order`,
@@ -309,7 +309,7 @@ for manipulating loophole.
 This may violate the key bindings of other features or your settings.
 
 If the default `loophole-mode-map` does not suit with your environment,
-overwrite it like the following lines.
+overwrite it by using settings like the following lines.
 
 ``` emacs-lisp
 (setcdr loophole-mode-map nil)
@@ -372,7 +372,7 @@ Keymaps will be stored temporarily up to `loophole-temporary-map-max`,
 even if they are disabled.
 When the number of generated keymaps exceeds `loophole-temporary-map-max`
 and thereafter,
-newly generated keymap overwrites the oldest one and completely abandoned it.
+newly generated keymap overwrites the oldest one and completely abandons it.
 
 Default value of this user option is `8`.
 
