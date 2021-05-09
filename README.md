@@ -140,8 +140,9 @@ Details of customization is described in the customization section below.
 | `C-u`, `C-1`        | kmacro  | recursive edit    |
 | `C-u` `C-u`, `C-2`  | command | key sequence      |
 | `C-u`\*3, `C-3`     | kmacro  | read key          |
-| `C-u`\*4, `C-4`     | kmacro  | recall record     |
-| `C-u`\*5, `C-5`     | object  | eval minibuffer   |
+| `C-u`\*4, `C-4`     | command | lambda form       |
+| `C-u`\*5, `C-5`     | kmacro  | recall record     |
+| `C-u`\*6, `C-6`     | object  | eval minibuffer   |
 
 ##### command by symbol
 
@@ -153,23 +154,42 @@ Default method.
 `read-key-sequence` and use the command which is bound with read key sequence
 in currently active keymaps.
 
+##### command by lambda form
+
+Setup temporary buffer with template for writing lambda form and start
+recursive edit.
+When you complete writing lambda form,
+type `C-c C-c` (`loophole-complete-writing-lisp`).
+Then, buffer contents will be read and evaluated,
+and returned object will be bound.
+When you want to abort, type `C-c C-k` (`loophole-abort-writing-lisp`).
+
+Actually, buffer contents can be any lisp form.
+If returned value is a valid command, it will be bound anyway.
+
+Note that while you are in recursive edit, it looks like top-level of Emacs
+and you may feel that the control is returned to you,
+but actually you are still in the command.
+For that reason, it is recommended to call either
+`loophole-complete-writing-lisp` or `loophole-abort-writing-lisp` which can
+properly end recursive edit.
+
 ##### kmacro by recursive edit
 
 Similar to built-in keyboard macro defining environment except that
 we are in recursive edit.
 In recursive edit, you can define your keyboard macro while you are getting
-the feedback on your keys.
+the feedback on your eyes.
 When you are finished, type `C-c )` (`loophole-end-kmacro`),
 or you want to abort, type `C-c !` (`loophole-abort-kmacro`).
 
-Note that while you are in recursive edit, it looks like top-level of Emacs
-and you may feel the control is returned to you,
-but actually you are still in the command.
-Therefore, it is highly recommended to call `loophole-abort-kmacro`
-even if you abort binding.
-`C-g` (`keyboard-quit`) in recursive edit stops defining keyboard macro,
-but do not abort recursive edit.
-`loophole-abort-kmacro` takes care of it, and does both of them.
+While you are defining keyboard macro, not only recursive edit but also
+kbd-macro environment is enabled.
+In order to handle these conditions, it is highly recommended to call
+either `loophole-end-kmacro` or `loophole-abort-kmacro`.
+Even if you want to abort binding, `C-g` (`keyboard-quit`) is not enough.
+It stops defining keyboard macro, but it does not abort recursive edit.
+`loophole-abort-kmacro` takes care of it as it does both of them.
 
 ##### kmacro by read key
 
@@ -230,14 +250,15 @@ Default value of `loophole-set-key-order` is
  loophole-obtain-key-and-kmacro-by-recursive-edit
  loophole-obtain-key-and-command-by-key-sequence
  loophole-obtain-key-and-kmacro-by-read-key
+ loophole-obtain-key-and-command-by-lambda-form
  loophole-obtain-key-and-kmacro-by-recall-record
  loophole-obtain-key-and-object)
 ```
 
 If you prefer binding command by key sequence and keyboard macro by read key,
 (They tends to need fewer input to bind something.)
-and you do not need recursive edit environment for defining keyboard macro,
-use the following lines.
+and you do not need recursive edit environment for defining keyboard macro
+and some other obtaining method, use the following lines.
 
 ``` emacs-lisp
 (setq loophole-set-key-order
@@ -271,7 +292,9 @@ Entire customization codes may look like below.
         loophole-obtain-key-and-kmacro-by-recursive-edit
         loophole-obtain-key-and-command-by-key-sequence
         loophole-obtain-key-and-kmacro-by-read-key
-        loophole-obtain-key-and-kmacro-by-recall-record))
+        loophole-obtain-key-and-command-by-lambda-form
+        loophole-obtain-key-and-kmacro-by-recall-record
+        loophole-obtain-key-and-object))
 ```
 
 `loophole-bind-` commands accept more complex specifying method,

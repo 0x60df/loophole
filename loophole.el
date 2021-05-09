@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.3.2
+;; Version: 0.3.3
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -67,6 +67,14 @@ Once Loophole is resumed, this comes back to nil.
 To see true state of suspension, use
 `loophole-suspending-p' instead of this variable.")
 
+(defvar loophole-write-lisp-mode-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map emacs-lisp-mode-map)
+    (define-key map (kbd "C-c C-c") #'loophole-complete-writing-lisp)
+    (define-key map (kbd "C-c C-k") #'loophole-abort-writing-lisp)
+    map)
+  "Keymap for `loophole-write-lisp-mode'.")
+
 (defvar loophole-base-map (make-sparse-keymap)
   "Base keymap for all Loophole maps.
 This keymap will be inherited to all Loophole maps,
@@ -91,9 +99,22 @@ overwrites the earliest used one."
   :group 'loophole
   :type 'key-sequence)
 
+(defcustom loophole-writing-lambda-form-format
+  (concat "(lambda (&optional arg)\n"
+          "  \"Temporary command on `loophole'.\"\n"
+          "  (interactive \"P\")\n"
+          "  (#))")
+  "Format for writing lambda form buffer.
+Character sequence (#) indicates where cursor will be
+placed, and it will be removed when the format is inserted
+in the buffer."
+  :group 'loophole
+  :type 'string)
+
 (defcustom loophole-bind-command-order
   '(loophole-obtain-key-and-command-by-symbol
     loophole-obtain-key-and-command-by-key-sequence
+    loophole-obtain-key-and-command-by-lambda-form
     loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and command for binding.
 `loophole-bind-command' refers this variable to select
@@ -161,6 +182,7 @@ case, the list looks like (key symbol keymap)."
     loophole-obtain-key-and-kmacro-by-recursive-edit
     loophole-obtain-key-and-command-by-key-sequence
     loophole-obtain-key-and-kmacro-by-read-key
+    loophole-obtain-key-and-command-by-lambda-form
     loophole-obtain-key-and-kmacro-by-recall-record
     loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and object for binding.
@@ -588,6 +610,46 @@ string as TAG regardless of the value of prefix-argument."
   (interactive)
   (setq loophole--editing-map-variable nil))
 
+(defun loophole-complete-writing-lisp ()
+  "Complete writing Lisp form in `loophole-write-lisp-mode' buffer."
+  (interactive)
+  (unless (zerop (recursion-depth))
+    (when (eq major-mode 'loophole-write-lisp-mode)
+      (emacs-lisp-mode))
+    (exit-recursive-edit)))
+
+(defun loophole-abort-writing-lisp ()
+  "Abort writing Lisp form in `loophole-write-lisp-mode' buffer."
+  (interactive)
+  (unless (zerop (recursion-depth))
+    (when (eq major-mode 'loophole-write-lisp-mode)
+      (emacs-lisp-mode))
+    (abort-recursive-edit)))
+
+(define-derived-mode loophole-write-lisp-mode emacs-lisp-mode
+  "Loophole Write Lisp"
+  "Auxiliary major mode for writing Lisp form in loophole.
+Calling this major mode in Lisp program offers
+`emacs-lisp-mode' like environment with few key bindings and
+recursive edit.
+After complete or abort writing, caller can get written
+forms by `buffer-string'.
+If writing is completed, forms following calling this
+function will be evaluated.
+In order to do something even for abort case, call this
+function in body form of `unwind-protect' and write follow
+up forms in unwind forms."
+  :group 'loophole
+  (setq header-line-format
+        `(""
+          mode-line-front-space
+          ,(substitute-command-keys
+            (concat "\\<loophole-write-lisp-mode-map>"
+                    "Writing lisp form.  "
+                    "Complete `\\[loophole-complete-writing-lisp]', "
+                    "Abort `\\[loophole-abort-writing-lisp]'."))))
+  (recursive-edit))
+
 ;;;###autoload
 (defun loophole-start-kmacro ()
   "Start defining keyboard macro.
@@ -646,6 +708,42 @@ Object is obtained as return value of `eval-minibuffer'."
                                     (key-description key))))))
                 (message "%s" binding)
                 binding))))
+
+(defun loophole-obtain-key-and-command-by-lambda-form ()
+  "Return set of key and command obtained by writing lambda form.
+This function provides work space for writing lambda form as
+a temporary buffer.
+Actually, any Lisp forms can be written in a temporary
+buffer, and if obtained object is valid command, this
+function return it.
+If multiple Lisp forms are written, they are evaluate
+sequentially, and return a value of the last form."
+  (let* ((menu-prompting nil)
+         (key (loophole-read-key "Set key temporarily: ")))
+    (let ((name "*Loophole*")
+          (buffer (current-buffer))
+          (window (selected-window)))
+      (unwind-protect
+          (progn
+            (switch-to-buffer-other-window (get-buffer-create name) t)
+            (erase-buffer)
+            (insert ";; For obtaining lambda form.\n\n")
+            (insert loophole-writing-lambda-form-format)
+            (let ((found (search-backward "(#)" nil t)))
+              (if found (delete-region (point) (+ (point) 3))))
+            (loophole-write-lisp-mode)
+            (let ((lambda-form
+                   (eval (read (concat
+                                "(progn "
+                                (with-current-buffer name (buffer-string))
+                                ")")))))
+              (if (commandp lambda-form)
+                  (list key lambda-form)
+                (user-error
+                 "Obtained Lisp object is not valid command: %s" lambda-form))))
+        (ignore-errors (delete-window (get-buffer-window name)))
+        (unless (eq (selected-window) window) (select-window window t))
+        (unless (eq (current-buffer) buffer) (switch-to-buffer buffer t t))))))
 
 (defun loophole-obtain-key-and-kmacro-by-read-key ()
   "Return set of key and kmacro obtained by reading key.
