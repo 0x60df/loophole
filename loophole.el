@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.3.3
+;; Version: 0.3.4
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 
@@ -72,6 +72,9 @@ To see true state of suspension, use
 Each element looks like (MAP-VARIABLE . TIMER).
 MAP-VARIABLE is a symbol which holds keymap.
 TIMER is a timer for MAP-VARIABLE on current buffer.")
+
+(defvar-local loophole--editing-timer nil
+  "Timer for stopping editing loophole map.")
 
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
@@ -199,12 +202,25 @@ Each element should return a list looks like (key object)."
   :type '(repeat symbol))
 
 (defcustom loophole-use-timer nil
-  "Flag if loophole map is automatically disabled by timer."
+  "Flag if loophole map is automatically disabled by timer.
+Value of this variable can be either of the followings.
+nil:     Do not use timer at all.
+map:     Enable timer for map state only.
+editing: Enable timer for editing state only.
+t:       Enable timer for both of map and editing."
   :group 'loophole
-  :type 'boolean)
+  :type '(choice (const :tag "Do not use timer" nil)
+                 (const :tag "Map state only" map)
+                 (const :tag "Editing state only" editing)
+                 (const :tag "Both of map and editing" t)))
 
 (defcustom loophole-timer-delay (* 60 60)
   "Delay time in seconds for auto disabling timer."
+  :group 'loophole
+  :type 'number)
+
+(defcustom loophole-editing-timer-delay (* 60 5)
+  "Delay time in seconds for auto stopping editing timer."
   :group 'loophole
   :type 'number)
 
@@ -318,6 +334,31 @@ is preserved."
     (if (and (timerp timer)
              (not (timer--triggered timer)))
         (cancel-timer timer))))
+
+(defun loophole-start-editing-timer ()
+  "Setup or update timer for editing state."
+  (if (timerp loophole--editing-timer)
+      (progn
+        (timer-set-time loophole--editing-timer
+                        (timer-relative-time nil loophole-editing-timer-delay))
+        (if (or (timer--triggered loophole--editing-timer)
+                (not (member loophole--editing-timer  timer-list)))
+            (timer-activate loophole--editing-timer)))
+    (setq loophole--editing-timer
+          (run-with-timer loophole-editing-timer-delay
+                          nil
+                          (lambda (buffer)
+                            (if (buffer-live-p buffer)
+                                (with-current-buffer buffer
+                                  (loophole-stop-editing)
+                                  (force-mode-line-update))))
+                          (current-buffer)))))
+
+(defun loophole-stop-editing-timer ()
+  "Cancel timer for editing state."
+  (if (and (timerp loophole--editing-timer)
+           (not (timer--triggered loophole--editing-timer)))
+      (cancel-timer loophole--editing-timer)))
 
 (defun loophole--follow-buffer-local-condition ()
   "Update variables for buffer local information.
@@ -494,7 +535,7 @@ generate new one and return it."
                                 #'loophole--follow-buffer-local-condition nil t)
                       (make-local-variable 'loophole--map-alist))
                     generated)))))
-    (if loophole-use-timer (loophole-start-timer map-variable))
+    (if (memq loophole-use-timer '(map t)) (loophole-start-timer map-variable))
     (symbol-value map-variable)))
 
 (defun loophole-enable (map-variable)
@@ -525,7 +566,8 @@ generate new one and return it."
             (add-hook 'kill-buffer-hook
                       #'loophole--follow-buffer-local-condition nil t)
             (make-local-variable 'loophole--map-alist))
-          (if loophole-use-timer (loophole-start-timer map-variable))))
+          (if (memq loophole-use-timer '(map t))
+              (loophole-start-timer map-variable))))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable (map-variable)
@@ -548,7 +590,8 @@ generate new one and return it."
           (set state-variable nil)
           (let ((cell (assq map-variable loophole--state-alist)))
             (setcdr cell (delq (current-buffer) (cdr cell))))
-          (if loophole-use-timer (loophole-stop-timer map-variable))))
+          (if (memq loophole-use-timer '(map t))
+              (loophole-stop-timer map-variable))))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable-latest ()
@@ -637,7 +680,7 @@ string as TAG regardless of the value of prefix-argument."
                 (if (eq map-variable loophole--editing-map-variable)
                   (setq loophole--editing-map-variable named-map-variable))))
             loophole--buffer-list)
-      (if loophole-use-timer
+      (if (memq loophole-use-timer '(map t))
           (mapc (lambda (buffer)
                   (with-current-buffer buffer
                     (let ((cell (assq map-variable loophole--timer-alist)))
@@ -670,11 +713,15 @@ string as TAG regardless of the value of prefix-argument."
                   (intern (completing-read
                            "Name keymap: " map-variable-list)))
                  (t (user-error "There are no loophole maps"))))))
+  (if (memq loophole-use-timer '(editing t))
+      (loophole-start-editing-timer))
   (setq loophole--editing-map-variable map-variable))
 
 (defun loophole-stop-editing ()
   "Stop keymap edit session."
   (interactive)
+  (if (memq loophole-use-timer '(editing t))
+      (loophole-stop-editing-timer))
   (setq loophole--editing-map-variable nil))
 
 (defun loophole-complete-writing-lisp ()
