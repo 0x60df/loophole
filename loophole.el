@@ -56,7 +56,7 @@ MAP-VARIABLE is active.")
 (defvar loophole--buffer-list nil
   "List of buffers which have local loophole map.")
 
-(defvar-local loophole--editing-map-variable nil
+(defvar-local loophole--editing nil
   "Variable of keymap which is currently being edited.
 Loophole binds keys in this keymap.  When this value is nil,
 Loophole may generate new keymap and bind keys in it.")
@@ -518,7 +518,7 @@ State variable is named as map-variable-state."
 If currently editing keymap exists, return it; otherwise
 generate new one and return it."
   (let ((map-variable
-         (cond (loophole--editing-map-variable loophole--editing-map-variable)
+         (cond (loophole--editing loophole--editing)
                (t (let ((generated (loophole-generate)))
                     (loophole-prioritize generated)
                     (loophole-start-editing generated)
@@ -677,8 +677,8 @@ string as TAG regardless of the value of prefix-argument."
       (setcar (assq map-variable loophole--state-alist) named-map-variable)
       (mapc (lambda (buffer)
               (with-current-buffer buffer
-                (if (eq map-variable loophole--editing-map-variable)
-                  (setq loophole--editing-map-variable named-map-variable))))
+                (if (eq map-variable loophole--editing)
+                  (setq loophole--editing named-map-variable))))
             loophole--buffer-list)
       (if (memq loophole-use-timer '(map t))
           (mapc (lambda (buffer)
@@ -715,14 +715,14 @@ string as TAG regardless of the value of prefix-argument."
                  (t (user-error "There are no loophole maps"))))))
   (if (memq loophole-use-timer '(editing t))
       (loophole-start-editing-timer))
-  (setq loophole--editing-map-variable map-variable))
+  (setq loophole--editing map-variable))
 
 (defun loophole-stop-editing ()
   "Stop keymap edit session."
   (interactive)
   (if (memq loophole-use-timer '(editing t))
       (loophole-stop-editing-timer))
-  (setq loophole--editing-map-variable nil))
+  (setq loophole--editing nil))
 
 (defun loophole-complete-writing-lisp ()
   "Complete writing Lisp form in `loophole-write-lisp-mode' buffer."
@@ -1192,8 +1192,7 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
 (defun loophole-unset-key (key)
   "Unset the temporary biding of KEY."
   (interactive "kUnset key temporarily: ")
-  (if loophole--editing-map-variable
-      (define-key (cdar loophole--map-alist) key nil)))
+  (if loophole--editing (define-key (cdar loophole--map-alist) key nil)))
 
 (defun loophole-suspend ()
   "Suspend Loophole.
@@ -1239,7 +1238,7 @@ temporary key bindings management command.
   :global t
   :lighter (""
             loophole-mode-lighter-base
-            (loophole--editing-map-variable loophole-mode-lighter-editing-sign)
+            (loophole--editing loophole-mode-lighter-editing-sign)
             (:eval (let ((n (length
                              (delq nil
                                    (mapcar
@@ -1307,8 +1306,7 @@ If STYLE is other than above, lighter is omitted."
                   (:eval (if (and (loophole-suspending-p)
                                   (not loophole-mode-lighter-use-face))
                            loophole-mode-lighter-suspending-sign))
-                  (loophole--editing-map-variable
-                   loophole-mode-lighter-editing-sign)
+                  (loophole--editing loophole-mode-lighter-editing-sign)
                   (:eval (let ((n (length
                                    (delq nil
                                          (mapcar
@@ -1331,11 +1329,10 @@ If STYLE is other than above, lighter is omitted."
                   (:eval (if (and (loophole-suspending-p)
                                   (not loophole-mode-lighter-use-face))
                            loophole-mode-lighter-suspending-sign))
-                  (loophole--editing-map-variable
+                  (loophole--editing
                    (""
                     loophole-mode-lighter-editing-sign
-                    (:eval (let ((tag (get loophole--editing-map-variable
-                                         :loophole-tag)))
+                    (:eval (let ((tag (get loophole--editing :loophole-tag)))
                              (if (and loophole-mode-lighter-use-face
                                       (stringp tag))
                                  (propertize tag 'face nil)
@@ -1367,8 +1364,7 @@ If STYLE is other than above, lighter is omitted."
                   loophole-mode-lighter-base
                   (:eval (if (loophole-suspending-p)
                            loophole-mode-lighter-suspending-sign))
-                  (loophole--editing-map-variable
-                   loophole-mode-lighter-editing-sign)))
+                  (loophole--editing loophole-mode-lighter-editing-sign)))
                ((eq style 'static) loophole-mode-lighter-base)
                ((eq style 'custom) format)
                (t "")))
@@ -1412,22 +1408,22 @@ Add advices to call `loophole-stop-editing' for
 advice for `loophole-disable'."
   (advice-add 'loophole-prioritize
               :after (lambda (map-variable)
-                       (unless (eq map-variable loophole--editing-map-variable)
+                       (unless (eq map-variable loophole--editing)
                          (loophole-stop-editing))))
   (advice-add 'loophole-enable
               :after (lambda (map-variable)
-                       (unless (eq map-variable loophole--editing-map-variable)
+                       (unless (eq map-variable loophole--editing)
                          (loophole-stop-editing))))
   (advice-add 'loophole-disable
               :after (lambda (map-variable)
-                       (if (eq map-variable loophole--editing-map-variable)
+                       (if (eq map-variable loophole--editing)
                            (loophole-stop-editing))))
   (advice-add 'loophole-disable-all :after #'loophole-stop-editing)
   (advice-add 'loophole-name
               :after (lambda (_map-variable map-name _tag)
                        (let ((map-var (intern
                                        (format "loophole-%s-map" map-name))))
-                         (unless (eq map-var loophole--editing-map-variable)
+                         (unless (eq map-var loophole--editing)
                            (loophole-stop-editing))))))
 
 (defun loophole-turn-off-auto-stop-editing ()
@@ -1435,21 +1431,21 @@ advice for `loophole-disable'."
 Remove advices added by `loophole-turn-on-auto-stop-editing'."
   (advice-remove 'loophole-prioritize
                  (lambda (map-variable)
-                   (unless (eq map-variable loophole--editing-map-variable)
+                   (unless (eq map-variable loophole--editing)
                      (loophole-stop-editing))))
   (advice-remove 'loophole-enable
                  (lambda (map-variable)
-                   (unless (eq map-variable loophole--editing-map-variable)
+                   (unless (eq map-variable loophole--editing)
                      (loophole-stop-editing))))
   (advice-remove 'loophole-disable
                  (lambda (map-variable)
-                   (if (eq map-variable loophole--editing-map-variable)
+                   (if (eq map-variable loophole--editing)
                        (loophole-stop-editing))))
   (advice-remove 'loophole-disable-all  #'loophole-stop-editing)
   (advice-remove 'loophole-name
                  (lambda (_map-variable map-name _tag)
                    (let ((map-var (intern (format "loophole-%s-map" map-name))))
-                     (unless (eq map-var loophole--editing-map-variable)
+                     (unless (eq map-var loophole--editing)
                        (loophole-stop-editing))))))
 
 (defun loophole-turn-on-auto-resume ()
