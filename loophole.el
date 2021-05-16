@@ -1037,9 +1037,7 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
      (if (null obtaining-method)
          (user-error "Undefined prefix argument"))
      (funcall obtaining-method)))
-  (if (or (vectorp kmacro)
-          (stringp kmacro)
-          (kmacro-p kmacro))
+  (if (kmacro-p kmacro)
       (loophole-bind-entry key kmacro keymap)
     (error "Invalid kmacro: %s" kmacro)))
 
