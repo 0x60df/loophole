@@ -67,6 +67,12 @@ Once Loophole is resumed, this comes back to nil.
 To see true state of suspension, use
 `loophole-suspending-p' instead of this variable.")
 
+(defvar-local loophole--timer-alist nil
+  "Alist of timer for disabling loophole map.
+Each element looks like (MAP-VARIABLE . TIMER).
+MAP-VARIABLE is a symbol which holds keymap.
+TIMER is a timer for MAP-VARIABLE on current buffer.")
+
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map emacs-lisp-mode-map)
@@ -192,6 +198,16 @@ Each element should return a list looks like (key object)."
   :group 'loophole
   :type '(repeat symbol))
 
+(defcustom loophole-use-timer nil
+  "Flag if loophole map is automatically disabled by timer."
+  :group 'loophole
+  :type 'boolean)
+
+(defcustom loophole-timer-delay (* 60 60)
+  "Delay time in seconds for auto disabling timer."
+  :group 'loophole
+  :type 'number)
+
 (defcustom loophole-tag-sign "#"
   "String indicating tag string of loophole-map."
   :group 'loophole
@@ -274,6 +290,34 @@ During suspension, `loophole--map-alist' is removed from
 Consequently, all loophole maps lose effect while its state
 is preserved."
   (not (memq 'loophole--map-alist emulation-mode-map-alists)))
+
+(defun loophole-start-timer (map-variable)
+  "Setup or update timer for MAP-VARIABLE."
+  (let ((timer (cdr (assq map-variable loophole--timer-alist))))
+    (if (timerp timer)
+        (progn
+          (timer-set-time timer (timer-relative-time nil loophole-timer-delay))
+          (if (or (timer--triggered timer)
+                  (not (member timer  timer-list)))
+              (timer-activate timer)))
+      (push `(,map-variable . ,(run-with-timer
+                                loophole-timer-delay
+                                nil
+                                (lambda (map-variable buffer)
+                                  (if (and (loophole-registered-p map-variable)
+                                           (buffer-live-p buffer))
+                                      (with-current-buffer buffer
+                                        (loophole-disable map-variable)
+                                        (force-mode-line-update))))
+                                map-variable (current-buffer)))
+            loophole--timer-alist))))
+
+(defun loophole-stop-timer (map-variable)
+  "Cancel timer for MAP-VARIABLE."
+  (let ((timer (cdr (assq map-variable loophole--timer-alist))))
+    (if (and (timerp timer)
+             (not (timer--triggered timer)))
+        (cancel-timer timer))))
 
 (defun loophole--follow-buffer-local-condition ()
   "Update variables for buffer local information.
@@ -432,23 +476,26 @@ State variable is named as map-variable-state."
   "Return available temporary keymap.
 If currently editing keymap exists, return it; otherwise
 generate new one and return it."
-  (cond (loophole--editing-map-variable
-         (symbol-value loophole--editing-map-variable))
-        (t (let ((map-variable (loophole-generate)))
-             (loophole-prioritize map-variable)
-             (loophole-start-editing map-variable)
-             (set (get map-variable :loophole-state-variable) t)
-             (let ((cell (assq map-variable loophole--state-alist)))
-               (unless (memq (current-buffer) (cdr cell))
-                 (push (current-buffer) (cdr cell))))
-             (unless (local-variable-p 'loophole--map-alist)
-               (add-to-list 'loophole--buffer-list (current-buffer) nil #'eq)
-               (add-hook 'change-major-mode-hook
-                         #'loophole--follow-buffer-local-condition nil t)
-               (add-hook 'kill-buffer-hook
-                         #'loophole--follow-buffer-local-condition nil t)
-               (make-local-variable 'loophole--map-alist))
-             (symbol-value map-variable)))))
+  (let ((map-variable
+         (cond (loophole--editing-map-variable loophole--editing-map-variable)
+               (t (let ((generated (loophole-generate)))
+                    (loophole-prioritize generated)
+                    (loophole-start-editing generated)
+                    (set (get generated :loophole-state-variable) t)
+                    (let ((cell (assq generated loophole--state-alist)))
+                      (unless (memq (current-buffer) (cdr cell))
+                        (push (current-buffer) (cdr cell))))
+                    (unless (local-variable-p 'loophole--map-alist)
+                      (add-to-list 'loophole--buffer-list
+                                   (current-buffer) nil #'eq)
+                      (add-hook 'change-major-mode-hook
+                                #'loophole--follow-buffer-local-condition nil t)
+                      (add-hook 'kill-buffer-hook
+                                #'loophole--follow-buffer-local-condition nil t)
+                      (make-local-variable 'loophole--map-alist))
+                    generated)))))
+    (if loophole-use-timer (loophole-start-timer map-variable))
+    (symbol-value map-variable)))
 
 (defun loophole-enable (map-variable)
   "Enable the keymap stored in MAP-VARIABLE."
@@ -477,7 +524,8 @@ generate new one and return it."
                       #'loophole--follow-buffer-local-condition nil t)
             (add-hook 'kill-buffer-hook
                       #'loophole--follow-buffer-local-condition nil t)
-            (make-local-variable 'loophole--map-alist))))
+            (make-local-variable 'loophole--map-alist))
+          (if loophole-use-timer (loophole-start-timer map-variable))))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable (map-variable)
@@ -499,7 +547,8 @@ generate new one and return it."
         (when state-variable
           (set state-variable nil)
           (let ((cell (assq map-variable loophole--state-alist)))
-            (setcdr cell (delq (current-buffer) (cdr cell))))))
+            (setcdr cell (delq (current-buffer) (cdr cell))))
+          (if loophole-use-timer (loophole-stop-timer map-variable))))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable-latest ()
@@ -587,7 +636,25 @@ string as TAG regardless of the value of prefix-argument."
               (with-current-buffer buffer
                 (if (eq map-variable loophole--editing-map-variable)
                   (setq loophole--editing-map-variable named-map-variable))))
-            loophole--buffer-list))
+            loophole--buffer-list)
+      (if loophole-use-timer
+          (mapc (lambda (buffer)
+                  (with-current-buffer buffer
+                    (let ((cell (assq map-variable loophole--timer-alist)))
+                      (when cell
+                        (setcar cell named-map-variable)
+                        (let ((timer (cdr cell)))
+                          (if (timerp timer)
+                              (timer-set-function
+                               timer
+                               (lambda (map-variable buffer)
+                                 (if (and (loophole-registered-p map-variable)
+                                          (buffer-live-p buffer))
+                                     (with-current-buffer buffer
+                                       (loophole-disable map-variable)
+                                       (force-mode-line-update))))
+                               (list named-map-variable (current-buffer)))))))))
+                loophole--buffer-list)))
     (set map-variable nil)
     (set state-variable nil)
     (makunbound map-variable)
