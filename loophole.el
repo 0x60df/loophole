@@ -102,9 +102,8 @@ overwrites the earliest used one."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-kmacro-completing-key (where-is-internal
-                                           'keyboard-quit nil t)
-  "Key sequence to complete definition of keyboard macro."
+(defcustom loophole-kmacro-finish-key (where-is-internal 'keyboard-quit nil t)
+  "Key sequence to finish definition of keyboard macro."
   :group 'loophole
   :type 'key-sequence)
 
@@ -862,14 +861,14 @@ sequentially, and return a value of the last form."
 (defun loophole-obtain-key-and-kmacro-by-read-key ()
   "Return set of key and kmacro obtained by reading key.
 This function `read-key' recursively.  When you finish
-keyboard macro, type `loophole-kmacro-completing-key'.
-By default, `loophole-kmacro-completing-key' is \\[keyboard-quit]
+keyboard macro, type `loophole-kmacro-finish-key'.
+By default, `loophole-kmacro-finish-key' is \\[keyboard-quit]
 the key bound to `keyboard-quit'.  In this situation, you
 cannot use \\[keyboard-quit] for quitting.
-Once `loophole-kmacro-completing-key' is changed, you can
-complete definition of kmacro by new completing key, and
-\\[keyboard-quit] takes effect as quit."
-  (let ((complete (vconcat loophole-kmacro-completing-key))
+Once `loophole-kmacro-finish-key' is changed, you can finish
+definition of kmacro by new finish key, and \\[keyboard-quit]
+takes effect as quit."
+  (let ((complete (vconcat loophole-kmacro-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
     (or (vectorp complete)
         (stringp complete)

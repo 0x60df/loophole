@@ -194,12 +194,12 @@ It stops defining keyboard macro, but it does not abort recursive edit.
 ##### kmacro by read key
 
 `read-key` recursively, and keys read will be the keyboard macro.
-When you are finished, type completing key which may be `C-g`.
-Completing key is specified by customizable variable
-`loophole-kmacro-completing-key`,
+When you are finished, type finish key which may be `C-g`.
+Finish key is specified by customizable variable
+`loophole-kmacro-finish-key`,
 whose default value is key sequence for `keyboard-quit`.
 By default, you can only finish and cannot abort definition.
-Once you set another key sequence to `loophole-kmacro-completing-key`,
+Once you set another key sequence to `loophole-kmacro-finish-key`,
 you can finish by your completing key,
 and can abort by the key sequence bound to `keyboard-quit`.
 
@@ -350,17 +350,17 @@ the following line achieve this.
 
 See documentation string of `loophole-mode-set-lighter-format` for more details.
 
-### Completing key for defining keyboard macro
+### Finish key for defining keyboard macro
 
 When defining keyboard macro by recursive `read-key`,
-the completing key is the key sequence for `keyboard-quit`.
+the finish key is the key sequence for `keyboard-quit`.
 The reason why `keyboard-quit` is employed is that
 built-in keyboard macro system treat the key sequence for `keyboard-quit`
 as just `keyboard-quit`, not the part of keyboard macro.
 It can be changed by the following line.
 
 ``` emacs-lisp
-(setq loophole-kmacro-completing-key (kbd "C-c C-c"))
+(setq loophole-kmacro-finish-key (kbd "C-c C-c"))
 ```
 
 ### Other considerable user options
