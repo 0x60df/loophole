@@ -649,12 +649,12 @@ string as TAG regardless of the value of prefix-argument."
          (map-variable-name (format "loophole-%s-map" map-name))
          (state-variable-name (concat map-variable-name "-state"))
          (tag (or tag (substring map-name 0 1))))
-    (let ((bound (seq-find (lambda (name)
-                             (boundp (intern name)))
-                           (list map-variable-name state-variable-name ))))
-      (if bound (user-error "Specified name %s has already been bound" bound)))
     (let ((named-map-variable (intern map-variable-name))
           (named-state-variable (intern state-variable-name)))
+      (let ((bound (seq-find #'boundp
+                             (list named-map-variable named-state-variable))))
+        (if bound
+            (user-error "Specified name %s has already been bound" bound)))
       (set named-map-variable (symbol-value map-variable))
       (make-variable-buffer-local named-state-variable)
       (set-default named-state-variable nil)
