@@ -31,9 +31,7 @@
 
 ;;; Code:
 
-(require 'seq)
 (require 'kmacro)
-(require 'nadvice)
 
 (defgroup loophole nil
   "Manage temporary key bindings."
