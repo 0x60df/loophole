@@ -366,9 +366,8 @@ This function is intended to be added to
 `loophole--state-alist' and `loophole--buffer-list' will be
 modified."
   (when (memq (current-buffer) loophole--buffer-list)
-    (mapc (lambda (cell)
-            (setcdr cell (delq (current-buffer) (cdr cell))))
-          loophole--state-alist)
+    (dolist (cell loophole--state-alist)
+      (setcdr cell (delq (current-buffer) (cdr cell))))
     (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))))
 
 (defun loophole-register (map-variable state-variable &optional tag
@@ -392,8 +391,8 @@ set as parent keymap for MAP-VARIABLE."
                       (default-value 'loophole--map-alist)))
   (mapc (lambda (buffer)
           (with-current-buffer buffer
-                  (push `(,state-variable . ,(symbol-value map-variable))
-                        loophole--map-alist)))
+            (push `(,state-variable . ,(symbol-value map-variable))
+                  loophole--map-alist)))
         loophole--buffer-list)
   (push `(,map-variable . ()) loophole--state-alist))
 
@@ -461,8 +460,8 @@ State variable is named as map-variable-state."
                         (let ((s (intern (format "loophole-%d-map" i))))
                           (cond ((< loophole-temporary-map-max i) nil)
                                 ((boundp s)
-                                 (funcall find-nonbound-temporary-map-variable
-                                          (+ i 1)))
+                                 (funcall
+                                  find-nonbound-temporary-map-variable (1+ i)))
                                 (t s)))))
                      (find-earliest-used-disabled-temporary-map-variable
                       (lambda ()
@@ -479,8 +478,8 @@ State variable is named as map-variable-state."
                                   (format "loophole-%d-map" i))))
                           (cond ((< loophole-temporary-map-max i) nil)
                                 ((memq s reversal-map-variable-list)
-                                 (funcall find-orphan-temporary-map-variable
-                                          (+ i 1)))
+                                 (funcall
+                                  find-orphan-temporary-map-variable (1+ i)))
                                 (t s)))))
                      (find-earliest-used-temporary-map-variable
                       (lambda ()
@@ -604,9 +603,8 @@ generate new one and return it."
 (defun loophole-disable-all ()
   "Disable the all keymaps."
   (interactive)
-  (mapc (lambda (map-variable)
-          (loophole-disable map-variable))
-        (loophole-map-variable-list)))
+  (dolist (map-variable (loophole-map-variable-list))
+    (loophole-disable map-variable)))
 
 (defun loophole-name (map-variable map-name &optional tag)
   "Name Loophole map MAP-VARIABLE as MAP-NAME.
@@ -634,7 +632,7 @@ string as TAG regardless of the value of prefix-argument."
                      (cond (match
                             (prog1
                                 (substring arg-map-name
-                                           (+ match 1)
+                                           (1+ match)
                                            (length arg-map-name))
                               (setq arg-map-name
                                     (substring arg-map-name 0 match))))
@@ -677,7 +675,7 @@ string as TAG regardless of the value of prefix-argument."
       (mapc (lambda (buffer)
               (with-current-buffer buffer
                 (if (eq map-variable loophole--editing)
-                  (setq loophole--editing named-map-variable))))
+                    (setq loophole--editing named-map-variable))))
             loophole--buffer-list)
       (if (memq loophole-use-timer '(map t))
           (mapc (lambda (buffer)
@@ -751,16 +749,16 @@ up forms in unwind forms."
   "Finish writing Lisp form in `loophole-write-lisp-mode' buffer."
   (interactive)
   (unless (zerop (recursion-depth))
-    (when (eq major-mode 'loophole-write-lisp-mode)
-      (emacs-lisp-mode))
+    (if (eq major-mode 'loophole-write-lisp-mode)
+        (emacs-lisp-mode))
     (exit-recursive-edit)))
 
 (defun loophole-abort-writing-lisp ()
   "Abort writing Lisp form in `loophole-write-lisp-mode' buffer."
   (interactive)
   (unless (zerop (recursion-depth))
-    (when (eq major-mode 'loophole-write-lisp-mode)
-      (emacs-lisp-mode))
+    (if (eq major-mode 'loophole-write-lisp-mode)
+        (emacs-lisp-mode))
     (abort-recursive-edit)))
 
 ;;;###autoload
@@ -777,22 +775,19 @@ Definition can be finished by calling `loophole-end-kmacro'."
                            (key-description abort))
                  "[loophole-end/abort-kmacro should be bound to key]")))
     (message "Defining keyboard macro... %s" body))
-  (if (not (called-interactively-p 'any))
-      (recursive-edit)))
+  (unless (called-interactively-p 'any) (recursive-edit)))
 
 (defun loophole-end-kmacro ()
   "End defining keyboard macro."
   (interactive)
   (unwind-protect
       (kmacro-end-macro nil)
-    (if (not (zerop (recursion-depth)))
-        (exit-recursive-edit))))
+    (unless (zerop (recursion-depth)) (exit-recursive-edit))))
 
 (defun loophole-abort-kmacro ()
   "Abort defining keyboard macro."
   (interactive)
-  (if (not (zerop (recursion-depth)))
-      (abort-recursive-edit))
+  (unless (zerop (recursion-depth)) (abort-recursive-edit))
   (keyboard-quit))
 
 (defun loophole-obtain-key-and-object ()
@@ -806,7 +801,7 @@ Object is obtained as return value of `eval-minibuffer'."
 (defun loophole-obtain-key-and-command-by-symbol ()
   "Return set of key and command obtained by reading minibuffer."
   (let* ((menu-prompting nil)
-          (key (loophole-read-key "Set key temporarily: ")))
+         (key (loophole-read-key "Set key temporarily: ")))
     (list key (read-command (format "Set key %s to command: "
                                     (key-description key))))))
 
@@ -915,7 +910,7 @@ finished by calling `loophole-end-kmacro' which is bound to
 Besides, Definition can be aborted by calling
 `loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro]."
   (let* ((menu-prompting nil)
-          (key (loophole-read-key "Set key temporarily: ")))
+         (key (loophole-read-key "Set key temporarily: ")))
     (list key (progn (loophole-start-kmacro)
                      (kmacro-lambda-form (kmacro-ring-head))))))
 
@@ -929,7 +924,7 @@ Besides, Definition can be aborted by calling
             (let* ((raw-label (key-description (car (car ring))))
                    (entry (assoc raw-label counter))
                    (label (if entry
-                              (format "%s <%d>" raw-label (+ (cdr entry) 1))
+                              (format "%s <%d>" raw-label (1+ (cdr entry)))
                             raw-label)))
               (cond ((null ring) ring)
                     (t (cons
@@ -937,7 +932,7 @@ Besides, Definition can be aborted by calling
                         (funcall make-label-kmacro-alist
                                  (cdr ring)
                                  (cons (if entry
-                                           `(,raw-label . ,(+ (cdr entry) 1))
+                                           `(,raw-label . ,(1+ (cdr entry)))
                                          `(,raw-label . 1))
                                        counter)))))))))
       (let* ((head (kmacro-ring-head))
@@ -1277,8 +1272,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] b s") #'loophole-bind-symbol)
             map)
   (if loophole-mode
-      (unless loophole--suspended
-        (loophole-resume))
+      (unless loophole--suspended (loophole-resume))
     (let ((flag loophole--suspended))
       (loophole-suspend)
       (setq loophole--suspended flag))))
@@ -1304,7 +1298,7 @@ If STYLE is other than above, lighter is omitted."
                   loophole-mode-lighter-base
                   (:eval (if (and (loophole-suspending-p)
                                   (not loophole-mode-lighter-use-face))
-                           loophole-mode-lighter-suspending-sign))
+                             loophole-mode-lighter-suspending-sign))
                   (loophole--editing loophole-mode-lighter-editing-sign)
                   (:eval (let ((n (length
                                    (delq nil
@@ -1321,13 +1315,13 @@ If STYLE is other than above, lighter is omitted."
                                             (if (loophole-suspending-p)
                                                 'loophole-suspending
                                               'loophole-using))
-                                           s))))))))
+                                         s))))))))
                ((eq style 'tag)
                 '(""
                   loophole-mode-lighter-base
                   (:eval (if (and (loophole-suspending-p)
                                   (not loophole-mode-lighter-use-face))
-                           loophole-mode-lighter-suspending-sign))
+                             loophole-mode-lighter-suspending-sign))
                   (loophole--editing
                    (""
                     loophole-mode-lighter-editing-sign
@@ -1362,7 +1356,7 @@ If STYLE is other than above, lighter is omitted."
                 '(""
                   loophole-mode-lighter-base
                   (:eval (if (loophole-suspending-p)
-                           loophole-mode-lighter-suspending-sign))
+                             loophole-mode-lighter-suspending-sign))
                   (loophole--editing loophole-mode-lighter-editing-sign)))
                ((eq style 'static) loophole-mode-lighter-base)
                ((eq style 'custom) format)
