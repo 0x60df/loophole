@@ -102,10 +102,28 @@ overwrites the earliest used one."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-kmacro-finish-key (where-is-internal 'keyboard-quit nil t)
-  "Key sequence to finish definition of keyboard macro."
+(defcustom loophole-use-timer nil
+  "Flag if loophole map is automatically disabled by timer.
+Value of this variable can be either of the followings.
+nil:     Do not use timer at all.
+map:     Enable timer for map state only.
+editing: Enable timer for editing state only.
+t:       Enable timer for both of map and editing."
   :group 'loophole
-  :type 'key-sequence)
+  :type '(choice (const :tag "Do not use timer" nil)
+                 (const :tag "Map state only" map)
+                 (const :tag "Editing state only" editing)
+                 (const :tag "Both of map and editing" t)))
+
+(defcustom loophole-timer-delay (* 60 60)
+  "Delay time in seconds for auto disabling timer."
+  :group 'loophole
+  :type 'number)
+
+(defcustom loophole-editing-timer-delay (* 60 5)
+  "Delay time in seconds for auto stopping editing timer."
+  :group 'loophole
+  :type 'number)
 
 (defcustom loophole-writing-lambda-form-format
   (concat "(lambda (&optional arg)\n"
@@ -118,6 +136,11 @@ placed, and it will be removed when the format is inserted
 in the buffer."
   :group 'loophole
   :type 'string)
+
+(defcustom loophole-kmacro-finish-key (where-is-internal 'keyboard-quit nil t)
+  "Key sequence to finish definition of keyboard macro."
+  :group 'loophole
+  :type 'key-sequence)
 
 (defcustom loophole-bind-command-order
   '(loophole-obtain-key-and-command-by-symbol
@@ -199,29 +222,6 @@ First element gets first priority.
 Each element should return a list looks like (key object)."
   :group 'loophole
   :type '(repeat symbol))
-
-(defcustom loophole-use-timer nil
-  "Flag if loophole map is automatically disabled by timer.
-Value of this variable can be either of the followings.
-nil:     Do not use timer at all.
-map:     Enable timer for map state only.
-editing: Enable timer for editing state only.
-t:       Enable timer for both of map and editing."
-  :group 'loophole
-  :type '(choice (const :tag "Do not use timer" nil)
-                 (const :tag "Map state only" map)
-                 (const :tag "Editing state only" editing)
-                 (const :tag "Both of map and editing" t)))
-
-(defcustom loophole-timer-delay (* 60 60)
-  "Delay time in seconds for auto disabling timer."
-  :group 'loophole
-  :type 'number)
-
-(defcustom loophole-editing-timer-delay (* 60 5)
-  "Delay time in seconds for auto stopping editing timer."
-  :group 'loophole
-  :type 'number)
 
 (defcustom loophole-tag-sign "#"
   "String indicating tag string of loophole-map."
@@ -723,22 +723,6 @@ string as TAG regardless of the value of prefix-argument."
       (loophole-stop-editing-timer))
   (setq loophole--editing nil))
 
-(defun loophole-finish-writing-lisp ()
-  "Finish writing Lisp form in `loophole-write-lisp-mode' buffer."
-  (interactive)
-  (unless (zerop (recursion-depth))
-    (when (eq major-mode 'loophole-write-lisp-mode)
-      (emacs-lisp-mode))
-    (exit-recursive-edit)))
-
-(defun loophole-abort-writing-lisp ()
-  "Abort writing Lisp form in `loophole-write-lisp-mode' buffer."
-  (interactive)
-  (unless (zerop (recursion-depth))
-    (when (eq major-mode 'loophole-write-lisp-mode)
-      (emacs-lisp-mode))
-    (abort-recursive-edit)))
-
 (define-derived-mode loophole-write-lisp-mode emacs-lisp-mode
   "Loophole Write Lisp"
   "Auxiliary major mode for writing Lisp form in loophole.
@@ -762,6 +746,22 @@ up forms in unwind forms."
                     "Complete `\\[loophole-finish-writing-lisp]', "
                     "Abort `\\[loophole-abort-writing-lisp]'."))))
   (recursive-edit))
+
+(defun loophole-finish-writing-lisp ()
+  "Finish writing Lisp form in `loophole-write-lisp-mode' buffer."
+  (interactive)
+  (unless (zerop (recursion-depth))
+    (when (eq major-mode 'loophole-write-lisp-mode)
+      (emacs-lisp-mode))
+    (exit-recursive-edit)))
+
+(defun loophole-abort-writing-lisp ()
+  "Abort writing Lisp form in `loophole-write-lisp-mode' buffer."
+  (interactive)
+  (unless (zerop (recursion-depth))
+    (when (eq major-mode 'loophole-write-lisp-mode)
+      (emacs-lisp-mode))
+    (abort-recursive-edit)))
 
 ;;;###autoload
 (defun loophole-start-kmacro ()
