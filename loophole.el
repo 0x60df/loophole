@@ -79,7 +79,7 @@ TIMER is a timer for MAP-VARIABLE on current buffer.")
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map emacs-lisp-mode-map)
-    (define-key map (kbd "C-c C-c") #'loophole-complete-writing-lisp)
+    (define-key map (kbd "C-c C-c") #'loophole-finish-writing-lisp)
     (define-key map (kbd "C-c C-k") #'loophole-abort-writing-lisp)
     map)
   "Keymap for `loophole-write-lisp-mode'.")
@@ -723,8 +723,8 @@ string as TAG regardless of the value of prefix-argument."
       (loophole-stop-editing-timer))
   (setq loophole--editing nil))
 
-(defun loophole-complete-writing-lisp ()
-  "Complete writing Lisp form in `loophole-write-lisp-mode' buffer."
+(defun loophole-finish-writing-lisp ()
+  "Finish writing Lisp form in `loophole-write-lisp-mode' buffer."
   (interactive)
   (unless (zerop (recursion-depth))
     (when (eq major-mode 'loophole-write-lisp-mode)
@@ -745,9 +745,9 @@ string as TAG regardless of the value of prefix-argument."
 Calling this major mode in Lisp program offers
 `emacs-lisp-mode' like environment with few key bindings and
 recursive edit.
-After complete or abort writing, caller can get written
+After finish or abort writing, caller can get written
 forms by `buffer-string'.
-If writing is completed, forms following calling this
+If writing is finished, forms following calling this
 function will be evaluated.
 In order to do something even for abort case, call this
 function in body form of `unwind-protect' and write follow
@@ -759,7 +759,7 @@ up forms in unwind forms."
           ,(substitute-command-keys
             (concat "\\<loophole-write-lisp-mode-map>"
                     "Writing lisp form.  "
-                    "Complete `\\[loophole-complete-writing-lisp]', "
+                    "Complete `\\[loophole-finish-writing-lisp]', "
                     "Abort `\\[loophole-abort-writing-lisp]'."))))
   (recursive-edit))
 
