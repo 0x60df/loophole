@@ -1,4 +1,4 @@
-;;; loophole.el --- Manage temporary key bindings in Emacs -*- lexical-binding: t -*-
+;;; loophole.el --- Manage temporary key bindings -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2020, 2021 0x60DF
 
@@ -7,6 +7,7 @@
 ;; Version: 0.3.4
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
+;; Package-Requires: ((emacs "27.1"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -32,6 +33,8 @@
 ;;; Code:
 
 (require 'kmacro)
+
+(declare-function seq-drop "seq")
 
 (defgroup loophole nil
   "Manage temporary key bindings."
@@ -546,7 +549,7 @@ generate new one and return it."
       (cond (disabled-map-variable-list
              (intern (completing-read "Enable keymap temporarily: "
                                       disabled-map-variable-list)))
-            (t (user-error "There are no disabled loophole maps."))))))
+            (t (user-error "There are no disabled loophole maps"))))))
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (when state-variable
@@ -577,7 +580,7 @@ generate new one and return it."
       (cond (enabled-map-variable-list
              (intern (completing-read "Disable keymap temporarily: "
                                       enabled-map-variable-list)))
-            (t (user-error "There are no enabled loophole maps."))))))
+            (t (user-error "There are no enabled loophole maps"))))))
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (when state-variable
@@ -596,7 +599,7 @@ generate new one and return it."
          (map-variable (get state-variable :loophole-map-variable)))
     (if map-variable
         (loophole-disable map-variable)
-      (user-error "There are no enabled loophole maps."))))
+      (user-error "There are no enabled loophole maps"))))
 
 (defun loophole-disable-all ()
   "Disable the all keymaps."
