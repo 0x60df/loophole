@@ -1369,23 +1369,38 @@ Add advices to call `loophole-prioritize' for
 `loophole-enable', `loophole-name' and
 `loophole-start-editing'."
   (advice-add 'loophole-enable
-              :after (lambda (map-variable) (loophole-prioritize map-variable)))
+              :after (lambda (map-variable)
+                       "`loophole-prioritize',
+  but without interactive spec."
+                       (loophole-prioritize map-variable)))
   (advice-add 'loophole-start-editing
-              :after (lambda (map-variable) (loophole-prioritize map-variable)))
+              :after (lambda (map-variable)
+                       "`loophole-prioritize',
+  but without interactive spec."
+                       (loophole-prioritize map-variable)))
   (advice-add 'loophole-name
               :after (lambda (_map-variable map-name _tag)
+                       "`loophole-prioritize',
+  for MAP-NAME
+  but without interactive spec."
                        (loophole-prioritize
-                        (intern
-                         (format "loophole-%s-map" map-name))))))
+                        (intern (format "loophole-%s-map" map-name))))))
 
 (defun loophole-turn-off-auto-prioritize ()
   "Turn off auto prioritize.
 Remove advices added by `loophole-turn-on-auto-prioritize'."
-  (advice-remove 'loophole-enable
-                 (lambda (map-variable) (loophole-prioritize map-variable)))
-  (advice-remove 'loophole-start-editing
-                 (lambda (map-variable) (loophole-prioritize map-variable)))
+  (advice-remove 'loophole-enable (lambda (map-variable)
+                                    "`loophole-prioritize',
+  but without interactive spec."
+                                    (loophole-prioritize map-variable)))
+  (advice-remove 'loophole-start-editing (lambda (map-variable)
+                                           "`loophole-prioritize',
+  but without interactive spec."
+                                           (loophole-prioritize map-variable)))
   (advice-remove 'loophole-name (lambda (_map-variable map-name _tag)
+                                  "`loophole-prioritize',
+  for MAP-NAME
+  but without interactive spec."
                                   (loophole-prioritize
                                    (intern
                                     (format "loophole-%s-map" map-name))))))
@@ -1400,19 +1415,31 @@ Add advices to call `loophole-stop-editing' for
 advice for `loophole-disable'."
   (advice-add 'loophole-prioritize
               :after (lambda (map-variable)
+                       "`loophole-stop-editing',
+  but without interactive spec
+  and only if MAP-VARIABLE is not being edited."
                        (unless (eq map-variable loophole--editing)
                          (loophole-stop-editing))))
   (advice-add 'loophole-enable
               :after (lambda (map-variable)
+                       "`loophole-stop-editing',
+  but without interactive spec
+  and only if MAP-VARIABLE is not being edited."
                        (unless (eq map-variable loophole--editing)
                          (loophole-stop-editing))))
   (advice-add 'loophole-disable
               :after (lambda (map-variable)
+                       "`loophole-stop-editing',
+  but without interactive spec
+  and only if MAP-VARIABLE is being edited."
                        (if (eq map-variable loophole--editing)
                            (loophole-stop-editing))))
   (advice-add 'loophole-disable-all :after #'loophole-stop-editing)
   (advice-add 'loophole-name
               :after (lambda (_map-variable map-name _tag)
+                       "`loophole-stop-editing',
+  but without interactive spec
+  and only if MAP-VARIABLE is not being edited."
                        (let ((map-var (intern
                                        (format "loophole-%s-map" map-name))))
                          (unless (eq map-var loophole--editing)
@@ -1423,19 +1450,31 @@ advice for `loophole-disable'."
 Remove advices added by `loophole-turn-on-auto-stop-editing'."
   (advice-remove 'loophole-prioritize
                  (lambda (map-variable)
+                   "`loophole-stop-editing',
+  but without interactive spec
+  and only if MAP-VARIABLE is not being edited."
                    (unless (eq map-variable loophole--editing)
                      (loophole-stop-editing))))
   (advice-remove 'loophole-enable
                  (lambda (map-variable)
+                   "`loophole-stop-editing',
+  but without interactive spec
+  and only if MAP-VARIABLE is not being edited."
                    (unless (eq map-variable loophole--editing)
                      (loophole-stop-editing))))
   (advice-remove 'loophole-disable
                  (lambda (map-variable)
+                   "`loophole-stop-editing',
+  but without interactive spec
+  and only if MAP-VARIABLE is being edited."
                    (if (eq map-variable loophole--editing)
                        (loophole-stop-editing))))
   (advice-remove 'loophole-disable-all  #'loophole-stop-editing)
   (advice-remove 'loophole-name
                  (lambda (_map-variable map-name _tag)
+                   "`loophole-stop-editing',
+  but without interactive spec
+  and only if MAP-VARIABLE is not being edited."
                    (let ((map-var (intern (format "loophole-%s-map" map-name))))
                      (unless (eq map-var loophole--editing)
                        (loophole-stop-editing))))))
@@ -1449,24 +1488,59 @@ Add advices to call `loophole-resume' for
 Binding commands including `loophole-set-key' also affected
 by the advice of `loophole-bind-entry'."
   (advice-add 'loophole-prioritize
-              :after (lambda (&rest _) (loophole-resume)))
+              :after (lambda (&rest _)
+                       "`loophole-resume',
+  but without interactive spec."
+                       (loophole-resume)))
   (advice-add 'loophole-enable
-              :after (lambda (&rest _) (loophole-resume)))
+              :after (lambda (&rest _)
+                       "`loophole-resume',
+  but without interactive spec."
+                       (loophole-resume)))
   (advice-add 'loophole-name
-              :after (lambda (&rest _) (loophole-resume)))
+              :after (lambda (&rest _)
+                       "`loophole-resume',
+  but without interactive spec."
+                       (loophole-resume)))
   (advice-add 'loophole-start-editing
-              :after (lambda (&rest _) (loophole-resume)))
+              :after (lambda (&rest _)
+                       "`loophole-resume',
+  but without interactive spec."
+                       (loophole-resume)))
   (advice-add 'loophole-bind-entry
-              :after (lambda (&rest _) (loophole-resume))))
+              :after (lambda (&rest _)
+                       "`loophole-resume',
+  but without interactive spec."
+                       (loophole-resume))))
 
 (defun loophole-turn-off-auto-resume ()
   "Turn off auto prioritize.
 Remove advices added by `loophole-turn-on-auto-resume'."
-  (advice-remove 'loophole-prioritize (lambda (&rest _) (loophole-resume)))
-  (advice-remove 'loophole-enable (lambda (&rest _) (loophole-resume)))
-  (advice-remove 'loophole-name (lambda (&rest _) (loophole-resume)))
-  (advice-remove 'loophole-start-editing (lambda (&rest _) (loophole-resume)))
-  (advice-remove 'loophole-bind-entry (lambda (&rest _) (loophole-resume))))
+  (advice-remove 'loophole-prioritize
+                 (lambda (&rest _)
+                   "`loophole-resume',
+  but without interactive spec."
+                   (loophole-resume)))
+  (advice-remove 'loophole-enable
+                 (lambda (&rest _)
+                   "`loophole-resume',
+  but without interactive spec."
+                   (loophole-resume)))
+  (advice-remove 'loophole-name
+                 (lambda (&rest _)
+                   "`loophole-resume',
+  but without interactive spec."
+                   (loophole-resume)))
+  (advice-remove 'loophole-start-editing
+                 (lambda (&rest _)
+                   "`loophole-resume',
+  but without interactive spec."
+                   (loophole-resume)))
+  (advice-remove 'loophole-bind-entry
+                 (lambda (&rest _)
+                   "`loophole-resume',
+  but without interactive spec."
+                   (loophole-resume))))
 
 (defalias 'loophole-dig 'loophole-set-key)
 (defalias 'loophole-bury 'loophole-unset-key)
