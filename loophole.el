@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.3.4
+;; Version: 0.3.5
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -831,7 +831,10 @@ sequentially, and return a value of the last form."
          (key (loophole-read-key "Set key temporarily: ")))
     (let ((name "*Loophole*")
           (buffer (current-buffer))
-          (window (selected-window)))
+          (window (selected-window))
+          (frame (selected-frame))
+          (configuration-list (mapcar #'current-window-configuration
+                                      (frame-list))))
       (unwind-protect
           (progn
             (switch-to-buffer-other-window (get-buffer-create name) t)
@@ -850,9 +853,16 @@ sequentially, and return a value of the last form."
                   (list key lambda-form)
                 (user-error
                  "Obtained Lisp object is not valid command: %s" lambda-form))))
-        (ignore-errors (delete-window (get-buffer-window name)))
-        (unless (eq (selected-window) window) (select-window window t))
-        (unless (eq (current-buffer) buffer) (switch-to-buffer buffer t t))))))
+        (let ((configuration
+               (seq-find (lambda (c)
+                           (eq (selected-frame) (window-configuration-frame c)))
+                         configuration-list)))
+          (if configuration
+              (set-window-configuration configuration)
+            (delete-frame)))
+        (if (frame-live-p frame) (select-frame-set-input-focus frame t))
+        (if (window-live-p window) (select-window window t))
+        (if (buffer-live-p buffer) (switch-to-buffer buffer t t))))))
 
 (defun loophole-obtain-key-and-kmacro-by-read-key ()
   "Return set of key and kmacro obtained by reading key.
