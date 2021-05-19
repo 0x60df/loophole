@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.3.5
+;; Version: 0.3.6
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -76,6 +76,10 @@ TIMER is a timer for MAP-VARIABLE on current buffer.")
 
 (defvar-local loophole--editing-timer nil
   "Timer for stopping editing loophole map.")
+
+(defvar loophole--read-map-variable-help-condition
+  '((index . 0) (last))
+  "Condition of help for `loophole-read-map-variable'.")
 
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
@@ -299,6 +303,66 @@ Otherwise, \\[keyboard-quit] will be returned as it is read."
          (keyboard-quit))
     key))
 
+(defun loophole-read-map-variable (prompt &optional predicate noerror)
+  "`completing-read' existing map-variable and return read one.
+PROMPT is used for `completing-read'.
+
+If optional argument PREDICATE is non-nil, it should be
+a function which filters candidates for `completing-read'.
+Otherwise, `loophole-map-variable-list' is used for
+candidates.
+PREDICATE shoud get one argument, a map variable, and return
+non-nil if that map variable should be used for candidates.
+
+If optional argument NOERROR is non-nil, this function
+returns nil if no candidate is found instead of signaling
+`user-error'."
+  (unwind-protect
+      (let ((map-variable-list
+             (if predicate
+                 (seq-filter predicate (loophole-map-variable-list))
+               (loophole-map-variable-list)))
+            (minibuffer-help-form
+             '(let ((completions (all-completions
+                                  (minibuffer-contents)
+                                  minibuffer-completion-table
+                                  minibuffer-completion-predicate))
+                    (index (cdr
+                            (assq 'index
+                                  loophole--read-map-variable-help-condition)))
+                    (last (cdr
+                           (assq 'last
+                                 loophole--read-map-variable-help-condition))))
+                (if completions
+                    (progn
+                      (if (equal completions last)
+                          (push `(index . ,(if (< index
+                                                  (- (length completions) 1))
+                                               (1+ index)
+                                             0))
+                                loophole--read-map-variable-help-condition)
+                        (push '(index . 0)
+                              loophole--read-map-variable-help-condition)
+                        (push `(last . ,completions)
+                              loophole--read-map-variable-help-condition))
+                      (let ((map-variable
+                             (elt
+                              completions
+                              (cdr
+                               (assq
+                                'index
+                                loophole--read-map-variable-help-condition)))))
+                        (if map-variable (loophole-describe map-variable))))
+                  (push '(index . 0)
+                        loophole--read-map-variable-help-condition)
+                  (push `(last . ,completions)
+                        loophole--read-map-variable-help-condition)))))
+        (cond (map-variable-list
+               (intern (completing-read prompt map-variable-list nil t)))
+              (noerror nil)
+              (t (user-error "There are no suitable loophole maps"))))
+    (setq loophole--read-map-variable-help-condition '((index . 0) (last)))))
+
 (defun loophole-suspending-p ()
   "Non-nil during suspending Loophole.
 During suspension, `loophole--map-alist' is removed from
@@ -413,11 +477,7 @@ registered, and they are associated."
   "Give first priority to MAP-VARIABLE.
 This is done by move the entry in `loophole--map-alist' to
 the front."
-  (interactive
-   (let ((map-variable-list (loophole-map-variable-list)))
-     (list (cond (map-variable-list
-                  (intern (completing-read "Name keymap: " map-variable-list)))
-                 (t (user-error "There are no loophole maps"))))))
+  (interactive (list (loophole-read-map-variable "Prioritize keymap: ")))
   (let ((state-variable (get map-variable :loophole-state-variable)))
     (when state-variable
       (unless (eq (assq state-variable loophole--map-alist)
@@ -549,16 +609,10 @@ generate new one and return it."
 (defun loophole-enable (map-variable)
   "Enable the keymap stored in MAP-VARIABLE."
   (interactive
-   (let ((disabled-map-variable-list
-          (seq-filter (lambda (map-variable)
-                        (not (symbol-value (get map-variable
-                                                :loophole-state-variable))))
-                      (loophole-map-variable-list))))
-     (list
-      (cond (disabled-map-variable-list
-             (intern (completing-read "Enable keymap temporarily: "
-                                      disabled-map-variable-list)))
-            (t (user-error "There are no disabled loophole maps"))))))
+   (list (loophole-read-map-variable
+          "Enable keymap temporarily: "
+          (lambda (map-variable)
+            (not (symbol-value (get map-variable :loophole-state-variable)))))))
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (when state-variable
@@ -580,16 +634,10 @@ generate new one and return it."
 (defun loophole-disable (map-variable)
   "Disable the keymap stored in MAP-VARIABLE."
   (interactive
-   (let ((enabled-map-variable-list
-          (seq-filter (lambda (map-variable)
-                        (symbol-value (get map-variable
-                                           :loophole-state-variable)))
-                      (loophole-map-variable-list))))
-     (list
-      (cond (enabled-map-variable-list
-             (intern (completing-read "Disable keymap temporarily: "
-                                      enabled-map-variable-list)))
-            (t (user-error "There are no enabled loophole maps"))))))
+   (list (loophole-read-map-variable
+          "Disable keymap temporarily: "
+          (lambda (map-variable)
+            (symbol-value (get map-variable :loophole-state-variable))))))
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (when state-variable
@@ -630,11 +678,7 @@ MAP-NAME.  If prefix-argument is non-nil, TAG is also asked.
 If MAP-NAME contains `loophole-tag-sign', use a following
 string as TAG regardless of the value of prefix-argument."
   (interactive
-   (let* ((map-variable-list (loophole-map-variable-list))
-          (arg-map-variable
-           (cond (map-variable-list
-                  (intern (completing-read "Name keymap: " map-variable-list)))
-                 (t (user-error "There are no loophole maps"))))
+   (let* ((arg-map-variable (loophole-read-map-variable "Name keymap: "))
           (arg-map-name (read-string (format "New name[%stag] for keymap %s: "
                                              loophole-tag-sign
                                              arg-map-variable)))
@@ -722,12 +766,7 @@ which had been already unbound." named-map-variable state-variable))
 
 (defun loophole-start-editing (map-variable)
   "Start keymap edit session with MAP-VARIABLE."
-  (interactive
-   (let ((map-variable-list (loophole-map-variable-list)))
-     (list (cond (map-variable-list
-                  (intern (completing-read
-                           "Name keymap: " map-variable-list)))
-                 (t (user-error "There are no loophole maps"))))))
+  (interactive (list (loophole-read-map-variable "Start editing keymap: ")))
   (if (memq loophole-use-timer '(editing t))
       (loophole-start-editing-timer))
   (setq loophole--editing map-variable))
@@ -741,12 +780,7 @@ which had been already unbound." named-map-variable state-variable))
 
 (defun loophole-describe (map-variable)
   "Display all key bindings in MAP-VARIABLE."
-  (interactive
-   (let ((map-variable-list (loophole-map-variable-list)))
-     (list (cond (map-variable-list
-                  (intern (completing-read
-                           "Describe keymap: " map-variable-list)))
-                 (t (user-error "There are no loophole maps"))))))
+  (interactive (list (loophole-read-map-variable "Describe keymap: ")))
   (help-setup-xref `(loophole-describe ,map-variable)
                    (called-interactively-p 'interactive))
   (with-help-window (help-buffer)

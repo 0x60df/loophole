@@ -223,6 +223,15 @@ This setting show tag string of editing keymap
 after `loophole-mode-lighter-editing-sign`.
 Details of mode line format is described below.
 
+#### Describe loophole-map
+
+`loophole-describe` describes loophole-map.
+As well as `M-x` `loophole-describe`,
+`help-char` in minibuffer for some commands like
+`loophole-enable`, `loophole-name` also invokes `loophole-describe`.
+Multiple input of `help-char` in minibuffer cycles loophole-map description
+among completion candidates.
+
 #### Alternative binding commands
 
 Loophole provides some binding commands other than `loophole-set-key`.
