@@ -722,6 +722,25 @@ string as TAG regardless of the value of prefix-argument."
       (loophole-stop-editing-timer))
   (setq loophole--editing nil))
 
+(defun loophole-describe (map-variable)
+  "Display all key bindings in MAP-VARIABLE."
+  (interactive
+   (let ((map-variable-list (loophole-map-variable-list)))
+     (list (cond (map-variable-list
+                  (intern (completing-read
+                           "Describe keymap: " map-variable-list)))
+                 (t (user-error "There are no loophole maps"))))))
+  (help-setup-xref `(loophole-describe ,map-variable)
+                   (called-interactively-p 'interactive))
+  (with-help-window (help-buffer)
+    (princ (format "`%s' Loophole Map Bindings:\n" map-variable))
+    (princ (substitute-command-keys
+            (format "\\{%s}" map-variable)))
+    (with-current-buffer standard-output
+      (save-excursion
+        (re-search-backward "`\\([^`']+\\)'" nil t)
+        (help-xref-button 1 'help-variable map-variable)))))
+
 (define-derived-mode loophole-write-lisp-mode emacs-lisp-mode
   "Loophole Write Lisp"
   "Auxiliary major mode for writing Lisp form in loophole.
@@ -1260,6 +1279,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] [") #'loophole-start-editing)
             (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
             (define-key map (kbd "C-c ] n") #'loophole-name)
+            (define-key map (kbd "C-c ] /") #'loophole-describe)
             (define-key map (kbd "C-c ] s") #'loophole-set-key)
             (define-key map (kbd "C-c ] u") #'loophole-unset-key)
             (define-key map (kbd "C-c ] e") #'loophole-enable)
