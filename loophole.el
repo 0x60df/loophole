@@ -435,6 +435,18 @@ modified."
       (setcdr cell (delq (current-buffer) (cdr cell))))
     (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))))
 
+(defun loophole-registered-p (map-variable &optional state-variable)
+  "Return non-nil if MAP-VARIABLE is registered to loophole.
+If optional argument STATE-VARIABLE is not nil,
+Return non-nil if both MAP-VARIABLE and STATE-VARIABLE are
+registered, and they are associated."
+  (and (if state-variable
+           (eq state-variable (get map-variable :loophole-state-variable))
+         (setq state-variable (get map-variable :loophole-state-variable)))
+       (eq map-variable (get state-variable :loophole-map-variable))
+       (assq state-variable (default-value 'loophole--map-alist))
+       (assq map-variable loophole--state-alist)))
+
 (defun loophole-register (map-variable state-variable &optional tag
                                        without-base-map)
   "Register the set of MAP-VARIABLE and STATE-VARIABLE to loophole.
@@ -443,7 +455,38 @@ mode line.  TAG should not contain `loophole-tag-sign',
 because tag will be prefixed by `loophole-tag-sign' on the
 mode-line.
 Unless WITHOUT-BASE-MAP is non-nil, `loophole-base-map' is
-set as parent keymap for MAP-VARIABLE."
+set as parent keymap for MAP-VARIABLE.
+
+If called interactively, read MAP-VARIABLE, STATE-VARIABLE
+and TAG.
+When called with prefix argument, it is assigned to
+WITHOUT-BASE-MAP."
+  (interactive
+   (let* ((arg-map-variable
+           (intern (completing-read "Map-variable: "
+                                    obarray
+                                    (lambda (s)
+                                      (and (boundp s) (not (keywordp s))
+                                           (keymapp (symbol-value s)))))))
+          (arg-state-variable
+           (intern (completing-read "State-variable: "
+                                    obarray
+                                    (lambda (s)
+                                      (and (boundp s) (not (keywordp s)))))))
+          (arg-tag (read-string
+                    (format "Tag for keymap %s: "
+                            arg-map-variable)))
+          (arg-without-base-map current-prefix-arg))
+     (list arg-map-variable arg-state-variable arg-tag arg-without-base-map)))
+  (if (loophole-registered-p map-variable state-variable)
+      (user-error "Specified variables are already registered: %s, %s"
+                  map-variable state-variable)
+    (cond ((assq map-variable loophole--state-alist)
+           (user-error "Specified map-variable is already used: %s"
+                       map-variable))
+          ((assq state-variable (default-value 'loophole--map-alist))
+           (user-error "Specified state-variable is already used: %s"
+                       state-variable))))
   (put map-variable :loophole-state-variable state-variable)
   (put state-variable :loophole-map-variable map-variable)
   (put map-variable :loophole-tag tag)
@@ -460,18 +503,6 @@ set as parent keymap for MAP-VARIABLE."
                   loophole--map-alist)))
         loophole--buffer-list)
   (push `(,map-variable . ()) loophole--state-alist))
-
-(defun loophole-registered-p (map-variable &optional state-variable)
-  "Return non-nil if MAP-VARIABLE is registered to loophole.
-If optional argument STATE-VARIABLE is not nil,
-Return non-nil if both MAP-VARIABLE and STATE-VARIABLE are
-registered, and they are associated."
-  (and (if state-variable
-           (eq state-variable (get map-variable :loophole-state-variable))
-         (setq state-variable (get map-variable :loophole-state-variable)))
-       (eq map-variable (get state-variable :loophole-map-variable))
-       (assq state-variable (default-value 'loophole--map-alist))
-       (assq map-variable loophole--state-alist)))
 
 (defun loophole-prioritize (map-variable)
   "Give first priority to MAP-VARIABLE.
@@ -1329,6 +1360,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] ^") #'loophole-prioritize)
             (define-key map (kbd "C-c ] [") #'loophole-start-editing)
             (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
+            (define-key map (kbd "C-c ] {") #'loophole-register)
             (define-key map (kbd "C-c ] n") #'loophole-name)
             (define-key map (kbd "C-c ] /") #'loophole-describe)
             (define-key map (kbd "C-c ] s") #'loophole-set-key)
