@@ -504,6 +504,52 @@ WITHOUT-BASE-MAP."
         loophole--buffer-list)
   (push `(,map-variable . ()) loophole--state-alist))
 
+(defun loophole-unregister (map-variable &optional keep-parent-map)
+  "Unregister MAP-VARIABLE from loophole.
+If an optional argument keep-parent-map is non-nil, parent
+of MAP-VARIABLE will not be removed.
+
+If called interactively with prefix argument, it is assigned
+to KEEP-PARENT-MAP."
+  (interactive
+   (list (loophole-read-map-variable "Unregister keymap:") current-prefix-arg))
+  (if (memq loophole-use-timer '(map t))
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (let ((timer (cdr (assq map-variable loophole--timer-alist))))
+                  (if (timerp timer) (cancel-timer timer)))
+                (setq loophole--timer-alist
+                      (seq-filter (lambda (cell)
+                                    (not (eq (car cell) map-variable)))
+                                  loophole--timer-alist))))
+            loophole--buffer-list))
+  (mapc (lambda (buffer)
+          (with-current-buffer buffer
+            (if (eq loophole--editing map-variable)
+                (setq loophole--editing nil))))
+        loophole--buffer-list)
+  (let ((state-variable (get map-variable :loophole-state-variable)))
+    (setq loophole--state-alist
+          (seq-filter (lambda (cell)
+                        (not (eq (car cell) map-variable)))
+                      loophole--state-alist))
+    (mapc (lambda (buffer)
+            (with-current-buffer buffer
+              (setq loophole--map-alist
+                    (seq-filter (lambda (cell)
+                                  (not (eq (car cell) state-variable)))
+                                loophole--map-alist))))
+          loophole--buffer-list)
+    (setq-default loophole--map-alist
+                  (seq-filter (lambda (cell)
+                                  (not (eq (car cell) state-variable)))
+                              (default-value 'loophole--map-alist)))
+    (unless keep-parent-map
+      (set-keymap-parent (symbol-value map-variable) nil))
+    (put map-variable :loophole-tag nil)
+    (put state-variable :loophole-map-variable nil)
+    (put map-variable :loophole-state-variable nil)))
+
 (defun loophole-prioritize (map-variable)
   "Give first priority to MAP-VARIABLE.
 This is done by move the entry in `loophole--map-alist' to
@@ -1361,6 +1407,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] [") #'loophole-start-editing)
             (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
             (define-key map (kbd "C-c ] {") #'loophole-register)
+            (define-key map (kbd "C-c ] }") #'loophole-unregister)
             (define-key map (kbd "C-c ] n") #'loophole-name)
             (define-key map (kbd "C-c ] /") #'loophole-describe)
             (define-key map (kbd "C-c ] s") #'loophole-set-key)
