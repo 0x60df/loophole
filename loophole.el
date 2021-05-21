@@ -155,7 +155,7 @@ in the buffer."
   :type 'key-sequence)
 
 (defcustom loophole-bind-command-order
-  '(loophole-obtain-key-and-command-by-symbol
+  '(loophole-obtain-key-and-command-by-read-command
     loophole-obtain-key-and-command-by-key-sequence
     loophole-obtain-key-and-command-by-lambda-form
     loophole-obtain-key-and-object)
@@ -225,7 +225,7 @@ case, the list looks like (key symbol keymap)."
   :type '(repeat symbol))
 
 (defcustom loophole-set-key-order
-  '(loophole-obtain-key-and-command-by-symbol
+  '(loophole-obtain-key-and-command-by-read-command
     loophole-obtain-key-and-kmacro-by-recursive-edit
     loophole-obtain-key-and-command-by-key-sequence
     loophole-obtain-key-and-kmacro-by-read-key
@@ -957,7 +957,7 @@ Object is obtained as return value of `eval-minibuffer'."
     (list key (eval-minibuffer (format "Set key %s to entry: "
                                        (key-description key))))))
 
-(defun loophole-obtain-key-and-command-by-symbol ()
+(defun loophole-obtain-key-and-command-by-read-command ()
   "Return set of key and command obtained by reading command symbol."
   (let* ((menu-prompting nil)
          (key (loophole-read-key "Set key temporarily: ")))

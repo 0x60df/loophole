@@ -256,7 +256,7 @@ the list looks like `(KEY ENTRY)`
 Default value of `loophole-set-key-order` is
 
 ```emacs-lisp
-(loophole-obtain-key-and-command-by-symbol
+(loophole-obtain-key-and-command-by-read-command
  loophole-obtain-key-and-kmacro-by-recursive-edit
  loophole-obtain-key-and-command-by-key-sequence
  loophole-obtain-key-and-kmacro-by-read-key
@@ -273,7 +273,7 @@ and you do not need some other obtaining method, use the following lines.
 (setq loophole-set-key-order
       '(loophole-obtain-key-and-command-by-key-sequence
         loophole-obtain-key-and-kmacro-by-read-key
-        loophole-obtain-key-and-command-by-symbol
+        loophole-obtain-key-and-command-by-read-command
         loophole-obtain-key-and-kmacro-by-recall-record))
 ```
 
@@ -297,7 +297,7 @@ Entire customization codes may look like below.
     (list key entry)))
 (setq loophole-set-key-order
       '(your-specifying-method
-        loophole-obtain-key-and-command-by-symbol
+        loophole-obtain-key-and-command-by-read-command
         loophole-obtain-key-and-kmacro-by-recursive-edit
         loophole-obtain-key-and-command-by-key-sequence
         loophole-obtain-key-and-kmacro-by-read-key
