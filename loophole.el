@@ -130,7 +130,7 @@ t:       Enable timer for both of map and editing."
   :group 'loophole
   :type 'number)
 
-(defcustom loophole-writing-lambda-form-format
+(defcustom loophole-command-by-lambda-form-format
   (concat "(lambda (&optional arg)\n"
           "  \"Temporary command on `loophole'.\"\n"
           "  (interactive \"P\")\n"
@@ -142,7 +142,8 @@ in the buffer."
   :group 'loophole
   :type 'string)
 
-(defcustom loophole-kmacro-finish-key (where-is-internal 'keyboard-quit nil t)
+(defcustom loophole-kmacro-by-read-key-finish-key (where-is-internal
+                                                   'keyboard-quit nil t)
   "Key sequence to finish definition of keyboard macro."
   :group 'loophole
   :type 'key-sequence)
@@ -987,7 +988,7 @@ sequentially, and return a value of the last form."
             (switch-to-buffer-other-window (get-buffer-create name) t)
             (erase-buffer)
             (insert ";; For obtaining lambda form.\n\n")
-            (insert loophole-writing-lambda-form-format)
+            (insert loophole-command-by-lambda-form-format)
             (let ((found (search-backward "(#)" nil t)))
               (if found (delete-region (point) (+ (point) 3))))
             (loophole-write-lisp-mode)
@@ -1013,15 +1014,16 @@ sequentially, and return a value of the last form."
 
 (defun loophole-obtain-key-and-kmacro-by-read-key ()
   "Return set of key and kmacro obtained by reading key.
-This function `read-key' recursively.  When you finish
-keyboard macro, type `loophole-kmacro-finish-key'.
-By default, `loophole-kmacro-finish-key' is \\[keyboard-quit]
+This function `read-key' recursively.
+When you finish keyboard macro,
+type `loophole-kmacro-by-read-key-finish-key'.
+By default, `loophole-kmacro-by-read-key-finish-key' is \\[keyboard-quit]
 the key bound to `keyboard-quit'.  In this situation, you
 cannot use \\[keyboard-quit] for quitting.
-Once `loophole-kmacro-finish-key' is changed, you can finish
-definition of kmacro by new finish key, and \\[keyboard-quit]
-takes effect as quit."
-  (let ((complete (vconcat loophole-kmacro-finish-key))
+Once `loophole-kmacro-by-read-key-finish-key' is changed,
+you can finish definition of kmacro by new finish key, and
+\\[keyboard-quit] takes effect as quit."
+  (let ((complete (vconcat loophole-kmacro-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
     (or (vectorp complete)
         (stringp complete)
