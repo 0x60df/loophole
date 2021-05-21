@@ -148,6 +148,12 @@ in the buffer."
   :group 'loophole
   :type 'key-sequence)
 
+(defcustom loophole-array-by-read-key-finish-key (where-is-internal
+                                                   'keyboard-quit nil t)
+  "Key sequence to finish inputting key sequence."
+  :group 'loophole
+  :type 'key-sequence)
+
 (defcustom loophole-bind-command-order
   '(loophole-obtain-key-and-command-by-symbol
     loophole-obtain-key-and-command-by-key-sequence
@@ -179,7 +185,9 @@ case, the list looks like (key kmacro keymap)."
   :type '(repeat symbol))
 
 (defcustom loophole-bind-array-order
-  '(loophole-obtain-key-and-object)
+  '(loophole-obtain-key-and-array-by-read-key
+    loophole-obtain-key-and-array-by-read-string
+    loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and array for binding.
 `loophole-bind-array' refers this variable to select
 obtaining method.  First element gets first priority.
@@ -1106,6 +1114,58 @@ Besides, Definition can be aborted by calling
                                     alist nil t))
              (kmacro (kmacro-lambda-form (cdr (assoc read alist)))))
         (list key kmacro)))))
+
+(defun loophole-obtain-key-and-array-by-read-key ()
+  "Return set of key and array obtained by reading key.
+This function `read-key' recursively.  When you finish
+inputting key sequence,
+type `loophole-array-by-read-key-finish-key'.
+By default, `loophole-array-by-read-key-finish-key' is \\[keyboard-quit]
+the key bound to `keyboard-quit'.  In this situation, you
+cannot use \\[keyboard-quit] for quitting.
+Once `loophole-array-by-read-key-finish-key' is changed, you
+can finish definition of kmacro by new finish key, and \\[keyboard-quit]
+takes effect as quit."
+  (let ((complete (vconcat loophole-array-by-read-key-finish-key))
+        (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
+    (or (vectorp complete)
+        (stringp complete)
+        (vectorp quit)
+        (stringp quit)
+        (user-error "Neither completing key nor quitting key is invalid"))
+    (let* ((menu-prompting nil)
+           (key (loophole-read-key "Set key temporarily: ")))
+      (letrec
+          ((read-arbitrary-key-sequence
+            (lambda (v)
+              (let* ((k (vector
+                         (read-key
+                          (format "Set key %s to array: (%s to complete) [%s]"
+                                  (key-description key)
+                                  (key-description complete)
+                                  (mapconcat (lambda (e)
+                                               (key-description (vector e)))
+                                             (reverse v)
+                                             " ")))))
+                     (v (vconcat k v)))
+                (cond ((loophole-key-equal
+                        (seq-take v (length complete))
+                        complete)
+                       (reverse (seq-drop v (length complete))))
+                      ((loophole-key-equal
+                        (seq-take v (length quit))
+                        quit)
+                       (keyboard-quit))
+                      (t (funcall read-arbitrary-key-sequence v)))))))
+        (let ((array (funcall read-arbitrary-key-sequence nil)))
+          (list key array))))))
+
+(defun loophole-obtain-key-and-array-by-read-string ()
+  "Return set of key and array obtained by `read-string'."
+  (let* ((menu-prompting nil)
+         (key (loophole-read-key "Set key temporarily: ")))
+    (list key (read-string (format "Set key %s to array: "
+                                   (key-description key))))))
 
 (defun loophole-prefix-rank-value (arg)
   "Return rank value for raw prefix argument ARG.
