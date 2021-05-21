@@ -213,7 +213,9 @@ case, the list looks like (key keymap keymap)."
   :type '(repeat symbol))
 
 (defcustom loophole-bind-symbol-order
-  '(loophole-obtain-key-and-object)
+  '(loophole-obtain-key-and-symbol-by-read-keymap-function
+    loophole-obtain-key-and-symbol-by-read-command
+    loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and symbol for binding.
 `loophole-bind-symbol' refers this variable to select
 obtaining method.  First element gets first priority.
@@ -1204,6 +1206,35 @@ or a symbol whose function cell is ultimately a keymap."
                            (lambda (s)
                              (let ((f (funcall symbol-function-recursively s)))
                                (keymapp f))))))))))
+
+(defun loophole-obtain-key-and-symbol-by-read-keymap-function ()
+  "Return set of key and symbol obtained by reading keymap function.
+Keymap function is a symbol whose function cell is a keymap
+or a symbol whose function cell is ultimately a keymap."
+  (let* ((menu-prompting nil)
+         (key (loophole-read-key "Set key temporarily: ")))
+    (letrec ((symbol-function-recursively
+              (lambda (s)
+                (let ((f (symbol-function s)))
+                  (cond ((eq f s) f)
+                        ((not (symbolp f)) f)
+                        (t (funcall symbol-function-recursively f)))))))
+      (list key (intern
+                 (completing-read
+                  (format "Set key %s to symbol whose function cell is keymap: "
+                                   (key-description key))
+                  obarray
+                  (lambda (s)
+                    (let ((f (funcall symbol-function-recursively s)))
+                      (keymapp f)))))))))
+
+(defun loophole-obtain-key-and-symbol-by-read-command ()
+  "Return set of key and symbol obtained by reading command symbol."
+  (let* ((menu-prompting nil)
+         (key (loophole-read-key "Set key temporarily: ")))
+    (list key (read-command
+               (format "Set key %s to symbol whose function cell is command: "
+                       (key-description key))))))
 
 (defun loophole-prefix-rank-value (arg)
   "Return rank value for raw prefix argument ARG.
