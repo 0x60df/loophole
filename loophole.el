@@ -199,7 +199,9 @@ case, the list looks like (key array keymap)."
   :type '(repeat symbol))
 
 (defcustom loophole-bind-keymap-order
-  '(loophole-obtain-key-and-object)
+  '(loophole-obtain-key-and-keymap-by-read-keymap-variable
+    loophole-obtain-key-and-keymap-by-read-keymap-function
+    loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and keymap for binding.
 `loophole-bind-keymap' refers this variable to select
 obtaining method.  First element gets first priority.
@@ -956,7 +958,7 @@ Object is obtained as return value of `eval-minibuffer'."
                                        (key-description key))))))
 
 (defun loophole-obtain-key-and-command-by-symbol ()
-  "Return set of key and command obtained by reading minibuffer."
+  "Return set of key and command obtained by reading command symbol."
   (let* ((menu-prompting nil)
          (key (loophole-read-key "Set key temporarily: ")))
     (list key (read-command (format "Set key %s to command: "
@@ -1166,6 +1168,42 @@ takes effect as quit."
          (key (loophole-read-key "Set key temporarily: ")))
     (list key (read-string (format "Set key %s to array: "
                                    (key-description key))))))
+
+(defun loophole-obtain-key-and-keymap-by-read-keymap-variable ()
+  "Return set of key and keymap obtained by reading keymap variable."
+  (let* ((menu-prompting nil)
+         (key (loophole-read-key "Set key temporarily: ")))
+    (list key (symbol-value
+               (intern
+                (completing-read
+                 (format "Set key %s to keymap bound to symbol: "
+                         (key-description key))
+                 obarray
+                 (lambda (s)
+                   (and (boundp s) (not (keywordp s))
+                        (keymapp (symbol-value s))))))))))
+
+(defun loophole-obtain-key-and-keymap-by-read-keymap-function ()
+  "Return set of key and keymap obtained by reading keymap function.
+Keymap function is a symbol whose function cell is a keymap
+or a symbol whose function cell is ultimately a keymap."
+  (let* ((menu-prompting nil)
+         (key (loophole-read-key "Set key temporarily: ")))
+    (letrec ((symbol-function-recursively
+              (lambda (s)
+                (let ((f (symbol-function s)))
+                  (cond ((eq f s) f)
+                        ((not (symbolp f)) f)
+                        (t (funcall symbol-function-recursively f)))))))
+      (list key (funcall symbol-function-recursively
+                         (intern
+                          (completing-read
+                           (format "Set key %s to keymap fbound to symbol: "
+                                   (key-description key))
+                           obarray
+                           (lambda (s)
+                             (let ((f (funcall symbol-function-recursively s)))
+                               (keymapp f))))))))))
 
 (defun loophole-prefix-rank-value (arg)
   "Return rank value for raw prefix argument ARG.
