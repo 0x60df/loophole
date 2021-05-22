@@ -1473,7 +1473,11 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
 (defun loophole-unset-key (key)
   "Unset the temporary biding of KEY."
   (interactive "kUnset key temporarily: ")
-  (if loophole--editing (define-key (cdar loophole--map-alist) key nil)))
+  (if loophole--editing
+      (let ((map (symbol-value loophole--editing)))
+        (if (lookup-key map key)
+            (loophole-bind-entry key nil map)
+          (message "No entry found in editing keymap: %s" loophole--editing)))))
 
 (defun loophole-suspend ()
   "Suspend Loophole.
