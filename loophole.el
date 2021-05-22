@@ -241,6 +241,56 @@ Each element should return a list looks like (key object)."
   :group 'loophole
   :type '(repeat symbol))
 
+(defcustom loophole-prioritize-functions nil
+  "Hook for `loophole-prioritize'.
+Functions added to this user option are called with one
+argument, prioritized map variable."
+  :group 'loophole
+  :type 'hook)
+
+(defcustom loophole-enable-functions nil
+  "Hook for `loophole-enable'.
+Functions added to this user option are called with one
+argument, enabled map variable."
+  :group 'loophole
+  :type 'hook)
+
+(defcustom loophole-disable-functions nil
+  "Hook for `loophole-disable'.
+Functions added to this user option are called with one
+argument, disabled map variable."
+  :group 'loophole
+  :type 'hook)
+
+(defcustom loophole-start-editing-functions nil
+  "Hook for `loophole-start-editing'.
+Functions added to this user option are called with one
+argument, which is being edited map variable."
+  :group 'loophole
+  :type 'hook)
+
+(defcustom loophole-stop-editing-functions nil
+  "Hook for `loophole-stop-editing'.
+Functions added to this user option are called with one
+argument, which has been edited map variable."
+  :group 'loophole
+  :type 'hook)
+
+(defcustom loophole-name-functions nil
+  "Hook for `loophole-name'.
+Functions added to this user option are called with one
+argument, named new map variable."
+  :group 'loophole
+  :type 'hook)
+
+(defcustom loophole-bind-hook nil
+  "Hook for `loophole-bind-entry'.
+Because binding commands including `loophole-set-key' and
+`loophole-unset-key' finally call `loophole-bind-entry',
+this hook is run with all of them."
+  :group 'loophole
+  :type 'hook)
+
 (defcustom loophole-tag-sign "#"
   "String indicating tag string of loophole-map."
   :group 'loophole
@@ -589,7 +639,8 @@ the front."
          (cons `(,state-variable . ,(symbol-value map-variable))
                (seq-filter (lambda (cell)
                              (not (eq (car cell) state-variable)))
-                           (default-value 'loophole--map-alist))))))))
+                           (default-value 'loophole--map-alist)))))
+      (run-hook-with-args 'loophole-prioritize-functions map-variable))))
 
 (defun loophole-generate ()
   "Return Loophole map variable which holds newly generated keymap.
@@ -718,7 +769,8 @@ generate new one and return it."
                       #'loophole--follow-buffer-local-condition nil t)
             (make-local-variable 'loophole--map-alist))
           (if (memq loophole-use-timer '(map t))
-              (loophole-start-timer map-variable))))
+              (loophole-start-timer map-variable))
+          (run-hook-with-args 'loophole-enable-functions map-variable)))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable (map-variable)
@@ -735,7 +787,8 @@ generate new one and return it."
           (let ((cell (assq map-variable loophole--state-alist)))
             (setcdr cell (delq (current-buffer) (cdr cell))))
           (if (memq loophole-use-timer '(map t))
-              (loophole-stop-timer map-variable))))
+              (loophole-stop-timer map-variable))
+          (run-hook-with-args 'loophole-disable-functions map-variable)))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable-latest ()
@@ -846,7 +899,8 @@ which had been already unbound." named-map-variable state-variable))
                                        (loophole-disable map-variable)
                                        (force-mode-line-update))))
                                (list named-map-variable (current-buffer)))))))))
-                loophole--buffer-list)))
+                loophole--buffer-list))
+      (run-hook-with-args 'loophole-name-functions named-map-variable))
     (set map-variable nil)
     (set state-variable nil)
     (makunbound map-variable)
@@ -859,14 +913,17 @@ which had been already unbound." named-map-variable state-variable))
   (interactive (list (loophole-read-map-variable "Start editing keymap: ")))
   (if (memq loophole-use-timer '(editing t))
       (loophole-start-editing-timer))
-  (setq loophole--editing map-variable))
+  (setq loophole--editing map-variable)
+  (run-hook-with-args 'loophole-start-editing-functions map-variable))
 
 (defun loophole-stop-editing ()
   "Stop keymap edit session."
   (interactive)
   (if (memq loophole-use-timer '(editing t))
       (loophole-stop-editing-timer))
-  (setq loophole--editing nil))
+  (let ((map-variable loophole--editing))
+    (setq loophole--editing nil)
+    (run-hook-with-args 'loophole-stop-editing-functions map-variable)))
 
 (defun loophole-describe (map-variable)
   "Display all key bindings in MAP-VARIABLE."
@@ -1272,7 +1329,8 @@ and it is registered to loophole, KEYMAP is used instead."
             (error "Invalid keymap: %s" keymap)))
       (loophole-ready-map))
     key
-    entry))
+    entry)
+  (run-hooks 'loophole-bind-hook))
 
 ;;;###autoload
 (defun loophole-bind-command (key command &optional keymap)
@@ -1659,183 +1717,98 @@ If STYLE is other than above, lighter is omitted."
     (if cell (setcdr cell (list form)))))
 
 (defun loophole-turn-on-auto-prioritize ()
-  "Turn on auto prioritize.
-Add advices to call `loophole-prioritize' for
+  "Turn on auto prioritize as user customization.
+Add hooks to call `loophole-prioritize' for
 `loophole-enable', `loophole-name' and
 `loophole-start-editing'."
-  (advice-add 'loophole-enable
-              :after (lambda (map-variable)
-                       "`loophole-prioritize',
-  but without interactive spec."
-                       (loophole-prioritize map-variable)))
-  (advice-add 'loophole-start-editing
-              :after (lambda (map-variable)
-                       "`loophole-prioritize',
-  but without interactive spec."
-                       (loophole-prioritize map-variable)))
-  (advice-add 'loophole-name
-              :after (lambda (_map-variable map-name _tag)
-                       "`loophole-prioritize',
-  for MAP-NAME
-  but without interactive spec."
-                       (loophole-prioritize
-                        (intern (format "loophole-%s-map" map-name))))))
+  (add-hook 'loophole-enable-functions #'loophole-prioritize)
+  (add-hook 'loophole-start-editing-functions #'loophole-prioritize)
+  (add-hook 'loophole-name-functions #'loophole-prioritize))
 
 (defun loophole-turn-off-auto-prioritize ()
-  "Turn off auto prioritize.
-Remove advices added by `loophole-turn-on-auto-prioritize'."
-  (advice-remove 'loophole-enable (lambda (map-variable)
-                                    "`loophole-prioritize',
-  but without interactive spec."
-                                    (loophole-prioritize map-variable)))
-  (advice-remove 'loophole-start-editing (lambda (map-variable)
-                                           "`loophole-prioritize',
-  but without interactive spec."
-                                           (loophole-prioritize map-variable)))
-  (advice-remove 'loophole-name (lambda (_map-variable map-name _tag)
-                                  "`loophole-prioritize',
-  for MAP-NAME
-  but without interactive spec."
-                                  (loophole-prioritize
-                                   (intern
-                                    (format "loophole-%s-map" map-name))))))
+  "Turn off auto prioritize as user customization.
+Remove hooks added by `loophole-turn-on-auto-prioritize'."
+  (remove-hook 'loophole-enable-functions #'loophole-prioritize)
+  (remove-hook 'loophole-start-editing-functions #'loophole-prioritize)
+  (remove-hook 'loophole-name-functions #'loophole-prioritize))
 
 (defun loophole-turn-on-auto-stop-editing ()
-  "Turn on auto stop-editing.
-Add advices to call `loophole-stop-editing' for
+  "Turn on auto stop-editing as user customization.
+Add hooks to call `loophole-stop-editing' for
 `loophole-prioritize', `loophole-enable',
-`loophole-disable', `loophole-disable-all' and
-`loophole-name'.
- `loophole-disable-latest' is also affected by the
-advice for `loophole-disable'."
-  (advice-add 'loophole-prioritize
-              :after (lambda (map-variable)
-                       "`loophole-stop-editing',
-  but without interactive spec
-  and only if MAP-VARIABLE is not being edited."
-                       (unless (eq map-variable loophole--editing)
-                         (loophole-stop-editing))))
-  (advice-add 'loophole-enable
-              :after (lambda (map-variable)
-                       "`loophole-stop-editing',
-  but without interactive spec
-  and only if MAP-VARIABLE is not being edited."
-                       (unless (eq map-variable loophole--editing)
-                         (loophole-stop-editing))))
-  (advice-add 'loophole-disable
-              :after (lambda (map-variable)
-                       "`loophole-stop-editing',
-  but without interactive spec
-  and only if MAP-VARIABLE is being edited."
-                       (if (eq map-variable loophole--editing)
-                           (loophole-stop-editing))))
-  (advice-add 'loophole-disable-all :after #'loophole-stop-editing)
-  (advice-add 'loophole-name
-              :after (lambda (_map-variable map-name _tag)
-                       "`loophole-stop-editing',
-  but without interactive spec
-  and only if MAP-VARIABLE is not being edited."
-                       (let ((map-var (intern
-                                       (format "loophole-%s-map" map-name))))
-                         (unless (eq map-var loophole--editing)
-                           (loophole-stop-editing))))))
+`loophole-disable' and `loophole-name'.
+ `loophole-disable-latest' and `loophole-disable-all' are
+also affected by the hook for `loophole-disable'."
+  (add-hook 'loophole-prioritize-functions
+            (lambda (map-variable)
+              (unless (eq map-variable loophole--editing)
+                (loophole-stop-editing))))
+  (add-hook 'loophole-enable-functions
+            (lambda (map-variable)
+              (unless (eq map-variable loophole--editing)
+                (loophole-stop-editing))))
+  (add-hook 'loophole-disable-functions
+            (lambda (map-variable)
+              (if (eq map-variable loophole--editing)
+                  (loophole-stop-editing))))
+  (add-hook 'loophole-name-functions
+            (lambda (map-variable)
+              (unless (eq map-variable loophole--editing)
+                (loophole-stop-editing)))))
 
 (defun loophole-turn-off-auto-stop-editing ()
-  "Turn off auto stop-editing.
-Remove advices added by `loophole-turn-on-auto-stop-editing'."
-  (advice-remove 'loophole-prioritize
-                 (lambda (map-variable)
-                   "`loophole-stop-editing',
-  but without interactive spec
-  and only if MAP-VARIABLE is not being edited."
-                   (unless (eq map-variable loophole--editing)
-                     (loophole-stop-editing))))
-  (advice-remove 'loophole-enable
-                 (lambda (map-variable)
-                   "`loophole-stop-editing',
-  but without interactive spec
-  and only if MAP-VARIABLE is not being edited."
-                   (unless (eq map-variable loophole--editing)
-                     (loophole-stop-editing))))
-  (advice-remove 'loophole-disable
-                 (lambda (map-variable)
-                   "`loophole-stop-editing',
-  but without interactive spec
-  and only if MAP-VARIABLE is being edited."
-                   (if (eq map-variable loophole--editing)
-                       (loophole-stop-editing))))
-  (advice-remove 'loophole-disable-all  #'loophole-stop-editing)
-  (advice-remove 'loophole-name
-                 (lambda (_map-variable map-name _tag)
-                   "`loophole-stop-editing',
-  but without interactive spec
-  and only if MAP-VARIABLE is not being edited."
-                   (let ((map-var (intern (format "loophole-%s-map" map-name))))
-                     (unless (eq map-var loophole--editing)
-                       (loophole-stop-editing))))))
+  "Turn off auto stop-editing as user customization.
+Remove hooks added by `loophole-turn-on-auto-stop-editing'."
+  (remove-hook 'loophole-prioritize-functions
+            (lambda (map-variable)
+              (unless (eq map-variable loophole--editing)
+                (loophole-stop-editing))))
+  (remove-hook 'loophole-enable-functions
+            (lambda (map-variable)
+              (unless (eq map-variable loophole--editing)
+                (loophole-stop-editing))))
+  (remove-hook 'loophole-disable-functions
+            (lambda (map-variable)
+              (if (eq map-variable loophole--editing)
+                  (loophole-stop-editing))))
+  (remove-hook 'loophole-name-functions
+              (lambda (map-variable)
+                (unless (eq map-variable loophole--editing)
+                  (loophole-stop-editing)))))
 
 (defun loophole-turn-on-auto-resume ()
-  "Turn on auto resume .
-Add advices to call `loophole-resume' for
+  "Turn on auto resume as user customization.
+Add hooks to call `loophole-resume' for
 `loophole-prioritize', `loophole-enable',
 `loophole-name', `loophole-start-editing' and
 `loophole-bind-entry'.
-Binding commands including `loophole-set-key' also affected
-by the advice of `loophole-bind-entry'."
-  (advice-add 'loophole-prioritize
-              :after (lambda (&rest _)
-                       "`loophole-resume',
-  but without interactive spec."
-                       (loophole-resume)))
-  (advice-add 'loophole-enable
-              :after (lambda (&rest _)
-                       "`loophole-resume',
-  but without interactive spec."
-                       (loophole-resume)))
-  (advice-add 'loophole-name
-              :after (lambda (&rest _)
-                       "`loophole-resume',
-  but without interactive spec."
-                       (loophole-resume)))
-  (advice-add 'loophole-start-editing
-              :after (lambda (&rest _)
-                       "`loophole-resume',
-  but without interactive spec."
-                       (loophole-resume)))
-  (advice-add 'loophole-bind-entry
-              :after (lambda (&rest _)
-                       "`loophole-resume',
-  but without interactive spec."
-                       (loophole-resume))))
+Binding commands including `loophole-set-key' and
+`loophole-unset-key' are also affected by the hook of
+`loophole-bind-entry'."
+  (add-hook 'loophole-prioritize-functions
+            (lambda (&rest _) (loophole-resume)))
+  (add-hook 'loophole-enable-functions
+            (lambda (&rest _) (loophole-resume)))
+  (add-hook 'loophole-name-functions
+            (lambda (&rest _) (loophole-resume)))
+  (add-hook 'loophole-start-editing-functions
+            (lambda (&rest _) (loophole-resume)))
+  (add-hook 'loophole-bind-hook
+            (lambda (&rest _) (loophole-resume))))
 
 (defun loophole-turn-off-auto-resume ()
-  "Turn off auto prioritize.
-Remove advices added by `loophole-turn-on-auto-resume'."
-  (advice-remove 'loophole-prioritize
-                 (lambda (&rest _)
-                   "`loophole-resume',
-  but without interactive spec."
-                   (loophole-resume)))
-  (advice-remove 'loophole-enable
-                 (lambda (&rest _)
-                   "`loophole-resume',
-  but without interactive spec."
-                   (loophole-resume)))
-  (advice-remove 'loophole-name
-                 (lambda (&rest _)
-                   "`loophole-resume',
-  but without interactive spec."
-                   (loophole-resume)))
-  (advice-remove 'loophole-start-editing
-                 (lambda (&rest _)
-                   "`loophole-resume',
-  but without interactive spec."
-                   (loophole-resume)))
-  (advice-remove 'loophole-bind-entry
-                 (lambda (&rest _)
-                   "`loophole-resume',
-  but without interactive spec."
-                   (loophole-resume))))
+  "Turn off auto prioritize as user customization.
+Remove hooks added by `loophole-turn-on-auto-resume'."
+  (remove-hook 'loophole-prioritize-functions
+               (lambda (&rest _) (loophole-resume)))
+  (remove-hook 'loophole-enable-functions
+               (lambda (&rest _) (loophole-resume)))
+  (remove-hook 'loophole-name-functions
+               (lambda (&rest _) (loophole-resume)))
+  (remove-hook 'loophole-start-editing-functions
+               (lambda (&rest _) (loophole-resume)))
+  (remove-hook 'loophole-bind-hook
+               (lambda (&rest _) (loophole-resume))))
 
 (defalias 'loophole-dig 'loophole-set-key)
 (defalias 'loophole-bury 'loophole-unset-key)

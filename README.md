@@ -14,7 +14,7 @@ and add the following lines to you init file like `.emacs`.
 (loophole-mode)
 ```
 
-The following settings in init file may be useful.
+The following settings in init file may be useful, they set up some hooks.
 
 ``` emacs-lisp
 (loophole-turn-on-auto-prioritize)
