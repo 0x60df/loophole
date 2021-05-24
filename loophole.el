@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.3.7
+;; Version: 0.4.0
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -420,6 +420,10 @@ returns nil if no candidate is found instead of signaling
               (t (user-error "There are no suitable loophole maps"))))
     (setq loophole--read-map-variable-help-condition '((index . 0) (last)))))
 
+(defun loophole-global-p (map-variable)
+  "Non-nil if MAP-VARIABLE is globalized Loophole map."
+  (get-variable-watchers (get map-variable :loophole-state-variable)))
+
 (defun loophole-suspending-p ()
   "Non-nil during suspending Loophole.
 During suspension, `loophole--map-alist' is removed from
@@ -508,6 +512,20 @@ This function is intended to be added to
     (remove-hook 'kill-buffer-hook
                  #'loophole--follow-killing-local-variable t)))
 
+(defun loophole--follow-global-state (symbol newval operation where)
+  "Set all of local and default SYMBOL value as NEWVAL.
+This is done if OPERATION is set and scan
+`loophole--buffer-list' by using WHERE."
+  (when (eq operation 'set)
+    (mapc (lambda (buffer)
+            (with-current-buffer buffer
+              (set symbol newval)))
+          (if where
+              (remq where loophole--buffer-list)
+            loophole--buffer-list))
+    (if where (set-default symbol newval))
+    (force-mode-line-update t)))
+
 (defun loophole-registered-p (map-variable &optional state-variable)
   "Return non-nil if MAP-VARIABLE is registered to loophole.
 If optional argument STATE-VARIABLE is not nil,
@@ -520,12 +538,19 @@ registered, and they are associated."
        (assq state-variable (default-value 'loophole--map-alist))))
 
 (defun loophole-register (map-variable state-variable &optional tag
-                                       without-base-map)
+                                       global without-base-map)
   "Register the set of MAP-VARIABLE and STATE-VARIABLE to loophole.
 Optional argument TAG is a tag string which may be shown in
 mode line.  TAG should not contain `loophole-tag-sign',
 because tag will be prefixed by `loophole-tag-sign' on the
 mode-line.
+If optional argument GLOBAL is non-nil, MAP-VARIABLE and
+STATE-VARIABLE are registered as globalized Loophole map.
+It means default value and all buffer local value of
+STATE-VARIABLE will be changed synchronously.
+When using globalized Loophole map, STATE-VARIABLE should
+have dynamic scope, i.e. should be defined by `defvar',
+`defconst' or `defcustom'.
 Unless WITHOUT-BASE-MAP is non-nil, `loophole-base-map' is
 set as parent keymap for MAP-VARIABLE.
 
@@ -567,6 +592,8 @@ WITHOUT-BASE-MAP."
                 (add-to-list 'loophole--buffer-list buffer nil #'eq))))
         (buffer-list))
   (add-variable-watcher state-variable #'loophole--follow-adding-local-variable)
+  (if global
+      (add-variable-watcher state-variable #'loophole--follow-global-state))
   (unless without-base-map
     (set-keymap-parent (symbol-value map-variable) loophole-base-map))
   (setq-default loophole--map-alist
@@ -637,6 +664,9 @@ to KEEP-PARENT-MAP."
           loophole--buffer-list)
     (unless keep-parent-map
       (set-keymap-parent (symbol-value map-variable) nil))
+    (if (loophole-global-p map-variable)
+        (remove-variable-watcher state-variable
+                                 #'loophole--follow-global-state))
     (put map-variable :loophole-tag nil)
     (put state-variable :loophole-map-variable nil)
     (put map-variable :loophole-state-variable nil)))
@@ -875,7 +905,10 @@ Introduced by `loophole-name' for renaming %s
 which had been already unbound." named-map-variable state-variable))
       (set named-map-variable (symbol-value map-variable))
       (make-variable-buffer-local named-state-variable)
-      (set-default named-state-variable nil)
+      (set-default named-state-variable
+                   (if (loophole-global-p map-variable)
+                       (symbol-value state-variable)
+                     nil))
       (mapc
        (lambda (buffer)
          (with-current-buffer buffer
@@ -884,6 +917,9 @@ which had been already unbound." named-map-variable state-variable))
        loophole--buffer-list)
       (add-variable-watcher named-state-variable
                             #'loophole--follow-adding-local-variable)
+      (if (loophole-global-p map-variable)
+          (add-variable-watcher named-state-variable
+                                #'loophole--follow-global-state))
       (put named-map-variable :loophole-state-variable named-state-variable)
       (put named-state-variable :loophole-map-variable named-map-variable)
       (put named-map-variable :loophole-tag tag)
@@ -925,6 +961,9 @@ which had been already unbound." named-map-variable state-variable))
                 loophole--buffer-list))
       (remove-variable-watcher state-variable
                                #'loophole--follow-adding-local-variable)
+      (if (loophole-global-p map-variable)
+          (remove-variable-watcher state-variable
+                                   #'loophole--follow-global-state))
       (makunbound state-variable)
       (makunbound map-variable)
       (put map-variable :loophole-tag nil)
@@ -955,7 +994,9 @@ which had been already unbound." named-map-variable state-variable))
   (help-setup-xref `(loophole-describe ,map-variable)
                    (called-interactively-p 'interactive))
   (with-help-window (help-buffer)
-    (princ (format "`%s' Loophole Map Bindings:\n" map-variable))
+    (princ (format "`%s' %sLoophole Map Bindings:\n"
+                   map-variable (if (loophole-global-p map-variable)
+                                    "Globalized ")))
     (princ (substitute-command-keys
             (format "\\{%s}" map-variable)))
     (with-current-buffer standard-output
