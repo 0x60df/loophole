@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.4.0
+;; Version: 0.4.1
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -83,6 +83,17 @@ TIMER is a timer for MAP-VARIABLE on current buffer.")
     map)
   "Keymap for `loophole-write-lisp-mode'.")
 
+(defvar loophole-kmacro-by-recursive-edit-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c [") #'loophole-end-kmacro)
+    (define-key map (kbd "C-c \\") #'loophole-abort-kmacro)
+    map)
+  "Keymap for `loophole-obtain-key-and-kmacro-by-recursive-edit'.
+This map is enabled temporarily during
+`loophole-obtain-key-and-kmacro-by-recursive-edit',
+and activity of this map is controled by
+`loophole-use-kmacro-by-recursive-edit-map'.")
+
 (defvar loophole-base-map (make-sparse-keymap)
   "Base keymap for all Loophole maps.
 This keymap will be inherited to all Loophole maps,
@@ -141,6 +152,17 @@ in the buffer."
   "Key sequence to finish definition of keyboard macro."
   :group 'loophole
   :type 'key-sequence)
+
+(defcustom loophole-use-kmacro-by-recursive-edit-map t
+  "Flag if `loophole-kmacro-by-recursive-edit-map' is enabled."
+  :group 'loophole
+  :type 'boolean)
+
+(defcustom loophole-kmacro-by-recursive-edit-map-tag
+  "kmacro[End: \\[loophole-end-kmacro], Abort: \\[loophole-abort-kmacro]]"
+  "Tag string for `loophole-kmacro-by-recursive-edit-map'."
+  :group 'loophole
+  :type 'string)
 
 (defcustom loophole-array-by-read-key-finish-key (where-is-internal
                                                    'keyboard-quit nil t)
@@ -1204,8 +1226,14 @@ Besides, Definition can be aborted by calling
 `loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro]."
   (let* ((menu-prompting nil)
          (key (loophole-read-key "Set key temporarily: ")))
-    (list key (progn (loophole-start-kmacro)
-                     (kmacro-lambda-form (kmacro-ring-head))))))
+    (list key (progn
+                (loophole-register 'loophole-kmacro-by-recursive-edit-map
+                                   'loophole-use-kmacro-by-recursive-edit-map
+                                   loophole-kmacro-by-recursive-edit-map-tag
+                                   t)
+                (unwind-protect (loophole-start-kmacro)
+                  (loophole-unregister 'loophole-kmacro-by-recursive-edit-map))
+                (kmacro-lambda-form (kmacro-ring-head))))))
 
 (defun loophole-obtain-key-and-kmacro-by-recall-record ()
   "Return set of key and kmacro obtained by recalling record."
@@ -1755,9 +1783,10 @@ If STYLE is other than above, lighter is omitted."
                              (mapcar
                               (lambda (a)
                                 (if (symbol-value (car a))
-                                    (let ((e (get (get (car a)
-                                                       :loophole-map-variable)
-                                                  :loophole-tag)))
+                                    (let ((e (substitute-command-keys
+                                              (get (get (car a)
+                                                        :loophole-map-variable)
+                                                   :loophole-tag))))
                                       (if (and loophole-mode-lighter-use-face
                                                (stringp e))
                                           (propertize
@@ -1770,7 +1799,7 @@ If STYLE is other than above, lighter is omitted."
                      (if (zerop (length l))
                          ""
                        (concat loophole-tag-sign
-                               (mapconcat 'identity l ",")))))))
+                               (mapconcat #'identity l ",")))))))
                ((eq style 'simple)
                 '(""
                   loophole-mode-lighter-base
