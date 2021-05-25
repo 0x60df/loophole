@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.4.1
+;; Version: 0.4.2
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -1723,6 +1723,50 @@ If KEYMAP is nil, lookup all active loophole maps ."
       (if (window-live-p window) (select-window window t))
       (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
 
+(defun loophole-modify-array (key &optional map-variable)
+  "Modify array bound to KEY in MAP-VARIABLE.
+If KEYMAP is nil, lookup all active loophole maps ."
+  (interactive (list (read-key-sequence-vector "Modify array for key: ")
+                     (if current-prefix-arg
+                         (loophole-read-map-variable "Lookup: "))))
+  (unless map-variable
+    (setq map-variable (loophole-map-variable-for-key-binding key))
+    (unless map-variable
+      (user-error "No entry found in loophole maps for key: %s"
+                  (key-description key))))
+  (let ((name "*Loophole*")
+        (buffer (current-buffer))
+        (window (selected-window))
+        (frame (selected-frame))
+        (configuration-list (mapcar #'current-window-configuration
+                                    (frame-list)))
+        (entry (lookup-key (symbol-value map-variable) key)))
+    (unless (arrayp entry)
+      (user-error "Bound entry is not array: %s" entry))
+    (unwind-protect
+        (let ((loophole-buffer (get-buffer-create name)))
+          (switch-to-buffer-other-window loophole-buffer t)
+          (erase-buffer)
+          (insert ";; For modifying array.\n\n")
+          (pp entry loophole-buffer)
+          (loophole-write-lisp-mode)
+          (goto-char 1)
+          (let ((array (read loophole-buffer)))
+            (if (arrayp array)
+                (loophole-bind-entry key array (symbol-value map-variable))
+              (user-error
+               "Modified Lisp object is not array: %s" array))))
+      (let ((configuration
+             (seq-find (lambda (c)
+                         (eq (selected-frame) (window-configuration-frame c)))
+                       configuration-list)))
+        (if configuration
+            (set-window-configuration configuration)
+          (delete-frame)))
+      (if (frame-live-p frame) (select-frame-set-input-focus frame t))
+      (if (window-live-p window) (select-window window t))
+      (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
+
 (defun loophole-suspend ()
   "Suspend Loophole.
 To suspend Loophole, this function delete
@@ -1809,6 +1853,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] b s") #'loophole-bind-symbol)
             (define-key map (kbd "C-c ] m l") #'loophole-modify-lambda-form)
             (define-key map (kbd "C-c ] m k") #'loophole-modify-kmacro)
+            (define-key map (kbd "C-c ] m a") #'loophole-modify-array)
             map)
   (let ((local-variable-list '(loophole--map-alist
                                loophole--editing
