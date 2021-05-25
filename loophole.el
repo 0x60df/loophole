@@ -446,6 +446,16 @@ returns nil if no candidate is found instead of signaling
   "Non-nil if MAP-VARIABLE is globalized Loophole map."
   (get-variable-watchers (get map-variable :loophole-state-variable)))
 
+(defun loophole-map-variable-for-key-binding (key)
+  "Return map variable for active KEY in `loophole--map-alist'."
+  (get (car (seq-find (lambda (a)
+                        (let ((binding (lookup-key (cdr a) key)))
+                          (and (symbol-value (car a))
+                               binding
+                               (eq binding (key-binding key)))))
+                      loophole--map-alist))
+       :loophole-map-variable))
+
 (defun loophole-suspending-p ()
   "Non-nil during suspending Loophole.
 During suspension, `loophole--map-alist' is removed from
@@ -1622,6 +1632,53 @@ Likewise C-u * n and C-n invoke the (n+1)th element."
             (loophole-bind-entry key nil map)
           (message "No entry found in editing keymap: %s" loophole--editing)))))
 
+(defun loophole-modify-lambda-form (key &optional map-variable)
+  "Modify lambda form bound to KEY in MAP-VARIABLE.
+If KEYMAP is nil, lookup all active loophole maps ."
+  (interactive (list (read-key-sequence-vector "Modify lambda form for key: ")
+                     (if current-prefix-arg
+                         (loophole-read-map-variable "Lookup: "))))
+  (unless map-variable
+    (setq map-variable (loophole-map-variable-for-key-binding key))
+    (unless map-variable
+      (user-error "No entry found in loophole maps for key: %s"
+                  (key-description key))))
+  (let ((name "*Loophole*")
+        (buffer (current-buffer))
+        (window (selected-window))
+        (frame (selected-frame))
+        (configuration-list (mapcar #'current-window-configuration
+                                    (frame-list)))
+        (entry (lookup-key (symbol-value map-variable) key)))
+    (unless (and (commandp entry)
+                 (not (symbolp entry))
+                 (not (arrayp entry)))
+      (user-error "Bound entry is not lambda form: %s" entry))
+    (unwind-protect
+        (let ((loophole-buffer (get-buffer-create name)))
+          (switch-to-buffer-other-window loophole-buffer t)
+          (erase-buffer)
+          (insert ";; For modifying lambda form.\n\n")
+          (pp entry loophole-buffer)
+          (loophole-write-lisp-mode)
+          (goto-char 1)
+          (let ((lambda-form (read loophole-buffer)))
+            (if (commandp lambda-form)
+                (loophole-bind-entry key lambda-form
+                                     (symbol-value map-variable))
+              (user-error
+               "Modified Lisp object is not valid command: %s" lambda-form))))
+      (let ((configuration
+             (seq-find (lambda (c)
+                         (eq (selected-frame) (window-configuration-frame c)))
+                       configuration-list)))
+        (if configuration
+            (set-window-configuration configuration)
+          (delete-frame)))
+      (if (frame-live-p frame) (select-frame-set-input-focus frame t))
+      (if (window-live-p window) (select-window window t))
+      (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
+
 (defun loophole-suspend ()
   "Suspend Loophole.
 To suspend Loophole, this function delete
@@ -1706,6 +1763,7 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] b a") #'loophole-bind-array)
             (define-key map (kbd "C-c ] b m") #'loophole-bind-keymap)
             (define-key map (kbd "C-c ] b s") #'loophole-bind-symbol)
+            (define-key map (kbd "C-c ] m l") #'loophole-modify-lambda-form)
             map)
   (let ((local-variable-list '(loophole--map-alist
                                loophole--editing
