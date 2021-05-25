@@ -1024,7 +1024,7 @@ up forms in unwind forms."
           ,(substitute-command-keys
             (concat "\\<loophole-write-lisp-mode-map>"
                     "Writing lisp form.  "
-                    "Complete `\\[loophole-finish-writing-lisp]', "
+                    "finish `\\[loophole-finish-writing-lisp]', "
                     "Abort `\\[loophole-abort-writing-lisp]'."))))
   (recursive-edit))
 
@@ -1049,11 +1049,11 @@ up forms in unwind forms."
 Definition can be finished by calling `loophole-end-kmacro'."
   (interactive)
   (kmacro-start-macro nil)
-  (let* ((complete (where-is-internal 'loophole-end-kmacro nil t))
+  (let* ((end (where-is-internal 'loophole-end-kmacro nil t))
          (abort (where-is-internal 'loophole-abort-kmacro nil t))
-         (body (if (and complete abort)
-                   (format "[Complete: %s, Abort: %s]"
-                           (key-description complete)
+         (body (if (and end abort)
+                   (format "[End: %s, Abort: %s]"
+                           (key-description end)
                            (key-description abort))
                  "[loophole-end/abort-kmacro should be bound to key]")))
     (message "Defining keyboard macro... %s" body))
@@ -1156,13 +1156,13 @@ cannot use \\[keyboard-quit] for quitting.
 Once `loophole-kmacro-by-read-key-finish-key' is changed,
 you can finish definition of kmacro by new finish key, and
 \\[keyboard-quit] takes effect as quit."
-  (let ((complete (vconcat loophole-kmacro-by-read-key-finish-key))
+  (let ((finish (vconcat loophole-kmacro-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
-    (or (vectorp complete)
-        (stringp complete)
+    (or (vectorp finish)
+        (stringp finish)
         (vectorp quit)
         (stringp quit)
-        (user-error "Neither completing key nor quitting key is invalid"))
+        (user-error "Neither finishing key nor quitting key is invalid"))
     (let* ((menu-prompting nil)
            (key (loophole-read-key "Set key temporarily: ")))
       (letrec
@@ -1170,18 +1170,18 @@ you can finish definition of kmacro by new finish key, and
             (lambda (v)
               (let* ((k (vector
                          (read-key
-                          (format "Set key %s to kmacro: (%s to complete) [%s]"
+                          (format "Set key %s to kmacro: (%s to finish) [%s]"
                                   (key-description key)
-                                  (key-description complete)
+                                  (key-description finish)
                                   (mapconcat (lambda (e)
                                                (key-description (vector e)))
                                              (reverse v)
                                              " ")))))
                      (v (vconcat k v)))
                 (cond ((loophole-key-equal
-                        (seq-take v (length complete))
-                        complete)
-                       (reverse (seq-drop v (length complete))))
+                        (seq-take v (length finish))
+                        finish)
+                       (reverse (seq-drop v (length finish))))
                       ((loophole-key-equal
                         (seq-take v (length quit))
                         quit)
@@ -1251,13 +1251,13 @@ cannot use \\[keyboard-quit] for quitting.
 Once `loophole-array-by-read-key-finish-key' is changed, you
 can finish definition of kmacro by new finish key, and \\[keyboard-quit]
 takes effect as quit."
-  (let ((complete (vconcat loophole-array-by-read-key-finish-key))
+  (let ((finish (vconcat loophole-array-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
-    (or (vectorp complete)
-        (stringp complete)
+    (or (vectorp finish)
+        (stringp finish)
         (vectorp quit)
         (stringp quit)
-        (user-error "Neither completing key nor quitting key is invalid"))
+        (user-error "Neither finishing key nor quitting key is invalid"))
     (let* ((menu-prompting nil)
            (key (loophole-read-key "Set key temporarily: ")))
       (letrec
@@ -1265,18 +1265,18 @@ takes effect as quit."
             (lambda (v)
               (let* ((k (vector
                          (read-key
-                          (format "Set key %s to array: (%s to complete) [%s]"
+                          (format "Set key %s to array: (%s to finish) [%s]"
                                   (key-description key)
-                                  (key-description complete)
+                                  (key-description finish)
                                   (mapconcat (lambda (e)
                                                (key-description (vector e)))
                                              (reverse v)
                                              " ")))))
                      (v (vconcat k v)))
                 (cond ((loophole-key-equal
-                        (seq-take v (length complete))
-                        complete)
-                       (reverse (seq-drop v (length complete))))
+                        (seq-take v (length finish))
+                        finish)
+                       (reverse (seq-drop v (length finish))))
                       ((loophole-key-equal
                         (seq-take v (length quit))
                         quit)
