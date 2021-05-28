@@ -131,6 +131,7 @@ overwrites the earliest used one."
 Character sequence (#) indicates where cursor will be
 placed, and it will be removed when the format is inserted
 in the buffer."
+  :risky t
   :group 'loophole
   :type 'string)
 
@@ -169,6 +170,7 @@ obtaining method.  First element gets first priority.
 Each element should return a list looks like (key command).
 Optionally, return value can contain keymap to bind; in this
 case, the list looks like (key command keymap)."
+  :risky t
   :group 'loophole
   :type '(repeat symbol))
 
@@ -184,6 +186,7 @@ obtaining method.  First element gets first priority.
 Each element should return a list looks like (key kmacro).
 Optionally, return value can contain keymap to bind; in this
 case, the list looks like (key kmacro keymap)."
+  :risky t
   :group 'loophole
   :type '(repeat symbol))
 
@@ -198,6 +201,7 @@ obtaining method.  First element gets first priority.
 Each element should return a list looks like (key array).
 Optionally, return value can contain keymap to bind; in this
 case, the list looks like (key array keymap)."
+  :risky t
   :group 'loophole
   :type '(repeat symbol))
 
@@ -212,6 +216,7 @@ obtaining method.  First element gets first priority.
 Each element should return a list looks like (key keymap).
 Optionally, return value can contain keymap to bind; in this
 case, the list looks like (key keymap keymap)."
+  :risky t
   :group 'loophole
   :type '(repeat symbol))
 
@@ -226,6 +231,7 @@ obtaining method.  First element gets first priority.
 Each element should return a list looks like (key symbol).
 Optionally, return value can contain keymap to bind; in this
 case, the list looks like (key symbol keymap)."
+  :risky t
   :group 'loophole
   :type '(repeat symbol))
 
@@ -241,6 +247,7 @@ case, the list looks like (key symbol keymap)."
 `loophole-set-key' refers this to select obtaining method.
 First element gets first priority.
 Each element should return a list looks like (key object)."
+  :risky t
   :group 'loophole
   :type '(repeat symbol))
 
