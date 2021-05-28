@@ -1964,7 +1964,11 @@ If STYLE is other than above, lighter is omitted."
   "Turn on auto prioritize as user customization.
 Add hooks to call `loophole-prioritize' for
 `loophole-enable', `loophole-name' and
-`loophole-start-editing'."
+`loophole-start-editing'.
+
+All of these hooks are optional.
+User can choose some of them and add to init file
+individually, instead of calling this function."
   (add-hook 'loophole-enable-functions #'loophole-prioritize)
   (add-hook 'loophole-start-editing-functions #'loophole-prioritize)
   (add-hook 'loophole-name-functions #'loophole-prioritize))
@@ -1982,7 +1986,11 @@ Add hooks to call `loophole-stop-editing' for
 `loophole-prioritize', `loophole-enable',
 `loophole-disable' and `loophole-name'.
  `loophole-disable-latest' and `loophole-disable-all' are
-also affected by the hook for `loophole-disable'."
+also affected by the hook for `loophole-disable'.
+
+All of these hooks are optional.
+User can choose some of them and add to init file
+individually, instead of calling this function."
   (add-hook 'loophole-prioritize-functions
             (lambda (map-variable)
               (unless (eq map-variable loophole--editing)
@@ -2028,31 +2036,25 @@ Add hooks to call `loophole-resume' for
 `loophole-bind-entry'.
 Binding commands including `loophole-set-key' and
 `loophole-unset-key' are also affected by the hook of
-`loophole-bind-entry'."
-  (add-hook 'loophole-prioritize-functions
-            (lambda (&rest _) (loophole-resume)))
-  (add-hook 'loophole-enable-functions
-            (lambda (&rest _) (loophole-resume)))
-  (add-hook 'loophole-name-functions
-            (lambda (&rest _) (loophole-resume)))
-  (add-hook 'loophole-start-editing-functions
-            (lambda (&rest _) (loophole-resume)))
-  (add-hook 'loophole-bind-hook
-            (lambda (&rest _) (loophole-resume))))
+`loophole-bind-entry'.
+
+All of these hooks are optional.
+User can choose some of them and add to init file
+individually, instead of calling this function."
+  (add-hook 'loophole-prioritize-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-enable-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-name-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-start-editing-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-bind-hook #'loophole-resume))
 
 (defun loophole-turn-off-auto-resume ()
-  "Turn off auto prioritize as user customization.
+  "Turn off auto resume as user customization.
 Remove hooks added by `loophole-turn-on-auto-resume'."
-  (remove-hook 'loophole-prioritize-functions
-               (lambda (&rest _) (loophole-resume)))
-  (remove-hook 'loophole-enable-functions
-               (lambda (&rest _) (loophole-resume)))
-  (remove-hook 'loophole-name-functions
-               (lambda (&rest _) (loophole-resume)))
-  (remove-hook 'loophole-start-editing-functions
-               (lambda (&rest _) (loophole-resume)))
-  (remove-hook 'loophole-bind-hook
-               (lambda (&rest _) (loophole-resume))))
+  (remove-hook 'loophole-prioritize-functions (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-enable-functions (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-name-functions (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-start-editing-functions (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-bind-hook #'loophole-resume))
 
 (defalias 'loophole-dig 'loophole-set-key)
 (defalias 'loophole-bury 'loophole-unset-key)
