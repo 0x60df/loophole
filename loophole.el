@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.4.2
+;; Version: 0.4.3
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -2151,6 +2151,99 @@ Remove hooks and advises added by `loophole-turn-on-editing-timer'."
                (lambda (_) (loophole-start-editing-timer)))
   (remove-hook 'loophole-stop-editing-functions
                (lambda (_) (loophole-stop-editing-timer))))
+
+(defcustom loophole-use-auto-prioritize t
+  "Flag if prioritize loophole map automatically.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-turn-on-auto-prioritize' or
+`loophole-turn-off-auto-prioritize' manually.
+They setup some hooks.
+
+For more detailed customization, see documentation string of
+`loophole-turn-on-auto-prioritize'."
+  :group 'loophole
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (loophole-turn-on-auto-prioritize)
+           (loophole-turn-off-auto-prioritize))))
+
+(defcustom loophole-use-auto-stop-editing t
+  "Flag if stop editing keymap automatically.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-turn-on-auto-stop-editing' or
+`loophole-turn-off-auto-stop-editing' manually.
+They setup some hooks.
+
+For more detailed customization, see documentation string of
+`loophole-turn-on-auto-stop-editing'."
+  :group 'loophole
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (loophole-turn-on-auto-stop-editing)
+           (loophole-turn-off-auto-stop-editing))))
+
+(defcustom loophole-use-auto-resume t
+  "Flag if resume Loophole automatically.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-turn-on-auto-resume' or
+`loophole-turn-off-auto-resume' manually.
+They setup some hooks.
+
+For more detailed customization, see documentation string of
+`loophole-turn-on-auto-resume'."
+  :group 'loophole
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (loophole-turn-on-auto-resume)
+           (loophole-turn-off-auto-resume))))
+
+(defcustom loophole-use-timer nil
+  "Flag if use timer for activating state.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-turn-on-timer' or `loophole-turn-off-timer'
+manually.  They setup some hooks and advises.
+
+For more detailed customization, see documentation string of
+`loophole-turn-on-timer'."
+  :group 'loophole
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (loophole-turn-on-timer)
+           (loophole-turn-off-timer))))
+
+(defcustom loophole-use-editing-timer nil
+  "Flag if use timer for editing state.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-turn-on-editing-timer' or `loophole-turn-off-editing-timer'
+manually.  They setup some hooks and advises.
+
+For more detailed customization, see documentation string of
+`loophole-turn-on-editing-timer'."
+  :group 'loophole
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (loophole-turn-on-editing-timer)
+           (loophole-turn-off-editing-timer))))
 
 (defalias 'loophole-dig 'loophole-set-key)
 (defalias 'loophole-bury 'loophole-unset-key)

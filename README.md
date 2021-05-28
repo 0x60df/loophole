@@ -14,14 +14,6 @@ and add the following lines to you init file like `.emacs`.
 (loophole-mode)
 ```
 
-The following settings in init file may be useful, they set up some hooks.
-
-``` emacs-lisp
-(loophole-turn-on-auto-prioritize)
-(loophole-turn-on-auto-stop-editing)
-(loophole-turn-on-auto-resume)
-```
-
 ## Usage
 
 ### Basics
@@ -244,6 +236,25 @@ but when you focused on specific binding entry,
 the commands prefixed by `loophole-bind-` may be convenient.
 
 ## Customization
+
+### Automation and timer
+
+Loophole offers some customization functions for automation and timer.
+Functions for automation setup some sequential call of loophole function like
+`loophole-stop-editing` after some events.
+Functions for timer setup some facilities to manage `timer`s of Emacs to
+disable loophole-map or stop editing keymap.
+
+These functions are prefixed by `loophole-turn-` on or off.
+Adding them in your init file setup automation and timers.
+
+They are also setter for custom variables like `loophole-use-auto-stop-editing`.
+Hence, they can be called via `custom-set-variables`.
+Default value of these custom variables are `t` for automation, and `nil` for
+timer.
+
+Note that `setq` for these variables does not work.
+
 
 ### Prefix arguments table of key binding commands
 
