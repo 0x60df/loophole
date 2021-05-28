@@ -112,19 +112,6 @@ overwrites the earliest used one."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-use-timer nil
-  "Flag if loophole map is automatically disabled by timer.
-Value of this variable can be either of the followings.
-nil:     Do not use timer at all.
-map:     Enable timer for map state only.
-editing: Enable timer for editing state only.
-t:       Enable timer for both of map and editing."
-  :group 'loophole
-  :type '(choice (const :tag "Do not use timer" nil)
-                 (const :tag "Map state only" map)
-                 (const :tag "Editing state only" editing)
-                 (const :tag "Both of map and editing" t)))
-
 (defcustom loophole-timer-delay (* 60 60)
   "Delay time in seconds for auto disabling timer."
   :group 'loophole
@@ -379,6 +366,10 @@ Specifically, this function get `key-description' of each
 key, and compare them by `equal'."
   (equal (key-description k1) (key-description k2)))
 
+(defun loophole-local-variable-if-set-list ()
+  "Return list of symbols which is local variable if set."
+  `(loophole--map-alist loophole--editing ,@(loophole-state-variable-list)))
+
 (defun loophole-read-key (prompt)
   "Read and return key sequence for bindings.
 PROMPT is a string for reading key.
@@ -460,6 +451,13 @@ returns nil if no candidate is found instead of signaling
   "Non-nil if MAP-VARIABLE is globalized Loophole map."
   (get-variable-watchers (get map-variable :loophole-state-variable)))
 
+(defun loophole-map-variable-for-keymap (keymap)
+  "Return map variable whose value is KEYMAP."
+  (let* ((state-variable (car (rassq keymap loophole--map-alist)))
+         (map-variable (get state-variable :loophole-map-variable)))
+    (if (eq (symbol-value map-variable) keymap)
+        map-variable)))
+
 (defun loophole-map-variable-for-key-binding (key)
   "Return map variable for active KEY in `loophole--map-alist'."
   (get (car (seq-find (lambda (a)
@@ -505,6 +503,45 @@ is preserved."
     (if (and (timerp timer)
              (not (timer--triggered timer)))
         (cancel-timer timer))))
+
+(defun loophole--remove-all-timers (map-variable)
+  "Cancel and remove all timers for MAP-VARIABLE."
+  (mapc (lambda (buffer)
+          (with-current-buffer buffer
+            (when (local-variable-p 'loophole--timer-alist)
+              (let ((timer (cdr (assq map-variable loophole--timer-alist))))
+                (if (timerp timer) (cancel-timer timer)))
+              (setq loophole--timer-alist
+                    (seq-filter (lambda (cell)
+                                  (not (eq (car cell) map-variable)))
+                                loophole--timer-alist)))))
+        loophole--buffer-list))
+
+(defun loophole--change-map-variable-name-of-timer (map-variable
+                                                       map-name &optional _tag)
+  "Update `loophole--timer-alist' and timer when naming MAP-VARIABLE.
+Updated ones refer to the symbol whose name is MAP-NAME
+prefixed by loophole- and suffixed by -map.
+All buffer local alists and timers are updated."
+  (let ((named-map-variable (intern (format "loophole-%s-map" map-name))))
+    (mapc (lambda (buffer)
+            (with-current-buffer buffer
+              (if (local-variable-p 'loophole--timer-alist)
+                  (let ((cell (assq map-variable loophole--timer-alist)))
+                    (when cell
+                      (setcar cell named-map-variable)
+                      (let ((timer (cdr cell)))
+                        (if (timerp timer)
+                            (timer-set-function
+                             timer
+                             (lambda (map-variable buffer)
+                               (if (and (loophole-registered-p map-variable)
+                                        (buffer-live-p buffer))
+                                   (with-current-buffer buffer
+                                     (loophole-disable map-variable)
+                                     (force-mode-line-update))))
+                             (list named-map-variable (current-buffer))))))))))
+          loophole--buffer-list)))
 
 (defun loophole-start-editing-timer ()
   "Setup or update timer for editing state."
@@ -662,22 +699,11 @@ If called interactively with prefix argument, it is assigned
 to KEEP-PARENT-MAP."
   (interactive
    (list (loophole-read-map-variable "Unregister keymap:") current-prefix-arg))
-  (if (memq loophole-use-timer '(map t))
-      (mapc (lambda (buffer)
-              (with-current-buffer buffer
-                (when (local-variable-p 'loophole--timer-alist)
-                  (let ((timer (cdr (assq map-variable loophole--timer-alist))))
-                    (if (timerp timer) (cancel-timer timer)))
-                  (setq loophole--timer-alist
-                        (seq-filter (lambda (cell)
-                                      (not (eq (car cell) map-variable)))
-                                    loophole--timer-alist)))))
-            loophole--buffer-list))
   (mapc (lambda (buffer)
           (with-current-buffer buffer
             (if (and (local-variable-p 'loophole--editing)
                      (eq loophole--editing map-variable))
-                (setq loophole--editing nil))))
+                (loophole-stop-editing))))
         loophole--buffer-list)
   (let ((state-variable (get map-variable :loophole-state-variable)))
     (mapc (lambda (buffer)
@@ -697,15 +723,9 @@ to KEEP-PARENT-MAP."
     (mapc (lambda (buffer)
             (with-current-buffer buffer
               (if (and (local-variable-p state-variable)
-                       (seq-every-p
-                        (lambda (variable)
-                          (not (local-variable-p variable)))
-                        `(loophole--map-alist
-                          loophole--editing
-                          loophole--timer-alist
-                          loophole--editing-timer
-                          ,@(remq state-variable
-                                  (loophole-state-variable-list)))))
+                       (seq-every-p (lambda (variable)
+                                      (not (local-variable-p variable)))
+                                    (loophole-local-variable-if-set-list)))
                   (setq loophole--buffer-list
                         (delq buffer loophole--buffer-list)))))
           loophole--buffer-list)
@@ -846,7 +866,6 @@ generate new one and return it."
                     (unless (local-variable-p 'loophole--map-alist)
                       (setq loophole--map-alist loophole--map-alist))
                     generated)))))
-    (if (memq loophole-use-timer '(map t)) (loophole-start-timer map-variable))
     (symbol-value map-variable)))
 
 (defun loophole-enable (map-variable)
@@ -862,8 +881,6 @@ generate new one and return it."
           (set state-variable t)
           (unless (local-variable-p 'loophole--map-alist)
             (setq loophole--map-alist loophole--map-alist))
-          (if (memq loophole-use-timer '(map t))
-              (loophole-start-timer map-variable))
           (run-hook-with-args 'loophole-enable-functions map-variable)))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
@@ -880,8 +897,6 @@ generate new one and return it."
           (set state-variable nil)
           (unless (local-variable-p 'loophole--map-alist)
             (setq loophole--map-alist loophole--map-alist))
-          (if (memq loophole-use-timer '(map t))
-              (loophole-stop-timer map-variable))
           (run-hook-with-args 'loophole-disable-functions map-variable)))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
@@ -986,27 +1001,6 @@ which had been already unbound." named-map-variable state-variable))
                          (eq map-variable loophole--editing))
                     (setq loophole--editing named-map-variable))))
             loophole--buffer-list)
-      (if (memq loophole-use-timer '(map t))
-          (mapc (lambda (buffer)
-                  (with-current-buffer buffer
-                    (if (local-variable-p 'loophole--timer-alist)
-                        (let ((cell (assq map-variable loophole--timer-alist)))
-                          (when cell
-                            (setcar cell named-map-variable)
-                            (let ((timer (cdr cell)))
-                              (if (timerp timer)
-                                  (timer-set-function
-                                   timer
-                                   (lambda (map-variable buffer)
-                                     (if (and (loophole-registered-p
-                                               map-variable)
-                                              (buffer-live-p buffer))
-                                         (with-current-buffer buffer
-                                           (loophole-disable map-variable)
-                                           (force-mode-line-update))))
-                                   (list named-map-variable
-                                         (current-buffer))))))))))
-                loophole--buffer-list))
       (remove-variable-watcher state-variable
                                #'loophole--follow-adding-local-variable)
       (if (loophole-global-p map-variable)
@@ -1022,16 +1016,12 @@ which had been already unbound." named-map-variable state-variable))
 (defun loophole-start-editing (map-variable)
   "Start keymap edit session with MAP-VARIABLE."
   (interactive (list (loophole-read-map-variable "Start editing keymap: ")))
-  (if (memq loophole-use-timer '(editing t))
-      (loophole-start-editing-timer))
   (setq loophole--editing map-variable)
   (run-hook-with-args 'loophole-start-editing-functions map-variable))
 
 (defun loophole-stop-editing ()
   "Stop keymap edit session."
   (interactive)
-  (if (memq loophole-use-timer '(editing t))
-      (loophole-stop-editing-timer))
   (let ((map-variable loophole--editing))
     (setq loophole--editing nil)
     (run-hook-with-args 'loophole-stop-editing-functions map-variable)))
@@ -1436,12 +1426,10 @@ and it is registered to loophole, KEYMAP is used instead."
   (interactive (loophole-obtain-key-and-object))
   (define-key
     (if keymap
-        (let* ((state-variable (car (rassq keymap loophole--map-alist)))
-               (map-variable (get state-variable :loophole-map-variable)))
+        (let ((map-variable (loophole-map-variable-for-keymap keymap)))
           (if (and keymap
                    map-variable
-                   (loophole-registered-p map-variable)
-                   (eq (symbol-value map-variable) keymap))
+                   (loophole-registered-p map-variable))
               keymap
             (error "Invalid keymap: %s" keymap)))
       (loophole-ready-map))
@@ -1871,22 +1859,18 @@ temporary key bindings management command.
             (define-key map (kbd "C-c ] m k") #'loophole-modify-kmacro)
             (define-key map (kbd "C-c ] m a") #'loophole-modify-array)
             map)
-  (let ((local-variable-list '(loophole--map-alist
-                               loophole--editing
-                               loophole--timer-alist
-                               loophole--editing-timer)))
-    (if loophole-mode
-        (progn
-          (unless loophole--suspended (loophole-resume))
-          (dolist (local-variable local-variable-list)
-            (add-variable-watcher
-             local-variable #'loophole--follow-adding-local-variable)))
-      (let ((flag loophole--suspended))
-        (loophole-suspend)
-        (setq loophole--suspended flag)
-        (dolist (local-variable local-variable-list)
-          (remove-variable-watcher
-           local-variable #'loophole--follow-adding-local-variable))))))
+  (if loophole-mode
+      (progn
+        (unless loophole--suspended (loophole-resume))
+        (dolist (local-variable (loophole-local-variable-if-set-list))
+          (add-variable-watcher
+           local-variable #'loophole--follow-adding-local-variable)))
+    (let ((flag loophole--suspended))
+      (loophole-suspend)
+      (setq loophole--suspended flag)
+      (dolist (local-variable (loophole-local-variable-if-set-list))
+        (remove-variable-watcher
+         local-variable #'loophole--follow-adding-local-variable)))))
 
 (defun loophole-mode-set-lighter-format (style &optional format)
   "Set lighter format for loophole mode.
@@ -2071,6 +2055,95 @@ Remove hooks added by `loophole-turn-on-auto-resume'."
   (remove-hook 'loophole-name-functions (lambda (_) (loophole-resume)))
   (remove-hook 'loophole-start-editing-functions (lambda (_) (loophole-resume)))
   (remove-hook 'loophole-bind-hook #'loophole-resume))
+
+(defun loophole-turn-on-timer ()
+  "Turn on timer for activating state as user customization.
+Add hooks and advices to take care of timers.
+
+In contrast with `loophole-turn-on-auto-prioritize',
+`loophole-turn-on-auto-stop-editing' and
+`loophole-turn-on-auto-resume', the hook for
+`loophole-unregister-functions' and the advises for
+`loophole-local-variable-if-set-list' and `loophole-name'
+are mandatory.  Others are optional.
+
+When user choose optional hooks and advises, hooks and
+advises described above must be added together to init file."
+  (add-hook 'loophole-unregister-functions #'loophole--remove-all-timers)
+  (advice-add 'loophole-local-variable-if-set-list
+              :filter-return
+              (lambda (return)
+                "Add `loophole--timer-alist'
+  to return value."
+                (cons 'loophole--timer-alist return)))
+  (advice-add 'loophole-name
+              :after #'loophole--change-map-variable-name-of-timer)
+  (advice-add 'loophole-ready-map
+              :filter-return
+              (lambda (return)
+                "Call `loophole-start-timer'
+  for map-variable of returned keymap, and return original."
+                (loophole-start-timer (loophole-map-variable-for-keymap return))
+                return))
+  (add-hook 'loophole-enable-functions #'loophole-start-timer)
+  (add-hook 'loophole-disable-functions #'loophole-stop-timer))
+
+(defun loophole-turn-off-timer ()
+  "Turn off timer for activating state as user customization.
+Remove hooks and advises added by `loophole-turn-on-timer'."
+  (remove-hook 'loophole-unregister-functions #'loophole--remove-all-timers)
+  (advice-remove 'loophole-local-variable-if-set-list
+                 (lambda (return)
+                   "Add `loophole--timer-alist'
+  to return value."
+                   (cons 'loophole--timer-alist return)))
+  (advice-remove 'loophole-name
+                 #'loophole--change-map-variable-name-of-timer)
+  (advice-remove 'loophole-ready-map
+                 (lambda (return)
+                   "Call `loophole-start-timer'
+  for map-variable of returned keymap, and return original."
+                   (loophole-start-timer (loophole-map-variable-for-keymap
+                                          return))
+                   return))
+  (remove-hook 'loophole-enable-functions #'loophole-start-timer)
+  (remove-hook 'loophole-disable-functions #'loophole-stop-timer))
+
+(defun loophole-turn-on-editing-timer ()
+  "Turn on timer for editing state as user customization.
+Add hooks and advices to take care of timers .
+
+In contrast with `loophole-turn-on-auto-prioritize',
+`loophole-turn-on-auto-stop-editing' and
+`loophole-turn-on-auto-resume', the advise for
+`loophole-local-variable-if-set-list' is
+mandatory.  Others are optional.
+
+When user choose optional hooks, the advise described above
+must be added together to init file."
+  (advice-add 'loophole-local-variable-if-set-list
+              :filter-return
+              (lambda (return)
+                "Add `loophole--editing-timer'
+  to return value."
+                (cons 'loophole--editing-timer return)))
+  (add-hook 'loophole-start-editing-functions
+            (lambda (_) (loophole-start-editing-timer)))
+  (add-hook 'loophole-stop-editing-functions
+            (lambda (_) (loophole-stop-editing-timer))))
+
+(defun loophole-turn-off-editing-timer ()
+  "Turn off timer for editing state as user customization.
+Remove hooks and advises added by `loophole-turn-on-editing-timer'."
+  (advice-remove 'loophole-local-variable-if-set-list
+                 (lambda (return)
+                   "Add `loophole--editing-timer'
+  to return value."
+                   (cons 'loophole--editing-timer return)))
+  (remove-hook 'loophole-start-editing-functions
+               (lambda (_) (loophole-start-editing-timer)))
+  (remove-hook 'loophole-stop-editing-functions
+               (lambda (_) (loophole-stop-editing-timer))))
 
 (defalias 'loophole-dig 'loophole-set-key)
 (defalias 'loophole-bury 'loophole-unset-key)
