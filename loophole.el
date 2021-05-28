@@ -257,6 +257,20 @@ Each element should return a list looks like (key object)."
   :group 'loophole
   :type '(repeat symbol))
 
+(defcustom loophole-register-functions nil
+  "Hook for `loophole-register'.
+Functions added to this user option are called with one
+argument, registered map variable."
+  :group 'loophole
+  :type 'hook)
+
+(defcustom loophole-unregister-functions nil
+  "Hook for `loophole-unregister'.
+Functions added to this user option are called with one
+argument, unregistered map variable."
+  :group 'loophole
+  :type 'hook)
+
 (defcustom loophole-prioritize-functions nil
   "Hook for `loophole-prioritize'.
 Functions added to this user option are called with one
@@ -636,7 +650,8 @@ WITHOUT-BASE-MAP."
             (if (local-variable-p 'loophole--map-alist)
                 (push `(,state-variable . ,(symbol-value map-variable))
                       loophole--map-alist))))
-        loophole--buffer-list))
+        loophole--buffer-list)
+  (run-hook-with-args 'loophole-register-functions map-variable))
 
 (defun loophole-unregister (map-variable &optional keep-parent-map)
   "Unregister MAP-VARIABLE from loophole.
@@ -701,7 +716,8 @@ to KEEP-PARENT-MAP."
                                  #'loophole--follow-global-state))
     (put map-variable :loophole-tag nil)
     (put state-variable :loophole-map-variable nil)
-    (put map-variable :loophole-state-variable nil)))
+    (put map-variable :loophole-state-variable nil))
+  (run-hook-with-args 'loophole-unregister-functions map-variable))
 
 (defun loophole-prioritize (map-variable)
   "Give first priority to MAP-VARIABLE.
