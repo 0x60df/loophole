@@ -50,7 +50,9 @@ active or not.  KEYMAP is a keymap object.")
 
 (defvar loophole--buffer-list nil
   "List of buffers on which Loophole variables have local value.
-`loophole-mode' maintains this variable as up to date.")
+`loophole-mode' maintains this variable as up to date.
+When `loophole-mode' is disabled, this variable is set as t
+in order to tell that this variable is not maintained.")
 
 (defvar-local loophole--editing nil
   "Variable of keymap which is currently being edited.
@@ -523,7 +525,9 @@ is preserved."
                     (seq-filter (lambda (cell)
                                   (not (eq (car cell) map-variable)))
                                 loophole--timer-alist)))))
-        loophole--buffer-list))
+        (if (listp loophole--buffer-list)
+            loophole--buffer-list
+          (buffer-list))))
 
 (defun loophole--change-map-variable-name-of-timer (map-variable
                                                        map-name &optional _tag)
@@ -549,10 +553,14 @@ All buffer local alists and timers are updated."
                                      (loophole-disable map-variable)
                                      (force-mode-line-update))))
                              (list named-map-variable (current-buffer))))))))))
-          loophole--buffer-list)))
+          (if (listp loophole--buffer-list)
+              loophole--buffer-list
+            (buffer-list)))))
 
 (defun loophole--stop-all-timers ()
-  "Cancel all timers."
+  "Cancel all timers with saving active timers.
+This function is intended to be added to
+`loophole-mode-hook'."
   (put 'loophole--timer-alist :loophole-ghost-timer-list nil)
   (mapc (lambda (buffer)
           (with-current-buffer buffer
@@ -568,7 +576,11 @@ All buffer local alists and timers are updated."
         (buffer-list)))
 
 (defun loophole--revive-or-start-all-timers ()
-  "Revive all times without updating trigering time."
+  "Revive without updating trigering time or start all timers.
+Timers which is saved as ghost when `loophole-mode' is
+disabled are revived.  Others are started.
+This function is intended to be added to
+`loophole-mode-hook'."
   (let ((ghost-timer-list
          (get 'loophole--timer-alist :loophole-ghost-timer-list)))
     (dolist (ghost-timer ghost-timer-list)
@@ -611,7 +623,9 @@ All buffer local alists and timers are updated."
       (cancel-timer loophole--editing-timer)))
 
 (defun loophole--stop-all-editing-timers ()
-  "Cancel all editing timers."
+  "Cancel all editing timers with saving active timers.
+This function is intended to be added to
+`loophole-mode-hook'."
   (put 'loophole--editing-timer :loophole-ghost-editing-timer-list nil)
   (mapc (lambda (buffer)
           (with-current-buffer buffer
@@ -626,7 +640,7 @@ All buffer local alists and timers are updated."
         (buffer-list)))
 
 (defun loophole--revive-or-start-all-editing-timers ()
-  "Revive or start all editing times without updating trigering time.
+  "Revive without updating trigering time or start all editing timers.
 Editing timers which is saved as ghost when `loophole-mode'
 is disabled are revived.  Others are started."
   (let ((ghost-timer-list
@@ -645,8 +659,8 @@ is disabled are revived.  Others are started."
 (defun loophole--follow-adding-local-variable (_symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
 This function is intented to be used for
- `add-variable-watcher'.
-Arguments _SYMBOL, _NEWVAL, OPERATION and WHERE is for
+`add-variable-watcher' which is set while `loophole-mode'.
+Arguments _SYMBOL, _NEWVAL, OPERATION and WHERE are for
 `add-variable-watcher'."
   (when (and (eq operation 'set)
              where
@@ -661,7 +675,9 @@ Arguments _SYMBOL, _NEWVAL, OPERATION and WHERE is for
 (defun loophole--follow-killing-local-variable ()
   "Update `loophole--buffer-list' for killing local variable.
 This function is intended to be added to
-`change-major-mode-hook' and `kill-buffer-hook'."
+`change-major-mode-hook' and `kill-buffer-hook'.
+Only while `loophole-mode' is enabled, this functions is
+added to the hooks above."
   (when (memq (current-buffer) loophole--buffer-list)
     (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))
     (remove-hook 'change-major-mode-hook
@@ -672,7 +688,9 @@ This function is intended to be added to
 (defun loophole--follow-global-state (symbol newval operation where)
   "Set all of local and default SYMBOL value as NEWVAL.
 This is done if OPERATION is set and scan
-`loophole--buffer-list' by using WHERE."
+`loophole--buffer-list' by using WHERE.
+This function is intented to be used for
+`add-variable-watcher' which is set while `loophole-mode'."
   (when (eq operation 'set)
     (mapc (lambda (buffer)
             (with-current-buffer buffer
@@ -744,11 +762,12 @@ WITHOUT-BASE-MAP."
   (put map-variable :loophole-global (not (null global)))
   (unless (local-variable-if-set-p state-variable)
     (make-variable-buffer-local state-variable))
-  (mapc (lambda (buffer)
-          (with-current-buffer buffer
-            (if (local-variable-p state-variable)
-                (add-to-list 'loophole--buffer-list buffer nil #'eq))))
-        (buffer-list))
+  (if (listp loophole--buffer-list)
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (if (local-variable-p state-variable)
+                    (add-to-list 'loophole--buffer-list buffer nil #'eq))))
+            (buffer-list)))
   (add-variable-watcher state-variable #'loophole--follow-adding-local-variable)
   (if global
       (add-variable-watcher state-variable #'loophole--follow-global-state))
@@ -762,7 +781,9 @@ WITHOUT-BASE-MAP."
             (if (local-variable-p 'loophole--map-alist)
                 (push `(,state-variable . ,(symbol-value map-variable))
                       loophole--map-alist))))
-        loophole--buffer-list)
+        (if (listp loophole--buffer-list)
+            loophole--buffer-list
+          (buffer-list)))
   (run-hook-with-args 'loophole-register-functions map-variable))
 
 (defun loophole-unregister (map-variable &optional keep-parent-map)
@@ -779,7 +800,9 @@ to KEEP-PARENT-MAP."
             (if (and (local-variable-p 'loophole--editing)
                      (eq loophole--editing map-variable))
                 (loophole-stop-editing))))
-        loophole--buffer-list)
+        (if (listp loophole--buffer-list)
+            loophole--buffer-list
+          (buffer-list)))
   (let ((state-variable (get map-variable :loophole-state-variable)))
     (mapc (lambda (buffer)
             (with-current-buffer buffer
@@ -788,22 +811,25 @@ to KEEP-PARENT-MAP."
                         (seq-filter (lambda (cell)
                                       (not (eq (car cell) state-variable)))
                                     loophole--map-alist)))))
-          loophole--buffer-list)
+          (if (listp loophole--buffer-list)
+            loophole--buffer-list
+          (buffer-list)))
     (setq-default loophole--map-alist
                   (seq-filter (lambda (cell)
                                   (not (eq (car cell) state-variable)))
                               (default-value 'loophole--map-alist)))
     (remove-variable-watcher state-variable
                              #'loophole--follow-adding-local-variable)
-    (mapc (lambda (buffer)
-            (with-current-buffer buffer
-              (if (and (local-variable-p state-variable)
-                       (seq-every-p (lambda (variable)
-                                      (not (local-variable-p variable)))
-                                    (loophole-local-variable-if-set-list)))
-                  (setq loophole--buffer-list
-                        (delq buffer loophole--buffer-list)))))
-          loophole--buffer-list)
+    (if (listp loophole--buffer-list)
+        (mapc (lambda (buffer)
+                (with-current-buffer buffer
+                  (if (and (local-variable-p state-variable)
+                           (seq-every-p (lambda (variable)
+                                          (not (local-variable-p variable)))
+                                        (loophole-local-variable-if-set-list)))
+                      (setq loophole--buffer-list
+                            (delq buffer loophole--buffer-list)))))
+              loophole--buffer-list))
     (unless keep-parent-map
       (set-keymap-parent (symbol-value map-variable) nil))
     (if (loophole-global-p map-variable)
@@ -876,7 +902,9 @@ Generated by `loophole-generate'.")
                                             (get map-var
                                                  :loophole-state-variable)))
                                        (not (symbol-value state-var)))))
-                                 loophole--buffer-list)
+                                 (if (listp loophole--buffer-list)
+                                     loophole--buffer-list
+                                   (buffer-list)))
                                 (string-match
                                  "loophole-[0-9]+-map"
                                  (symbol-name map-var))))
@@ -924,7 +952,9 @@ Generated by `loophole-generate'." map-variable)))
                          (symbol-value state-variable))
                 (set state-variable nil)
                 (force-mode-line-update))))
-          loophole--buffer-list)
+          (if (listp loophole--buffer-list)
+            loophole--buffer-list
+          (buffer-list)))
     (unless (loophole-registered-p map-variable state-variable)
       (loophole-register map-variable state-variable tag))
     map-variable))
@@ -1053,7 +1083,9 @@ which had been already unbound." named-map-variable state-variable))
          (with-current-buffer buffer
            (if (local-variable-p state-variable)
                (set named-state-variable (symbol-value state-variable)))))
-       loophole--buffer-list)
+       (if (listp loophole--buffer-list)
+           loophole--buffer-list
+         (buffer-list)))
       (add-variable-watcher named-state-variable
                             #'loophole--follow-adding-local-variable)
       (if (loophole-global-p map-variable)
@@ -1072,13 +1104,17 @@ which had been already unbound." named-map-variable state-variable))
                     (let ((cell (assq state-variable loophole--map-alist)))
                       (if (consp cell)
                           (setcar cell named-state-variable))))))
-            loophole--buffer-list)
+            (if (listp loophole--buffer-list)
+                loophole--buffer-list
+              (buffer-list)))
       (mapc (lambda (buffer)
               (with-current-buffer buffer
                 (if (and (local-variable-p 'loophole--editing)
                          (eq map-variable loophole--editing))
                     (setq loophole--editing named-map-variable))))
-            loophole--buffer-list)
+            (if (listp loophole--buffer-list)
+            loophole--buffer-list
+          (buffer-list)))
       (remove-variable-watcher state-variable
                                #'loophole--follow-adding-local-variable)
       (if (loophole-global-p map-variable)
@@ -1983,7 +2019,7 @@ temporary key bindings management command.
     (dolist (variable (loophole-local-variable-if-set-list))
       (remove-variable-watcher variable
                                #'loophole--follow-adding-local-variable))
-    (setq loophole--buffer-list nil)))
+    (setq loophole--buffer-list t)))
 
 (defun loophole-mode-set-lighter-format (style &optional format)
   "Set lighter format for loophole mode.
