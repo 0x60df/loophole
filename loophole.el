@@ -466,10 +466,6 @@ If there are no candidates after PREDICATE is applied to
       (if (null map-variable-list)
           (user-error "There are no suitable loophole maps")))))
 
-(defun loophole-global-p (map-variable)
-  "Non-nil if MAP-VARIABLE is globalized Loophole map."
-  (get-variable-watchers (get map-variable :loophole-state-variable)))
-
 (defun loophole-map-variable-for-keymap (keymap)
   "Return map variable whose value is KEYMAP."
   (let* ((state-variable (car (rassq keymap loophole--map-alist)))
@@ -841,7 +837,7 @@ to KEEP-PARENT-MAP."
               loophole--buffer-list))
     (unless keep-parent-map
       (set-keymap-parent (symbol-value map-variable) nil))
-    (if (loophole-global-p map-variable)
+    (if (get map-variable :loophole-global)
         (remove-variable-watcher state-variable
                                  #'loophole--follow-global-state))
     (put map-variable :loophole-global nil)
@@ -1084,7 +1080,7 @@ which had been already unbound." named-map-variable state-variable))
       (set named-map-variable (symbol-value map-variable))
       (make-variable-buffer-local named-state-variable)
       (set-default named-state-variable
-                   (if (loophole-global-p map-variable)
+                   (if (get map-variable :loophole-global)
                        (symbol-value state-variable)
                      nil))
       (mapc
@@ -1097,7 +1093,7 @@ which had been already unbound." named-map-variable state-variable))
          (buffer-list)))
       (add-variable-watcher named-state-variable
                             #'loophole--follow-adding-local-variable)
-      (if (loophole-global-p map-variable)
+      (if (get map-variable :loophole-global)
           (add-variable-watcher named-state-variable
                                 #'loophole--follow-global-state))
       (put named-map-variable :loophole-state-variable named-state-variable)
@@ -1126,7 +1122,7 @@ which had been already unbound." named-map-variable state-variable))
           (buffer-list)))
       (remove-variable-watcher state-variable
                                #'loophole--follow-adding-local-variable)
-      (if (loophole-global-p map-variable)
+      (if (get map-variable :loophole-global)
           (remove-variable-watcher state-variable
                                    #'loophole--follow-global-state))
       (makunbound state-variable)
@@ -1156,7 +1152,7 @@ which had been already unbound." named-map-variable state-variable))
                    (called-interactively-p 'interactive))
   (with-help-window (help-buffer)
     (princ (format "`%s' %sLoophole Map Bindings:\n"
-                   map-variable (if (loophole-global-p map-variable)
+                   map-variable (if (get map-variable :loophole-global)
                                     "Globalized ")))
     (princ (substitute-command-keys
             (format "\\{%s}" map-variable)))
