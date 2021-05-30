@@ -760,9 +760,19 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (cond ((loophole-registered-p map-variable state-variable)
          (user-error "Specified variables are already registered: %s, %s"
                      map-variable state-variable))
-        ((assq state-variable (default-value 'loophole--map-alist))
+        ((memq map-variable (loophole-map-variable-list))
+         (user-error "Specified map-variable is already used: %s"
+                     map-variable))
+        ((memq state-variable (loophole-state-variable-list))
          (user-error "Specified state-variable is already used: %s"
-                     state-variable)))
+                     state-variable))
+        ((seq-find (lambda (a)
+                     (let ((keymap (cdr a)))
+                       (eq keymap (symbol-value map-variable))))
+                   loophole--map-alist)
+         (user-error
+          "Specified map-variable holds keymap which is already used: %s"
+          state-variable)))
   (put map-variable :loophole-state-variable state-variable)
   (put state-variable :loophole-map-variable map-variable)
   (put map-variable :loophole-tag tag)
