@@ -668,9 +668,10 @@ This function is intended to be added to
 (defun loophole--follow-adding-local-variable (_symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
 This function is intented to be used for
-`add-variable-watcher' which is set while `loophole-mode'.
-Arguments _SYMBOL, _NEWVAL, OPERATION and WHERE are for
-`add-variable-watcher'."
+`add-variable-watcher'.  Only while `loophole-mode' is
+enabled, this function is added as variable watcher.
+When OPERATION is set and WHERE is non-nil, WHERE is added
+to `loophole--buffer-list'."
   (when (and (eq operation 'set)
              where
              (not (memq where loophole--buffer-list)))
@@ -695,11 +696,13 @@ added to the hooks above."
                  #'loophole--follow-killing-local-variable t)))
 
 (defun loophole--follow-global-state (symbol newval operation where)
-  "Set all of local and default SYMBOL value as NEWVAL.
-This is done if OPERATION is set and scan
-`loophole--buffer-list' by using WHERE.
-This function is intented to be used for
-`add-variable-watcher' which is set while `loophole-mode'."
+  "Set all of local and default value of SYMBOL as NEWVAL.
+This is done if OPERATION is set.
+Local variables are scanned by using `loophole--buffer-list'
+and WHERE.
+This function is intended to be used for
+`add-variable-watcher'.  Only while `loophole-mode' is
+enabled, this function is added as variable watcher."
   (when (eq operation 'set)
     (mapc (lambda (buffer)
             (with-current-buffer buffer
