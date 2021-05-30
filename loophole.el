@@ -407,65 +407,64 @@ Otherwise, \\[keyboard-quit] will be returned as it is read."
          (keyboard-quit))
     key))
 
-(defun loophole-read-map-variable (prompt &optional predicate noerror)
+(defun loophole-read-map-variable (prompt &optional predicate)
   "`completing-read' existing map-variable and return read one.
 PROMPT is used for `completing-read'.
 
 If optional argument PREDICATE is non-nil, it should be
 a function which filters candidates for `completing-read'.
-Otherwise, `loophole-map-variable-list' is used for
+Otherwise, bare `loophole-map-variable-list' is used for
 candidates.
 PREDICATE shoud get one argument, a map variable, and return
 non-nil if that map variable should be used for candidates.
 
-If optional argument NOERROR is non-nil, this function
-returns nil if no candidate is found instead of signaling
+If there are no candidates after PREDICATE is applied to
+`loophole-map-variable-list', this function finally signals
 `user-error'."
-  (unwind-protect
-      (let ((map-variable-list
-             (if predicate
-                 (seq-filter predicate (loophole-map-variable-list))
-               (loophole-map-variable-list)))
-            (minibuffer-help-form
-             '(let ((completions (all-completions
-                                  (minibuffer-contents)
-                                  minibuffer-completion-table
-                                  minibuffer-completion-predicate))
-                    (index (cdr
-                            (assq 'index
-                                  loophole--read-map-variable-help-condition)))
-                    (last (cdr
-                           (assq 'last
-                                 loophole--read-map-variable-help-condition))))
-                (if completions
-                    (progn
-                      (if (equal completions last)
-                          (push `(index . ,(if (< index
-                                                  (- (length completions) 1))
-                                               (1+ index)
-                                             0))
-                                loophole--read-map-variable-help-condition)
-                        (push '(index . 0)
-                              loophole--read-map-variable-help-condition)
-                        (push `(last . ,completions)
-                              loophole--read-map-variable-help-condition))
-                      (let ((map-variable
-                             (elt
-                              completions
-                              (cdr
-                               (assq
-                                'index
-                                loophole--read-map-variable-help-condition)))))
-                        (if map-variable (loophole-describe map-variable))))
-                  (push '(index . 0)
-                        loophole--read-map-variable-help-condition)
-                  (push `(last . ,completions)
-                        loophole--read-map-variable-help-condition)))))
-        (cond (map-variable-list
-               (intern (completing-read prompt map-variable-list nil t)))
-              (noerror nil)
-              (t (user-error "There are no suitable loophole maps"))))
-    (setq loophole--read-map-variable-help-condition '((index . 0) (last)))))
+  (let ((map-variable-list
+         (if predicate
+             (seq-filter predicate (loophole-map-variable-list))
+           (loophole-map-variable-list)))
+        (minibuffer-help-form
+         '(let ((completions (all-completions
+                              (minibuffer-contents)
+                              minibuffer-completion-table
+                              minibuffer-completion-predicate))
+                (index (cdr
+                        (assq 'index
+                              loophole--read-map-variable-help-condition)))
+                (last (cdr
+                       (assq 'last
+                             loophole--read-map-variable-help-condition))))
+            (if completions
+                (progn
+                  (if (equal completions last)
+                      (push `(index . ,(if (< index
+                                              (- (length completions) 1))
+                                           (1+ index)
+                                         0))
+                            loophole--read-map-variable-help-condition)
+                    (push '(index . 0)
+                          loophole--read-map-variable-help-condition)
+                    (push `(last . ,completions)
+                          loophole--read-map-variable-help-condition))
+                  (let ((map-variable
+                         (elt
+                          completions
+                          (cdr
+                           (assq
+                            'index
+                            loophole--read-map-variable-help-condition)))))
+                    (if map-variable (loophole-describe map-variable))))
+              (push '(index . 0)
+                    loophole--read-map-variable-help-condition)
+              (push `(last . ,completions)
+                    loophole--read-map-variable-help-condition)))))
+    (unwind-protect
+        (intern (completing-read prompt map-variable-list nil t))
+      (setq loophole--read-map-variable-help-condition '((index . 0) (last)))
+      (if (null map-variable-list)
+          (user-error "There are no suitable loophole maps")))))
 
 (defun loophole-global-p (map-variable)
   "Non-nil if MAP-VARIABLE is globalized Loophole map."
