@@ -876,11 +876,10 @@ the front."
       (unless (eq (assq state-variable loophole--map-alist)
                   (car loophole--map-alist))
         (setq loophole--map-alist
-              (seq-filter (lambda (cell)
-                            (not (eq (car cell) state-variable)))
-                          loophole--map-alist))
-        (push `(,state-variable . ,(symbol-value map-variable))
-              loophole--map-alist)
+              (cons `(,state-variable . ,(symbol-value map-variable))
+                    (seq-filter (lambda (cell)
+                                  (not (eq (car cell) state-variable)))
+                                loophole--map-alist)))
         (setq-default
          loophole--map-alist
          (cons `(,state-variable . ,(symbol-value map-variable))
