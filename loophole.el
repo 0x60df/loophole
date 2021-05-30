@@ -492,7 +492,7 @@ is preserved."
   (not (memq 'loophole--map-alist emulation-mode-map-alists)))
 
 (defun loophole-start-timer (map-variable)
-  "Setup or update timer for MAP-VARIABLE."
+  "Setup or update timer for disabling MAP-VARIABLE."
   (let ((timer (cdr (assq map-variable loophole--timer-alist))))
     (if (timerp timer)
         (progn
@@ -513,14 +513,14 @@ is preserved."
             loophole--timer-alist))))
 
 (defun loophole-stop-timer (map-variable)
-  "Cancel timer for MAP-VARIABLE."
+  "Cancel timer for disabling MAP-VARIABLE."
   (let ((timer (cdr (assq map-variable loophole--timer-alist))))
     (if (and (timerp timer)
              (not (timer--triggered timer)))
         (cancel-timer timer))))
 
 (defun loophole--remove-all-timers (map-variable)
-  "Cancel and remove all timers for MAP-VARIABLE."
+  "Cancel and remove all timers for disabling MAP-VARIABLE."
   (mapc (lambda (buffer)
           (with-current-buffer buffer
             (when (local-variable-p 'loophole--timer-alist)
@@ -565,7 +565,7 @@ All buffer local alists and timers are updated."
 (defun loophole--stop-all-timers ()
   "Cancel all timers with saving active timers.
 This function is intended to be added to
-`loophole-mode-hook'."
+`loophole-mode-hook' for disabling `loophole-mode'."
   (put 'loophole--timer-alist :loophole-ghost-timer-list nil)
   (mapc (lambda (buffer)
           (with-current-buffer buffer
@@ -581,11 +581,12 @@ This function is intended to be added to
         (buffer-list)))
 
 (defun loophole--revive-or-start-all-timers ()
-  "Revive without updating trigering time or start all timers.
+  "Revive or start all timers for disabling loophole-map.
 Timers which is saved as ghost when `loophole-mode' is
-disabled are revived.  Others are started.
+disabled are revived without updating trigering time.
+Others are started.
 This function is intended to be added to
-`loophole-mode-hook'."
+`loophole-mode-hook' for enabling `loophole-mode'."
   (let ((ghost-timer-list
          (get 'loophole--timer-alist :loophole-ghost-timer-list)))
     (dolist (ghost-timer ghost-timer-list)
@@ -630,7 +631,7 @@ This function is intended to be added to
 (defun loophole--stop-all-editing-timers ()
   "Cancel all editing timers with saving active timers.
 This function is intended to be added to
-`loophole-mode-hook'."
+`loophole-mode-hook' for disabling `loophole-mode'."
   (put 'loophole--editing-timer :loophole-ghost-editing-timer-list nil)
   (mapc (lambda (buffer)
           (with-current-buffer buffer
@@ -645,9 +646,12 @@ This function is intended to be added to
         (buffer-list)))
 
 (defun loophole--revive-or-start-all-editing-timers ()
-  "Revive without updating trigering time or start all editing timers.
+  "Revive or start all timers for editing state.
 Editing timers which is saved as ghost when `loophole-mode'
-is disabled are revived.  Others are started."
+is disabled are revived without updating trigering time.
+Others are started.
+This function is intended to be added to
+`loophole-mode-hook' for enabling `loophole-mode'."
   (let ((ghost-timer-list
          (get 'loophole--editing-timer :loophole-ghost-editing-timer-list)))
     (dolist (ghost-timer ghost-timer-list)
