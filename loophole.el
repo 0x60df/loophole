@@ -46,7 +46,9 @@
 Syntax is same as `minor-mode-map-alist', i.e. each element
 looks like (STATE-VARIABLE . KEYMAP).  STATE-VARIABLE is a
 symbol whose boolean value represents if the KEYMAP is
-active or not.  KEYMAP is a keymap object.")
+active or not.  KEYMAP is a keymap object.
+STATE-VARIABLE, KEYMAP and map-variable which holds KEYMAP
+must be unique for each element of this variable.")
 
 (defvar loophole--buffer-list nil
   "List of buffers on which Loophole variables have local value.
@@ -100,13 +102,15 @@ and activity of this map is controled by
 (defvar loophole-base-map (make-sparse-keymap)
   "Base keymap for all Loophole maps.
 This keymap will be inherited to all Loophole maps,
-except for the case user explicitly decline inheritance.")
+except for the case user explicitly decline inheritance
+when `loophole-register'.")
 
 (defcustom loophole-temporary-map-max 8
   "Maximum number of temporary keymaps.
 When the number of bound temporary keymaps is
 `loophole-temporary-map-max' or higher, generating new map
-overwrites the earliest used one."
+overwrites the disabled earliest used one, unregistered one
+or enabled earliest used one."
   :group 'loophole
   :type 'integer)
 
@@ -131,6 +135,8 @@ overwrites the earliest used one."
           "  (interactive \"P\")\n"
           "  (#))")
   "Format for writing lambda form buffer.
+This is used by
+`loophole-obtain-key-and-command-by-lambda-form'.
 Character sequence (#) indicates where cursor will be
 placed, and it will be removed when the format is inserted
 in the buffer."
@@ -140,7 +146,9 @@ in the buffer."
 
 (defcustom loophole-kmacro-by-read-key-finish-key (where-is-internal
                                                    'keyboard-quit nil t)
-  "Key sequence to finish definition of keyboard macro."
+  "Key sequence to finish definition of keyboard macro.
+This is used by
+`loophole-obtain-key-and-kmacro-by-read-key'."
   :group 'loophole
   :type 'key-sequence)
 
@@ -157,7 +165,9 @@ in the buffer."
 
 (defcustom loophole-array-by-read-key-finish-key (where-is-internal
                                                    'keyboard-quit nil t)
-  "Key sequence to finish inputting key sequence."
+  "Key sequence to finish inputting key sequence.
+This is used by
+`loophole-obtain-key-and-array-by-read-key'."
   :group 'loophole
   :type 'key-sequence)
 
