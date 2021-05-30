@@ -734,10 +734,9 @@ have dynamic scope, i.e. should be defined by `defvar',
 Unless WITHOUT-BASE-MAP is non-nil, `loophole-base-map' is
 set as parent keymap for MAP-VARIABLE.
 
-If called interactively, read MAP-VARIABLE, STATE-VARIABLE
-and TAG.
-When called with prefix argument, it is assigned to
-WITHOUT-BASE-MAP."
+If called interactively, read MAP-VARIABLE, STATE-VARIABLE.
+When called with prefix argument, read TAG and ask user if
+MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (interactive
    (let* ((arg-map-variable
            (intern (completing-read "Map-variable: "
@@ -750,11 +749,14 @@ WITHOUT-BASE-MAP."
                                     obarray
                                     (lambda (s)
                                       (and (boundp s) (not (keywordp s)))))))
-          (arg-tag (read-string
-                    (format "Tag for keymap %s: "
-                            arg-map-variable)))
-          (arg-without-base-map current-prefix-arg))
-     (list arg-map-variable arg-state-variable arg-tag arg-without-base-map)))
+          (arg-tag (if current-prefix-arg
+                       (read-string
+                        (format "Tag for keymap %s: " arg-map-variable))))
+          (arg-global (if current-prefix-arg (y-or-n-p "Global? ")))
+          (arg-without-base-map (if current-prefix-arg
+                                    (y-or-n-p "Without base map? "))))
+     (list arg-map-variable arg-state-variable arg-tag
+           arg-global arg-without-base-map)))
   (cond ((loophole-registered-p map-variable state-variable)
          (user-error "Specified variables are already registered: %s, %s"
                      map-variable state-variable))
@@ -767,15 +769,16 @@ WITHOUT-BASE-MAP."
   (put map-variable :loophole-global (not (null global)))
   (unless (local-variable-if-set-p state-variable)
     (make-variable-buffer-local state-variable))
-  (if (listp loophole--buffer-list)
-      (mapc (lambda (buffer)
-              (with-current-buffer buffer
-                (if (local-variable-p state-variable)
-                    (add-to-list 'loophole--buffer-list buffer nil #'eq))))
-            (buffer-list)))
-  (add-variable-watcher state-variable #'loophole--follow-adding-local-variable)
-  (if global
-      (add-variable-watcher state-variable #'loophole--follow-global-state))
+  (when (listp loophole--buffer-list)
+    (mapc (lambda (buffer)
+            (with-current-buffer buffer
+              (if (local-variable-p state-variable)
+                  (add-to-list 'loophole--buffer-list buffer nil #'eq))))
+          (buffer-list))
+    (add-variable-watcher state-variable
+                          #'loophole--follow-adding-local-variable)
+    (if global
+        (add-variable-watcher state-variable #'loophole--follow-global-state)))
   (unless without-base-map
     (set-keymap-parent (symbol-value map-variable) loophole-base-map))
   (setq-default loophole--map-alist
@@ -793,7 +796,7 @@ WITHOUT-BASE-MAP."
 
 (defun loophole-unregister (map-variable &optional keep-parent-map)
   "Unregister MAP-VARIABLE from loophole.
-If an optional argument keep-parent-map is non-nil, parent
+If an optional argument KEEP-PARENT-MAP is non-nil, parent
 of MAP-VARIABLE will not be removed.
 
 If called interactively with prefix argument, it is assigned
@@ -823,23 +826,23 @@ to KEEP-PARENT-MAP."
                   (seq-filter (lambda (cell)
                                   (not (eq (car cell) state-variable)))
                               (default-value 'loophole--map-alist)))
-    (remove-variable-watcher state-variable
-                             #'loophole--follow-adding-local-variable)
-    (if (listp loophole--buffer-list)
-        (mapc (lambda (buffer)
-                (with-current-buffer buffer
-                  (if (and (local-variable-p state-variable)
-                           (seq-every-p (lambda (variable)
-                                          (not (local-variable-p variable)))
-                                        (loophole-local-variable-if-set-list)))
-                      (setq loophole--buffer-list
-                            (delq buffer loophole--buffer-list)))))
-              loophole--buffer-list))
+    (when (listp loophole--buffer-list)
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (if (and (local-variable-p state-variable)
+                         (seq-every-p (lambda (variable)
+                                        (not (local-variable-p variable)))
+                                      (loophole-local-variable-if-set-list)))
+                    (setq loophole--buffer-list
+                          (delq buffer loophole--buffer-list)))))
+            loophole--buffer-list)
+      (remove-variable-watcher state-variable
+                               #'loophole--follow-adding-local-variable)
+      (if (get map-variable :loophole-global)
+          (remove-variable-watcher state-variable
+                                   #'loophole--follow-global-state)))
     (unless keep-parent-map
       (set-keymap-parent (symbol-value map-variable) nil))
-    (if (get map-variable :loophole-global)
-        (remove-variable-watcher state-variable
-                                 #'loophole--follow-global-state))
     (put map-variable :loophole-global nil)
     (put map-variable :loophole-tag nil)
     (put state-variable :loophole-map-variable nil)
