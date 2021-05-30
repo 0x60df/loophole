@@ -1906,10 +1906,18 @@ unless `loophole--map-alist' is a member of
 
 (defun loophole-quit ()
   "Quit loophole completely.
-Disable the all keymaps, and turn off `loophole-mode'."
+Disable the all keymaps, stop editing, and turn off
+`loophole-mode'."
   (interactive)
-  (loophole-disable-all)
-  (loophole-mode 0))
+  (mapc (lambda (buffer)
+          (with-current-buffer buffer
+            (loophole-disable-all)
+            (loophole-stop-editing)))
+        (if (listp loophole--buffer-list)
+            loophole--buffer-list
+          (buffer-list)))
+  (loophole-mode 0)
+  (force-mode-line-update t))
 
 ;;;###autoload
 (define-minor-mode loophole-mode
