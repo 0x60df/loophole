@@ -1007,11 +1007,10 @@ generate new one, prepare it, and return it."
             (not (symbol-value (get map-variable :loophole-state-variable)))))))
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
-        (when state-variable
-          (set state-variable t)
-          (unless (local-variable-p 'loophole--map-alist)
-            (setq loophole--map-alist loophole--map-alist))
-          (run-hook-with-args 'loophole-enable-functions map-variable)))
+        (set state-variable t)
+        (unless (local-variable-p 'loophole--map-alist)
+          (setq loophole--map-alist loophole--map-alist))
+        (run-hook-with-args 'loophole-enable-functions map-variable))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable (map-variable)
@@ -1023,11 +1022,10 @@ generate new one, prepare it, and return it."
             (symbol-value (get map-variable :loophole-state-variable))))))
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
-        (when state-variable
-          (set state-variable nil)
-          (unless (local-variable-p 'loophole--map-alist)
-            (setq loophole--map-alist loophole--map-alist))
-          (run-hook-with-args 'loophole-disable-functions map-variable)))
+        (set state-variable nil)
+        (unless (local-variable-p 'loophole--map-alist)
+          (setq loophole--map-alist loophole--map-alist))
+        (run-hook-with-args 'loophole-disable-functions map-variable))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable-latest ()
