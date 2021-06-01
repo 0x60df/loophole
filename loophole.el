@@ -1771,7 +1771,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
 
 (defun loophole-unset-key (key)
   "Unset the temporary biding of KEY."
-  (interactive "kUnset key temporarily: ")
+  (interactive (list (loophole-read-key "Unset temporarily set key: ")))
   (if loophole--editing
       (let ((map (symbol-value loophole--editing)))
         (if (lookup-key map key)
