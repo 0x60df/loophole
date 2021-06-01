@@ -1256,22 +1256,19 @@ Definition can be finished by calling `loophole-end-kmacro'."
 (defun loophole-obtain-key-and-object ()
   "Return set of key and any Lisp object.
 Object is obtained as return value of `eval-minibuffer'."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (list key (eval-minibuffer (format "Set key %s to entry: "
                                        (key-description key))))))
 
 (defun loophole-obtain-key-and-command-by-read-command ()
   "Return set of key and command obtained by reading command symbol."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (list key (read-command (format "Set key %s to command: "
                                     (key-description key))))))
 
 (defun loophole-obtain-key-and-command-by-key-sequence ()
   "Return set of key and command obtained by key sequence lookup."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (list key (let ((binding
                      (key-binding (loophole-read-key
                                    (format
@@ -1289,8 +1286,7 @@ buffer, and if obtained object is valid command, this
 function return it.
 If multiple Lisp forms are written, they are evaluate
 sequentially, and return a value of the last form."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (let ((name "*Loophole*")
           (buffer (current-buffer))
           (window (selected-window))
@@ -1383,21 +1379,19 @@ finished by calling `loophole-end-kmacro' which is bound to
 \\[loophole-end-kmacro].
 Besides, Definition can be aborted by calling
 `loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro]."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
-    (list key (progn
-                (loophole-register 'loophole-kmacro-by-recursive-edit-map
-                                   'loophole-use-kmacro-by-recursive-edit-map
-                                   loophole-kmacro-by-recursive-edit-map-tag
-                                   t)
-                (unwind-protect (loophole-start-kmacro)
-                  (loophole-unregister 'loophole-kmacro-by-recursive-edit-map))
-                (kmacro-lambda-form (kmacro-ring-head))))))
+  (list (loophole-read-key "Set key temporarily: ")
+        (progn
+          (loophole-register 'loophole-kmacro-by-recursive-edit-map
+                             'loophole-use-kmacro-by-recursive-edit-map
+                             loophole-kmacro-by-recursive-edit-map-tag
+                             t)
+          (unwind-protect (loophole-start-kmacro)
+            (loophole-unregister 'loophole-kmacro-by-recursive-edit-map))
+          (kmacro-lambda-form (kmacro-ring-head)))))
 
 (defun loophole-obtain-key-and-kmacro-by-recall-record ()
   "Return set of key and kmacro obtained by recalling record."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (letrec
         ((make-label-kmacro-alist
           (lambda (ring counter)
@@ -1474,15 +1468,13 @@ takes effect as quit."
 
 (defun loophole-obtain-key-and-array-by-read-string ()
   "Return set of key and array obtained by `read-string'."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (list key (read-string (format "Set key %s to array: "
                                    (key-description key))))))
 
 (defun loophole-obtain-key-and-keymap-by-read-keymap-variable ()
   "Return set of key and keymap obtained by reading keymap variable."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (list key (symbol-value
                (intern
                 (completing-read
@@ -1497,8 +1489,7 @@ takes effect as quit."
   "Return set of key and keymap obtained by reading keymap function.
 Keymap function is a symbol whose function cell is a keymap
 or a symbol whose function cell is ultimately a keymap."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (letrec ((symbol-function-recursively
               (lambda (s)
                 (let ((f (symbol-function s)))
@@ -1519,8 +1510,7 @@ or a symbol whose function cell is ultimately a keymap."
   "Return set of key and symbol obtained by reading keymap function.
 Keymap function is a symbol whose function cell is a keymap
 or a symbol whose function cell is ultimately a keymap."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (letrec ((symbol-function-recursively
               (lambda (s)
                 (let ((f (symbol-function s)))
@@ -1538,8 +1528,7 @@ or a symbol whose function cell is ultimately a keymap."
 
 (defun loophole-obtain-key-and-symbol-by-read-command ()
   "Return set of key and symbol obtained by reading command symbol."
-  (let* ((menu-prompting nil)
-         (key (loophole-read-key "Set key temporarily: ")))
+  (let ((key (loophole-read-key "Set key temporarily: ")))
     (list key (read-command
                (format "Set key %s to symbol whose function cell is command: "
                        (key-description key))))))
@@ -1639,10 +1628,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   "Bind KEY to the lastly accessed keyboard macro.
 Currently editing keymap or generated new one is used for
 binding."
-  (interactive
-   (let* ((menu-prompting nil)
-          (key (loophole-read-key "Set key temporarily: ")))
-     (list key)))
+  (interactive (list (loophole-read-key "Set key temporarily: ")))
   (loophole-bind-kmacro key (kmacro-lambda-form (kmacro-ring-head))))
 
 (defun loophole-bind-array (key array &optional keymap)
