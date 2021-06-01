@@ -1767,7 +1767,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
 (defun loophole-modify-lambda-form (key &optional map-variable)
   "Modify lambda form bound to KEY in MAP-VARIABLE.
 If KEYMAP is nil, lookup all active loophole maps ."
-  (interactive (list (read-key-sequence-vector "Modify lambda form for key: ")
+  (interactive (list (loophole-read-key "Modify lambda form for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
   (unless map-variable
@@ -1814,7 +1814,7 @@ If KEYMAP is nil, lookup all active loophole maps ."
 (defun loophole-modify-kmacro (key &optional map-variable)
   "Modify kmacro bound to KEY in MAP-VARIABLE.
 If KEYMAP is nil, lookup all active loophole maps ."
-  (interactive (list (read-key-sequence-vector "Modify kmacro for key: ")
+  (interactive (list (loophole-read-key "Modify kmacro for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
   (unless map-variable
@@ -1858,7 +1858,7 @@ If KEYMAP is nil, lookup all active loophole maps ."
 (defun loophole-modify-array (key &optional map-variable)
   "Modify array bound to KEY in MAP-VARIABLE.
 If KEYMAP is nil, lookup all active loophole maps ."
-  (interactive (list (read-key-sequence-vector "Modify array for key: ")
+  (interactive (list (loophole-read-key "Modify array for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
   (unless map-variable
