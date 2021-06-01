@@ -353,6 +353,112 @@ this hook is run with all of them."
   :group 'loophole
   :type 'boolean)
 
+(defconst loophole-mode-lighter-preset-alist
+  '((tag . (""
+            loophole-mode-lighter-base
+            (:eval (if (and (loophole-suspending-p)
+                            (not loophole-mode-lighter-use-face))
+                       loophole-mode-lighter-suspending-sign))
+            (loophole--editing
+             (""
+              loophole-mode-lighter-editing-sign
+              (:eval (let ((tag (get loophole--editing :loophole-tag)))
+                       (if (and loophole-mode-lighter-use-face
+                                (stringp tag))
+                           (propertize (replace-regexp-in-string
+                                        "%" "%%" (substitute-command-keys tag))
+                            'face nil)
+                         tag)))))
+            (:eval
+             (let ((l (delq
+                       nil
+                       (mapcar
+                        (lambda (a)
+                          (if (symbol-value (car a))
+                              (let ((e (replace-regexp-in-string
+                                        "%" "%%"
+                                        (substitute-command-keys
+                                         (get (get (car a)
+                                                   :loophole-map-variable)
+                                              :loophole-tag)))))
+                                (if (and loophole-mode-lighter-use-face
+                                         (stringp e))
+                                    (propertize
+                                     e 'face
+                                     (if (loophole-suspending-p)
+                                         'loophole-suspending
+                                       'loophole-using))
+                                  e))))
+                        loophole--map-alist))))
+               (if (zerop (length l))
+                   ""
+                 (concat loophole-tag-sign
+                         (mapconcat #'identity l ",")))))))
+    (number . (""
+               loophole-mode-lighter-base
+               (:eval (if (and (loophole-suspending-p)
+                               (not loophole-mode-lighter-use-face))
+                          loophole-mode-lighter-suspending-sign))
+               (loophole--editing loophole-mode-lighter-editing-sign)
+               (:eval (let ((n (length
+                                (delq nil
+                                      (mapcar
+                                       (lambda (e) (symbol-value (car e)))
+                                       loophole--map-alist)))))
+                        (if (zerop n)
+                            ""
+                          (concat ":"
+                                  (let ((s (int-to-string n)))
+                                    (if loophole-mode-lighter-use-face
+                                        (propertize
+                                         s 'face
+                                         (if (loophole-suspending-p)
+                                             'loophole-suspending
+                                           'loophole-using))
+                                      s))))))))
+    (simple . (""
+               loophole-mode-lighter-base
+               (:eval (if (loophole-suspending-p)
+                          loophole-mode-lighter-suspending-sign))
+               (loophole--editing loophole-mode-lighter-editing-sign)))
+    (static . loophole-mode-lighter-base))
+  "Alist of preset for `loophole-mode-lighter'.
+Each element looks like (STYLE . DEFINITION).
+STYLE is a symbol which represents DEFINITION.
+DEFINITION is a mode line construct.
+
+Four presets are provided:  tag, number, simple and static.
+tag:    display lighter-base suffixed with suspending
+        status, editing status and concatenated tag strings
+        of keymaps.  If no keymaps are enabled, tag suffix
+        is omitted.
+number: display lighter-base suffixed with suspending
+        status, editing status and number of enabled
+        keymaps.  If no keymaps are enabled, numeric suffix
+        is omitted.
+simple: display lighter-base suffixed with suspending
+        status and editing status.
+static: display lighter-base with no suffix.")
+(put 'loophole-mode-lighter-preset-alist 'risky-local-variable t)
+
+(defcustom loophole-mode-lighter
+  (cdr (assq 'tag loophole-mode-lighter-preset-alist))
+  "Lighter for `loophole-mode'.
+Any mode-line construct is vaild for this variable.
+`loophole-mode-lighter-preset-alist' offers preset for this.
+
+Although many user options and constant prefixed with
+loophole-mode-lighter- exist, `loophole-mode' only refers
+this variable.  Other user options are materials for the
+presets described above.
+When you use presets, you can tweak mode-line lighter by
+these user options.
+Besides, they might be useful when you set your own lighter
+format."
+  :risky t
+  :group 'loophole
+  :type 'sexp)
+
 (defface loophole-using
   '((t :inherit error))
   "Face used for section of lighter showing active loophole-map."
@@ -1968,17 +2074,7 @@ temporary key bindings management command.
 \\{loophole-mode-map}"
   :group 'loophole
   :global t
-  :lighter (""
-            loophole-mode-lighter-base
-            (loophole--editing loophole-mode-lighter-editing-sign)
-            (:eval (let ((n (length
-                             (delq nil
-                                   (mapcar
-                                    (lambda (e) (symbol-value (car e)))
-                                    loophole--map-alist)))))
-                     (if (zerop n)
-                         ""
-                       (format ":%d" n)))))
+  :lighter loophole-mode-lighter
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c [") #'loophole-set-key)
             (define-key map (kbd "C-c \\") #'loophole-disable-latest)
@@ -2062,94 +2158,6 @@ temporary key bindings management command.
       (remove-variable-watcher variable
                                #'loophole--follow-adding-local-variable))
     (setq loophole--buffer-list t)))
-
-(defun loophole-mode-set-lighter-format (style &optional format)
-  "Set lighter format for loophole mode.
-STYLE is a symbol to specify style of format.
-STYLE can be 'number', 'tag', 'simple', 'static', 'custom',
-and any other Lisp object.  Each means as follows.
-number: display lighter-base suffixed with editing status,
-        and number of enabled keymaps.  If no keymaps are
-        enabled, numeric suffix is omitted.
-tag:    display lighter-base suffixed with editing status,
-        and concatenated tag strings of keymaps.  If no
-        keymaps are enabled, tag suffix is omitted.
-simple: display lighter-base suffixed with editing status
-static: display lighter-base with no suffix.
-custom: use FORMAT.
-If STYLE is other than above, lighter is omitted."
-  (let ((form (cond
-               ((eq style 'number)
-                '(""
-                  loophole-mode-lighter-base
-                  (:eval (if (and (loophole-suspending-p)
-                                  (not loophole-mode-lighter-use-face))
-                             loophole-mode-lighter-suspending-sign))
-                  (loophole--editing loophole-mode-lighter-editing-sign)
-                  (:eval (let ((n (length
-                                   (delq nil
-                                         (mapcar
-                                          (lambda (e) (symbol-value (car e)))
-                                          loophole--map-alist)))))
-                           (if (zerop n)
-                               ""
-                             (concat ":"
-                                     (let ((s (int-to-string n)))
-                                       (if loophole-mode-lighter-use-face
-                                           (propertize
-                                            s 'face
-                                            (if (loophole-suspending-p)
-                                                'loophole-suspending
-                                              'loophole-using))
-                                         s))))))))
-               ((eq style 'tag)
-                '(""
-                  loophole-mode-lighter-base
-                  (:eval (if (and (loophole-suspending-p)
-                                  (not loophole-mode-lighter-use-face))
-                             loophole-mode-lighter-suspending-sign))
-                  (loophole--editing
-                   (""
-                    loophole-mode-lighter-editing-sign
-                    (:eval (let ((tag (get loophole--editing :loophole-tag)))
-                             (if (and loophole-mode-lighter-use-face
-                                      (stringp tag))
-                                 (propertize tag 'face nil)
-                               tag)))))
-                  (:eval
-                   (let ((l (delq
-                             nil
-                             (mapcar
-                              (lambda (a)
-                                (if (symbol-value (car a))
-                                    (let ((e (substitute-command-keys
-                                              (get (get (car a)
-                                                        :loophole-map-variable)
-                                                   :loophole-tag))))
-                                      (if (and loophole-mode-lighter-use-face
-                                               (stringp e))
-                                          (propertize
-                                           e 'face
-                                           (if (loophole-suspending-p)
-                                               'loophole-suspending
-                                             'loophole-using))
-                                        e))))
-                              loophole--map-alist))))
-                     (if (zerop (length l))
-                         ""
-                       (concat loophole-tag-sign
-                               (mapconcat #'identity l ",")))))))
-               ((eq style 'simple)
-                '(""
-                  loophole-mode-lighter-base
-                  (:eval (if (loophole-suspending-p)
-                             loophole-mode-lighter-suspending-sign))
-                  (loophole--editing loophole-mode-lighter-editing-sign)))
-               ((eq style 'static) loophole-mode-lighter-base)
-               ((eq style 'custom) format)
-               (t "")))
-        (cell (assq 'loophole-mode minor-mode-alist)))
-    (if cell (setcdr cell (list form)))))
 
 (defun loophole-turn-on-auto-prioritize ()
   "Turn on auto prioritize as user customization.

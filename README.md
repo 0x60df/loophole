@@ -208,12 +208,10 @@ Fallback method.
 
 #### Editing keymap
 
-Old keymap can be edit afterwards by calling `loophole-edit`.
-When you want to see which keymap you are editing,
-try `(loophole-mode-set-lighter-format 'tag)` in your init file.
-This setting show tag string of editing keymap
-after `loophole-mode-lighter-editing-sign`.
-Details of mode line format is described below.
+Old keymap can be edited afterwards by calling `loophole-start-editing`.
+Keymap which is been edited is displayed in mode line with
+`loophole-mode-lighter-editing-sign`.
+Details of mode line format is described in customization section.
 
 #### Describe loophole-map
 
@@ -343,32 +341,23 @@ Loophole shows its status on mode-line dynamically.
 By default, it shows `loophole-mode-lighter-base`,
 `loophole-mode-lighter-suspending-sign` when suspending loophole,
 `loophole-mode-lighter-editing-sign` when editing loophole-map,
-and the number of enabled loophole-maps.
+and concatenated tags of enabled loophole-maps.
+Here, tag is short string which represents loophole-map.
 
-You can change this style by the function `loophole-mode-set-lighter-format`.
-For example, the following line make lighter show the list of tag string of
-enabled loophole-map instead of the number.
-
-``` emacs-lisp
-(loophole-mode-set-lighter-format 'tag)
-```
-
-If the dynamic lighter is annoying, use the following line instead.
+You can change this style by user option `loophole-mode-lighter` and
+`loohpole-mode-lighter-preset-alist`.
+If the dynamic lighter is annoying, use the static style as follows.
 Then, lighter shows `loophole-mode-lighter-base` only.
-This may improve performance.
+This might improve performance.
 
 ``` emacs-lisp
-(loophole-mode-set-lighter-format 'static)
+(setq loophole-mode-lighter
+      (cdr (assq 'static loophole-mode-lighter-preset-alist)))
 ```
 
 If you want to use your own format,
-the following line achieve this.
-
-``` emacs-lisp
-(loophole-mode-set-lighter-format 'custom your-format)
-```
-
-See documentation string of `loophole-mode-set-lighter-format` for more details.
+it can be set directly to `loophole-mode-lighter`.
+Any mode line construct is valid.
 
 ### Finish key for defining keyboard macro
 
