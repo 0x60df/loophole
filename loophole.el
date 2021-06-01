@@ -1050,8 +1050,13 @@ If optional argument TAG is non-nil, tag string for the map
 is set as TAG; otherwise, initial character of MAP-NAME is
 used as tag string.
 Old MAP-VARIABLE and corresponding state-variable are
-initialized: they are unbound, their plists are set as nil,
-they are removed from `loophole--map-alist'.
+initialized; their documentation is set as nil, they are
+unbound, their properties for Loophole are set as nil, they
+are removed from `loophole--map-alist'.
+
+If loophole-MAP-NAME-map or loophole-MAP-NAME-map-state have
+been already bound, this function signals `user-error'.
+Only unbound name can be used for MAP-NAME.
 
 When interactive call, this function asks MAP-VARIABLE and
 MAP-NAME.  If prefix-argument is non-nil, TAG is also asked.
@@ -1135,13 +1140,15 @@ which had been already unbound." named-map-variable state-variable))
                          (eq map-variable loophole--editing))
                     (setq loophole--editing named-map-variable))))
             (if (listp loophole--buffer-list)
-            loophole--buffer-list
-          (buffer-list)))
+                loophole--buffer-list
+              (buffer-list)))
       (remove-variable-watcher state-variable
                                #'loophole--follow-adding-local-variable)
       (if (get map-variable :loophole-global)
           (remove-variable-watcher state-variable
                                    #'loophole--follow-global-state))
+      (put state-variable 'variable-documentation nil)
+      (put map-variable 'variable-documentation nil)
       (makunbound state-variable)
       (makunbound map-variable)
       (put map-variable :loophole-tag nil)
