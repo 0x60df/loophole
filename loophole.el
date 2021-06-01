@@ -2256,18 +2256,17 @@ Remove hooks added by `loophole-turn-on-auto-resume'."
   (remove-hook 'loophole-bind-hook #'loophole-resume))
 
 (defun loophole-turn-on-timer ()
-  "Turn on timer for activating state as user customization.
+  "Turn on timer for disabling loophole map as user customization.
 Add hooks and advices to take care of timers.
 
-In contrast with `loophole-turn-on-auto-prioritize',
-`loophole-turn-on-auto-stop-editing' and
-`loophole-turn-on-auto-resume', the hook for
-`loophole-unregister-functions', `loophole-mode-hook' and
-the advises for `loophole-local-variable-if-set-list' and
-`loophole-name' are mandatory.  Others are optional.
+In contrast with loophole-turn-on-auto- functions, the hooks
+for `loophole-unregister-functions', `loophole-mode-hook'
+and the advises for `loophole-local-variable-if-set-list'
+and `loophole-name' are mandatory.  Others are optional.
 
-When user choose optional hooks and advises, hooks and
-advises described above must be added together to init file."
+When user picks optional hooks and advises, mandatory hooks
+and advises described above must be added together to init
+file."
   (add-hook 'loophole-unregister-functions #'loophole--remove-all-timers)
   (advice-add 'loophole-local-variable-if-set-list
                :filter-return
@@ -2299,7 +2298,7 @@ advises described above must be added together to init file."
                (if loophole-mode (loophole-stop-timer map-variable)))))
 
 (defun loophole-turn-off-timer ()
-  "Turn off timer for activating state as user customization.
+  "Turn off timer for  disabling loophole map as user customization.
 Remove hooks and advises added by `loophole-turn-on-timer'."
   (remove-hook 'loophole-unregister-functions #'loophole--remove-all-timers)
   (advice-remove 'loophole-local-variable-if-set-list
@@ -2330,17 +2329,15 @@ Remove hooks and advises added by `loophole-turn-on-timer'."
                   (if loophole-mode (loophole-stop-timer map-variable)))))
 
 (defun loophole-turn-on-editing-timer ()
-  "Turn on timer for editing state as user customization.
+  "Turn on timer for stopping editing session as user customization.
 Add hooks and advices to take care of timers .
 
-In contrast with `loophole-turn-on-auto-prioritize',
-`loophole-turn-on-auto-stop-editing' and
-`loophole-turn-on-auto-resume', the advise for
-`loophole-local-variable-if-set-list' and the  hook for
+In contrast with loophole-turn-on-auto- functions the advise
+for `loophole-local-variable-if-set-list' and the hook for
 `loophole-mode-hook' are mandatory.  Others are optional.
 
-When user choose optional hooks, the advise described above
-must be added together to init file."
+When user picks optional hooks, mandatory hook and advise
+described above must be added together to init file."
   (advice-add 'loophole-local-variable-if-set-list
                :filter-return
                (lambda (return)
@@ -2358,7 +2355,7 @@ must be added together to init file."
              (lambda (_) (if loophole-mode (loophole-stop-editing-timer)))))
 
 (defun loophole-turn-off-editing-timer ()
-  "Turn off timer for editing state as user customization.
+  "Turn off timer for stoping editing session as user customization.
 Remove hooks and advises added by `loophole-turn-on-editing-timer'."
   (advice-remove 'loophole-local-variable-if-set-list
                  (lambda (return)
@@ -2433,7 +2430,7 @@ For more detailed customization, see documentation string of
            (loophole-turn-off-auto-resume))))
 
 (defcustom loophole-use-timer nil
-  "Flag if use timer for activating state.
+  "Flag if use timer for disabling loophole map.
 
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
@@ -2451,7 +2448,7 @@ For more detailed customization, see documentation string of
            (loophole-turn-off-timer))))
 
 (defcustom loophole-use-editing-timer nil
-  "Flag if use timer for editing state.
+  "Flag if use timer for stopping editing session.
 
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
