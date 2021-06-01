@@ -1282,31 +1282,25 @@ Object is obtained as return value of `eval-minibuffer'."
 This function provides work space for writing lambda form as
 a temporary buffer.
 Actually, any Lisp forms can be written in a temporary
-buffer, and if obtained object is valid lambda command, this
-function return it.
-If multiple Lisp forms are written, they are evaluate
-sequentially, and return a value of the last form."
+buffer, and if return value of evaluating first form is
+valid lambda command, this function return it."
   (let ((key (loophole-read-key "Set key temporarily: ")))
-    (let ((name "*Loophole*")
-          (buffer (current-buffer))
+    (let ((buffer (current-buffer))
           (window (selected-window))
           (frame (selected-frame))
           (configuration-list (mapcar #'current-window-configuration
                                       (frame-list))))
       (unwind-protect
-          (progn
-            (switch-to-buffer-other-window (get-buffer-create name) t)
+          (let ((workspace (get-buffer-create "*Loophole*")))
+            (switch-to-buffer-other-window workspace t)
             (erase-buffer)
             (insert ";; For obtaining lambda form.\n\n")
             (insert loophole-command-by-lambda-form-format)
             (let ((found (search-backward "(#)" nil t)))
               (if found (delete-region (point) (+ (point) 3))))
             (loophole-write-lisp-mode)
-            (let ((lambda-form
-                   (eval (read (concat
-                                "(progn "
-                                (with-current-buffer name (buffer-string))
-                                ")")))))
+            (with-current-buffer workspace (goto-char 1))
+            (let ((lambda-form (eval (read workspace))))
               (if (and (commandp lambda-form)
                        (not (symbolp lambda-form))
                        (not (arrayp lambda-form)))
@@ -1769,7 +1763,15 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
 
 (defun loophole-modify-lambda-form (key &optional map-variable)
   "Modify lambda form bound to KEY in MAP-VARIABLE.
-If KEYMAP is nil, lookup all active loophole maps ."
+If KEYMAP is nil, lookup all active loophole maps.
+
+This function print bound lambda form to temporary buffer,
+and read it back when modifying is finished.
+In contrast with
+`loophole-obtain-key-and-command-by-lambda-form',
+this function does not evaluate the form but just read it.
+If temporary buffer contains multiple form when finished,
+the first one will be read."
   (interactive (list (loophole-read-key "Modify lambda form for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
@@ -1778,8 +1780,7 @@ If KEYMAP is nil, lookup all active loophole maps ."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((name "*Loophole*")
-        (buffer (current-buffer))
+  (let ((buffer (current-buffer))
         (window (selected-window))
         (frame (selected-frame))
         (configuration-list (mapcar #'current-window-configuration
@@ -1790,19 +1791,22 @@ If KEYMAP is nil, lookup all active loophole maps ."
                  (not (arrayp entry)))
       (user-error "Bound entry is not lambda form: %s" entry))
     (unwind-protect
-        (let ((loophole-buffer (get-buffer-create name)))
-          (switch-to-buffer-other-window loophole-buffer t)
+        (let ((workspace (get-buffer-create "*Loophole*")))
+          (switch-to-buffer-other-window workspace t)
           (erase-buffer)
           (insert ";; For modifying lambda form.\n\n")
-          (pp entry loophole-buffer)
+          (pp entry workspace)
           (loophole-write-lisp-mode)
-          (goto-char 1)
-          (let ((lambda-form (read loophole-buffer)))
-            (if (commandp lambda-form)
+          (with-current-buffer workspace (goto-char 1))
+          (let ((lambda-form (read workspace)))
+            (if (and (commandp lambda-form)
+                     (not (symbolp lambda-form))
+                     (not (arrayp lambda-form)))
                 (loophole-bind-entry key lambda-form
                                      (symbol-value map-variable))
               (user-error
-               "Modified Lisp object is not valid command: %s" lambda-form))))
+               "Modified Lisp object is not valid lambda command: %s"
+               lambda-form))))
       (let ((configuration
              (seq-find (lambda (c)
                          (eq (selected-frame) (window-configuration-frame c)))
@@ -1816,7 +1820,16 @@ If KEYMAP is nil, lookup all active loophole maps ."
 
 (defun loophole-modify-kmacro (key &optional map-variable)
   "Modify kmacro bound to KEY in MAP-VARIABLE.
-If KEYMAP is nil, lookup all active loophole maps ."
+If KEYMAP is nil, lookup all active loophole maps.
+
+This function print bound kmacro to temporary buffer, and
+read it back when modifying is finished.
+Because kmacro object is actually a lambda form wrapping
+basic keyboard macro, a string or a vector,
+lambda form will be printed in temporary buffer.
+
+If temporary buffer contains multiple form when finished,
+the first one will be read."
   (interactive (list (loophole-read-key "Modify kmacro for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
@@ -1825,8 +1838,7 @@ If KEYMAP is nil, lookup all active loophole maps ."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((name "*Loophole*")
-        (buffer (current-buffer))
+  (let ((buffer (current-buffer))
         (window (selected-window))
         (frame (selected-frame))
         (configuration-list (mapcar #'current-window-configuration
@@ -1835,14 +1847,14 @@ If KEYMAP is nil, lookup all active loophole maps ."
     (unless (kmacro-p entry)
       (user-error "Bound entry is not kmacro: %s" entry))
     (unwind-protect
-        (let ((loophole-buffer (get-buffer-create name)))
-          (switch-to-buffer-other-window loophole-buffer t)
+        (let ((workspace (get-buffer-create "*Loophole*")))
+          (switch-to-buffer-other-window workspace t)
           (erase-buffer)
           (insert ";; For modifying kmacro.\n\n")
-          (pp entry loophole-buffer)
+          (pp entry workspace)
           (loophole-write-lisp-mode)
-          (goto-char 1)
-          (let ((kmacro (read loophole-buffer)))
+          (with-current-buffer workspace (goto-char 1))
+          (let ((kmacro (read workspace)))
             (if (kmacro-p kmacro)
                 (loophole-bind-entry key kmacro (symbol-value map-variable))
               (user-error
@@ -1860,7 +1872,13 @@ If KEYMAP is nil, lookup all active loophole maps ."
 
 (defun loophole-modify-array (key &optional map-variable)
   "Modify array bound to KEY in MAP-VARIABLE.
-If KEYMAP is nil, lookup all active loophole maps ."
+If KEYMAP is nil, lookup all active loophole maps.
+
+This function print bound array to temporary buffer, and
+read it back when modifying is finished.
+This function does not evaluate the form but just read it.
+If temporary buffer contains multiple form when finished,
+the first one will be read."
   (interactive (list (loophole-read-key "Modify array for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
@@ -1869,8 +1887,7 @@ If KEYMAP is nil, lookup all active loophole maps ."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((name "*Loophole*")
-        (buffer (current-buffer))
+  (let ((buffer (current-buffer))
         (window (selected-window))
         (frame (selected-frame))
         (configuration-list (mapcar #'current-window-configuration
@@ -1879,14 +1896,14 @@ If KEYMAP is nil, lookup all active loophole maps ."
     (unless (arrayp entry)
       (user-error "Bound entry is not array: %s" entry))
     (unwind-protect
-        (let ((loophole-buffer (get-buffer-create name)))
-          (switch-to-buffer-other-window loophole-buffer t)
+        (let ((workspace (get-buffer-create "*Loophole*")))
+          (switch-to-buffer-other-window workspace t)
           (erase-buffer)
           (insert ";; For modifying array.\n\n")
-          (pp entry loophole-buffer)
+          (pp entry workspace)
           (loophole-write-lisp-mode)
-          (goto-char 1)
-          (let ((array (read loophole-buffer)))
+          (with-current-buffer workspace (goto-char 1))
+          (let ((array (read workspace)))
             (if (arrayp array)
                 (loophole-bind-entry key array (symbol-value map-variable))
               (user-error
