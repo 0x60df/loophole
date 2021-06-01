@@ -1282,7 +1282,7 @@ Object is obtained as return value of `eval-minibuffer'."
 This function provides work space for writing lambda form as
 a temporary buffer.
 Actually, any Lisp forms can be written in a temporary
-buffer, and if obtained object is valid command, this
+buffer, and if obtained object is valid lambda command, this
 function return it.
 If multiple Lisp forms are written, they are evaluate
 sequentially, and return a value of the last form."
@@ -1307,10 +1307,13 @@ sequentially, and return a value of the last form."
                                 "(progn "
                                 (with-current-buffer name (buffer-string))
                                 ")")))))
-              (if (commandp lambda-form)
+              (if (and (commandp lambda-form)
+                       (not (symbolp lambda-form))
+                       (not (arrayp lambda-form)))
                   (list key lambda-form)
                 (user-error
-                 "Obtained Lisp object is not valid command: %s" lambda-form))))
+                 "Obtained Lisp object is not valid lambda command: %s"
+                 lambda-form))))
         (let ((configuration
                (seq-find (lambda (c)
                            (eq (selected-frame) (window-configuration-frame c)))
