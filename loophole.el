@@ -889,7 +889,7 @@ the front."
       (run-hook-with-args 'loophole-prioritize-functions map-variable))))
 
 (defun loophole-generate ()
-  "Return Loophole map variable which holds newly generated keymap.
+  "Return Loophole map variable whose value is newly generated keymap.
 
 Name of map variable is loophole-n-map.
 If the number of temporary keymap is
@@ -1549,9 +1549,9 @@ or a symbol whose function cell is ultimately a keymap."
 In the context of this function, rank of prefix argument is
 defined as follows.
 The rank of no prefix argument is 0.
-The rank of prefix argument specified by C-u and C-1 is 1,
-The rank of C-u C-u and C-2 is 2,
-Likewise, rank n means C-u * n or C-n."
+The rank of prefix argument specified by \\[universal-argument] and C-1 is 1,
+The rank of \\[universal-argument] \\[universal-argument] and C-2 is 2,
+Likewise, rank n means \\[universal-argument] * n or C-[n]."
   (cond ((null arg) 0)
         ((listp arg) (truncate (log (prefix-numeric-value arg) 4)))
         ((natnump arg) arg)
@@ -1595,9 +1595,9 @@ obtaining method for KEY and COMMAND according to
 When this function called without prefix argument,
 the first element of `loophole-bind-command-order' is
 employed as obtaining method.
-C-u and C-1 invokes the second element,
-C-u C-u and C-2 invokes the third one.
-Likewise C-u * n and C-n invoke the (n+1)th element."
+\\[universal-argument] and C-1 invokes the second element,
+\\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
    (let* ((n (loophole-prefix-rank-value current-prefix-arg))
           (obtaining-method (elt loophole-bind-command-order n)))
@@ -1623,9 +1623,9 @@ obtaining method for KEY and KMACRO according to
 When this function is called without prefix argument,
 the first element of `loophole-bind-kmacro-order' is
 employed as obtaining method.
-C-u and C-1 invokes the second element,
-C-u C-u and C-2 invokes the third one.
-Likewise C-u * n and C-n invoke the (n+1)th element."
+\\[universal-argument] and C-1 invokes the second element,
+\\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
    (let* ((n (loophole-prefix-rank-value current-prefix-arg))
           (obtaining-method (elt loophole-bind-kmacro-order n)))
@@ -1662,9 +1662,9 @@ obtaining method for KEY and ARRAY according to
 When this function called without prefix argument,
 the first element of `loophole-bind-array-order' is
 employed as obtaining method.
-C-u and C-1 invokes the second element,
-C-u C-u and C-2 invokes the third one.
-Likewise C-u * n and C-n invoke the (n+1)th element."
+\\[universal-argument] and C-1 invokes the second element,
+\\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
    (let* ((n (loophole-prefix-rank-value current-prefix-arg))
           (obtaining-method (elt loophole-bind-array-order n)))
@@ -1691,9 +1691,9 @@ obtaining method for KEY and ANOTHER-KEYMAP according to
 When this function called without prefix argument,
 the first element of `loophole-bind-keymap-order' is
 employed as obtaining method.
-C-u and C-1 invokes the second element,
-C-u C-u and C-2 invokes the third one.
-Likewise C-u * n and C-n invoke the (n+1)th element."
+\\[universal-argument] and C-1 invokes the second element,
+\\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
    (let* ((n (loophole-prefix-rank-value current-prefix-arg))
           (obtaining-method (elt loophole-bind-keymap-order n)))
@@ -1721,9 +1721,9 @@ obtaining method for KEY and SYMBOL according to
 When this function called without prefix argument,
 the first element of `loophole-bind-symbol-order' is
 employed as obtaining method.
-C-u and C-1 invokes the second element,
-C-u C-u and C-2 invokes the third one.
-Likewise C-u * n and C-n invoke the (n+1)th element."
+\\[universal-argument] and C-1 invokes the second element,
+\\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
    (let* ((n (loophole-prefix-rank-value current-prefix-arg))
           (obtaining-method (elt loophole-bind-symbol-order n)))
@@ -1759,9 +1759,9 @@ obtaining method for KEY and ENTRY according to
 When this function is called without prefix argument,
 the first element of `loophole-set-key-order' is
 employed as obtaining method.
-C-u and C-1 invokes the second element,
-C-u C-u and C-2 invokes the third one.
-Likewise C-u * n and C-n invoke the (n+1)th element."
+\\[universal-argument] and C-1 invokes the second element,
+\\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
    (let* ((n (loophole-prefix-rank-value current-prefix-arg))
           (obtaining-method (elt loophole-set-key-order n)))
