@@ -1570,8 +1570,7 @@ and it is registered to loophole, KEYMAP is used instead."
   (define-key
     (if keymap
         (let ((map-variable (loophole-map-variable-for-keymap keymap)))
-          (if (and keymap
-                   map-variable
+          (if (and map-variable
                    (loophole-registered-p map-variable))
               keymap
             (error "Invalid keymap: %s" keymap)))
