@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.4.3
+;; Version: 0.4.4
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -625,7 +625,7 @@ is preserved."
              (not (timer--triggered timer)))
         (cancel-timer timer))))
 
-(defun loophole--remove-all-timers (map-variable)
+(defun loophole--remove-timers (map-variable)
   "Cancel and remove all timers for disabling MAP-VARIABLE."
   (mapc (lambda (buffer)
           (with-current-buffer buffer
@@ -668,29 +668,39 @@ All buffer local alists and timers are updated."
               loophole--buffer-list
             (buffer-list)))))
 
-(defun loophole--stop-all-timers ()
+(defun loophole--stop-all-alive-timers ()
   "Cancel all timers with saving active timers.
+If any timers has already been saved, which are named as
+ghost timer, keep existing ghost timers.
+Ghost timers can be revived by
+`loophole--revive-or-start-all-timers'.
 This function is intended to be added to
 `loophole-mode-hook' for disabling `loophole-mode'."
-  (put 'loophole--timer-alist :loophole-ghost-timer-list nil)
-  (mapc (lambda (buffer)
-          (with-current-buffer buffer
-            (if (local-variable-p 'loophole--timer-alist)
-                (dolist (cell loophole--timer-alist)
-                  (let ((timer (cdr cell)))
-                    (when (and (timerp timer)
-                               (not (timer--triggered timer)))
-                      (if (memq timer timer-list)
-                          (push timer (get 'loophole--timer-alist
-                                           :loophole-ghost-timer-list)))
-                      (cancel-timer timer)))))))
-        (buffer-list)))
+  (let ((ghost-timers-exist
+         (get 'loophole--timer-alist :loophole-ghost-timer-list)))
+    (unless ghost-timers-exist
+      (put 'loophole--timer-alist :loophole-ghost-timer-list nil))
+    (mapc (lambda (buffer)
+            (with-current-buffer buffer
+              (if (local-variable-p 'loophole--timer-alist)
+                  (dolist (cell loophole--timer-alist)
+                    (let ((map-variable (car cell))
+                          (timer (cdr cell)))
+                      (when (timerp timer)
+                        (if (and (not (timer--triggered timer))
+                                 (memq timer timer-list)
+                                 (not ghost-timers-exist))
+                            (push timer (get 'loophole--timer-alist
+                                             :loophole-ghost-timer-list)))
+                        (loophole-stop-timer map-variable)))))))
+          (buffer-list))))
 
 (defun loophole--revive-or-start-all-timers ()
-  "Revive or start all timers for disabling loophole-map.
-Timers which is saved as ghost when `loophole-mode' is
-disabled are revived without updating trigering time.
-Others are started.
+  "Revive or start all timers.
+Ghost timers saved by `loophole--stop-all-alive-timers' will
+be revived, in other words, activated without changing
+trigering time.
+Others are newly started.
 This function is intended to be added to
 `loophole-mode-hook' for enabling `loophole-mode'."
   (let ((ghost-timer-list
@@ -734,28 +744,37 @@ This function is intended to be added to
            (not (timer--triggered loophole--editing-timer)))
       (cancel-timer loophole--editing-timer)))
 
-(defun loophole--stop-all-editing-timers ()
+(defun loophole--stop-all-alive-editing-timers ()
   "Cancel all editing timers with saving active timers.
+If any timers has already been saved, which are named as
+ghost timer, keep existing ghost timers.
+Ghost timers can be revived by
+`loophole--revive-or-start-all-editing-timers'.
 This function is intended to be added to
 `loophole-mode-hook' for disabling `loophole-mode'."
-  (put 'loophole--editing-timer :loophole-ghost-editing-timer-list nil)
-  (mapc (lambda (buffer)
-          (with-current-buffer buffer
-            (when (and (local-variable-p 'loophole--editing-timer)
-                       (timerp loophole--editing-timer)
-                       (not (timer--triggered loophole--editing-timer)))
-              (if (memq loophole--editing-timer timer-list)
-                  (push loophole--editing-timer
-                        (get 'loophole--editing-timer
-                             :loophole-ghost-editing-timer-list)))
-              (cancel-timer loophole--editing-timer))))
-        (buffer-list)))
+  (let ((ghost-timers-exist
+         (get 'loophole--editing-timer :loophole-ghost-editing-timer-list)))
+    (unless ghost-timers-exist
+      (put 'loophole--editing-timer :loophole-ghost-editing-timer-list nil))
+    (mapc (lambda (buffer)
+            (with-current-buffer buffer
+              (when (and (local-variable-p 'loophole--editing-timer)
+                         (timerp loophole--editing-timer))
+                (if (and (not (timer--triggered loophole--editing-timer))
+                         (memq loophole--editing-timer timer-list)
+                         (not ghost-timers-exist))
+                    (push loophole--editing-timer
+                          (get 'loophole--editing-timer
+                               :loophole-ghost-editing-timer-list)))
+                (loophole-stop-editing-timer))))
+          (buffer-list))))
 
 (defun loophole--revive-or-start-all-editing-timers ()
-  "Revive or start all timers for editing state.
-Editing timers which is saved as ghost when `loophole-mode'
-is disabled are revived without updating trigering time.
-Others are started.
+  "Revive or start all editing timers.
+Ghost timers saved by
+`loophole--stop-all-alive-editing-timers' will be revived,
+in other words, activated without changing trigering time.
+Others are newly started.
 This function is intended to be added to
 `loophole-mode-hook' for enabling `loophole-mode'."
   (let ((ghost-timer-list
@@ -764,8 +783,8 @@ This function is intended to be added to
       (timer-activate ghost-timer))
     (mapc (lambda (buffer)
             (with-current-buffer buffer
-              (if (and (local-variable-p 'loophole--editing-timer)
-                       (timerp loophole--editing-timer)
+              (if (and (local-variable-p 'loophole--editing)
+                       loophole--editing
                        (not (memq loophole--editing-timer ghost-timer-list)))
                   (loophole-start-editing-timer))))
           loophole--buffer-list))
@@ -2255,32 +2274,79 @@ Remove hooks added by `loophole-turn-on-auto-resume'."
   (remove-hook 'loophole-start-editing-functions (lambda (_) (loophole-resume)))
   (remove-hook 'loophole-bind-hook #'loophole-resume))
 
+(defun loophole-initialize-timer ()
+  "Initialize manipulating timers for disabling loophole map.
+This function setup some hooks and advice which are
+mandatory for `loophole-turn-on-timer'.
+Then start timers for all active loophole map if
+`loophole-mode' is enabled."
+  (add-hook 'loophole-unregister-functions #'loophole--remove-timers)
+  (advice-add 'loophole-local-variable-if-set-list
+              :filter-return
+              (lambda (return)
+                "Add `loophole--timer-alist'
+  to return value."
+                (cons 'loophole--timer-alist return)))
+  (advice-add 'loophole-name
+              :after #'loophole--change-map-variable-name-of-timer)
+  (add-hook 'loophole-mode-hook
+            (lambda ()
+              (if loophole-mode
+                  (loophole--revive-or-start-all-timers)
+                (loophole--stop-all-alive-timers))))
+  (if loophole-mode
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (dolist (map-variable (loophole-map-variable-list))
+                  (if (symbol-value (get map-variable :loophole-state-variable))
+                      (loophole-start-timer map-variable)))))
+            loophole--buffer-list)))
+
+(defun loophole-finalize-timer ()
+  "Finalize manipulating timers for disabling loophole map.
+Remove hooks and advice added by
+`loophole-initialize-timer'.  Then cancel all active timers
+if `loophole-mode' is enabled.
+These are mandatory procedure for `loophole-turn-off-timer'."
+  (remove-hook 'loophole-unregister-functions #'loophole--remove-timers)
+  (advice-remove 'loophole-local-variable-if-set-list
+                 (lambda (return)
+                   "Add `loophole--timer-alist'
+  to return value."
+                   (cons 'loophole--timer-alist return)))
+  (advice-remove 'loophole-name
+                 #'loophole--change-map-variable-name-of-timer)
+  (remove-hook 'loophole-mode-hook
+               (lambda ()
+                 (if loophole-mode
+                     (loophole--revive-or-start-all-timers)
+                   (loophole--stop-all-alive-timers))))
+  (if loophole-mode
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (if (local-variable-p 'loophole--timer-alist)
+                    (dolist (cell loophole--timer-alist)
+                      (let ((map-variable (car cell))
+                            (timer (cdr cell)))
+                        (if (timerp timer)
+                            (loophole-stop-timer map-variable)))))))
+            loophole--buffer-list)))
+
 (defun loophole-turn-on-timer ()
   "Turn on timer for disabling loophole map as user customization.
-Add hooks and advices to take care of timers.
+First, `loophole-initialize-timer' and second, add hooks and
+advice to take care of timers.
 
-In contrast with loophole-turn-on-auto- functions, the hooks
-for `loophole-unregister-functions', `loophole-mode-hook'
-and the advises for `loophole-local-variable-if-set-list'
-and `loophole-name' are mandatory.  Others are optional.
+All of hooks and advice added on this function are
+optional.
+`loophole-initialize-timer' also setup some hooks and
+advice but these are mandatory for managing timers.
 
-When user picks optional hooks and advises, mandatory hooks
-and advises described above must be added together to init
-file."
-  (add-hook 'loophole-unregister-functions #'loophole--remove-all-timers)
-  (advice-add 'loophole-local-variable-if-set-list
-               :filter-return
-               (lambda (return)
-                 "Add `loophole--timer-alist'
-  to return value."
-                 (cons 'loophole--timer-alist return)))
-  (advice-add 'loophole-name
-               :after #'loophole--change-map-variable-name-of-timer)
-  (add-hook 'loophole-mode-hook
-             (lambda ()
-               (if loophole-mode
-                   (loophole--revive-or-start-all-timers)
-                 (loophole--stop-all-timers))))
+Instead of using this function, user can pick some hooks and
+advice for customization.
+In that case, `loophole-initialize-timer' must be called
+together."
+  (loophole-initialize-timer)
   (advice-add 'loophole-ready-map
                :filter-return
                (lambda (return)
@@ -2298,21 +2364,9 @@ file."
                (if loophole-mode (loophole-stop-timer map-variable)))))
 
 (defun loophole-turn-off-timer ()
-  "Turn off timer for  disabling loophole map as user customization.
-Remove hooks and advises added by `loophole-turn-on-timer'."
-  (remove-hook 'loophole-unregister-functions #'loophole--remove-all-timers)
-  (advice-remove 'loophole-local-variable-if-set-list
-                  (lambda (return)
-                    "Add `loophole--timer-alist'
-  to return value."
-                    (cons 'loophole--timer-alist return)))
-  (advice-remove 'loophole-name
-                  #'loophole--change-map-variable-name-of-timer)
-  (remove-hook 'loophole-mode-hook
-                (lambda ()
-                  (if loophole-mode
-                      (loophole--revive-or-start-all-timers)
-                    (loophole--stop-all-timers))))
+  "Turn off timer for disabling loophole map as user customization.
+Remove hooks and advice added by `loophole-turn-on-timer'."
+  (loophole-finalize-timer)
   (advice-remove 'loophole-ready-map
                   (lambda (return)
                     "Call `loophole-start-timer'
@@ -2328,45 +2382,80 @@ Remove hooks and advises added by `loophole-turn-on-timer'."
                 (lambda (map-variable)
                   (if loophole-mode (loophole-stop-timer map-variable)))))
 
-(defun loophole-turn-on-editing-timer ()
-  "Turn on timer for stopping editing session as user customization.
-Add hooks and advices to take care of timers .
-
-In contrast with loophole-turn-on-auto- functions the advise
-for `loophole-local-variable-if-set-list' and the hook for
-`loophole-mode-hook' are mandatory.  Others are optional.
-
-When user picks optional hooks, mandatory hook and advise
-described above must be added together to init file."
+(defun loophole-initialize-editing-timer ()
+  "Initialize manipulating editing timers.
+This function setup a hook and advice which are
+mandatory for `loophole-turn-on-editing-timer'.
+Then start timers for all editing map if `loophole-mode' is
+enabled."
   (advice-add 'loophole-local-variable-if-set-list
-               :filter-return
-               (lambda (return)
-                 "Add `loophole--editing-timer'
+              :filter-return
+              (lambda (return)
+                "Add `loophole--editing-timer'
   to return value."
-                 (cons 'loophole--editing-timer return)))
+                (cons 'loophole--editing-timer return)))
   (add-hook 'loophole-mode-hook
-             (lambda ()
-               (if loophole-mode
-                   (loophole--revive-or-start-all-editing-timers)
-                 (loophole--stop-all-editing-timers))))
-  (add-hook 'loophole-start-editing-functions
-             (lambda (_) (if loophole-mode (loophole-start-editing-timer))))
-  (add-hook 'loophole-stop-editing-functions
-             (lambda (_) (if loophole-mode (loophole-stop-editing-timer)))))
+            (lambda ()
+              (if loophole-mode
+                  (loophole--revive-or-start-all-editing-timers)
+                (loophole--stop-all-alive-editing-timers))))
+  (if loophole-mode
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (if (and (local-variable-p 'loophole--editing)
+                         loophole--editing)
+                    (loophole-start-editing-timer))))
+            loophole--buffer-list)))
 
-(defun loophole-turn-off-editing-timer ()
-  "Turn off timer for stoping editing session as user customization.
-Remove hooks and advises added by `loophole-turn-on-editing-timer'."
+(defun loophole-finalize-editing-timer ()
+  "Finalize manipulating editing timers.
+Remove a hook and advice added by
+`loophole-initialize-editing-timer'.  Then cancel all active
+editing timers if `loophole-mode' is enabled.
+These are mandatory procedure for
+`loophole-turn-off-editing-timer'."
   (advice-remove 'loophole-local-variable-if-set-list
                  (lambda (return)
                    "Add `loophole--editing-timer'
   to return value."
                    (cons 'loophole--editing-timer return)))
   (remove-hook 'loophole-mode-hook
-                (lambda ()
-                  (if loophole-mode
-                      (loophole--revive-or-start-all-editing-timers)
-                    (loophole--stop-all-editing-timers))))
+               (lambda ()
+                 (if loophole-mode
+                     (loophole--revive-or-start-all-editing-timers)
+                   (loophole--stop-all-alive-editing-timers))))
+  (if loophole-mode
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (if (and (local-variable-p 'loophole--editing-timer)
+                         (timerp loophole--editing-timer))
+                    (loophole-stop-editing-timer))))
+            loophole--buffer-list)))
+
+(defun loophole-turn-on-editing-timer ()
+  "Turn on timer for stopping editing session as user customization.
+First, `loophole-initialize-editing-timer' and second, add
+hooks to take care of timers .
+
+All of hooks and advice added on this function are
+optional.
+`loophole-initialize-editing-timer' also setup hooks and
+advice but these are mandatory for managing editing timers.
+
+Instead of using this function, user can pick some hooks for
+customization.
+In that case, `loophole-initialize-editing-timer' must be
+called together."
+  (loophole-initialize-editing-timer)
+  (add-hook 'loophole-start-editing-functions
+            (lambda (_) (if loophole-mode (loophole-start-editing-timer))))
+  (add-hook 'loophole-stop-editing-functions
+            (lambda (_) (if loophole-mode (loophole-stop-editing-timer)))))
+
+(defun loophole-turn-off-editing-timer ()
+  "Turn off timer for stoping editing session as user customization.
+Remove hooks and advice added by `loophole-turn-on-editing-timer'."
+  (loophole-finalize-editing-timer)
   (remove-hook 'loophole-start-editing-functions
                 (lambda (_) (if loophole-mode (loophole-start-editing-timer))))
   (remove-hook 'loophole-stop-editing-functions
@@ -2435,7 +2524,7 @@ For more detailed customization, see documentation string of
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
 `loophole-turn-on-timer' or `loophole-turn-off-timer'
-manually.  They setup some hooks and advises.
+manually.  They setup some hooks and advice.
 
 For more detailed customization, see documentation string of
 `loophole-turn-on-timer'."
@@ -2453,7 +2542,7 @@ For more detailed customization, see documentation string of
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
 `loophole-turn-on-editing-timer' or `loophole-turn-off-editing-timer'
-manually.  They setup some hooks and advises.
+manually.  They setup some hooks and advice.
 
 For more detailed customization, see documentation string of
 `loophole-turn-on-editing-timer'."
