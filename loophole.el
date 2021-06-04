@@ -1067,8 +1067,9 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (mapc (lambda (buffer)
           (with-current-buffer buffer
             (if (local-variable-p 'loophole--map-alist)
-                (push `(,state-variable . ,(symbol-value map-variable))
-                      loophole--map-alist))))
+                (setq loophole--map-alist
+                      (cons `(,state-variable . ,(symbol-value map-variable))
+                            loophole--map-alist)))))
         (if (listp loophole--buffer-list)
             loophole--buffer-list
           (buffer-list)))
