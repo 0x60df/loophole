@@ -130,6 +130,11 @@ or enabled earliest used one."
   :group 'loophole
   :type 'boolean)
 
+(defcustom loophole-force-overwrite-parent-map nil
+  "Flag if `set-keymap-parent' is done without prompting."
+  :group 'loophole
+  :type 'boolean)
+
 (defcustom loophole-timer-delay (* 60 60)
   "Delay time in seconds for auto disabling timer."
   :group 'loophole
@@ -1007,6 +1012,14 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
          (user-error
           "Specified map-variable holds keymap which is already used: %s"
           state-variable)))
+  (if (and (not without-base-map)
+           (keymap-parent (symbol-value map-variable)))
+      (unless (or loophole-force-overwrite-parent-map
+                  (yes-or-no-p
+                   (format
+                    "%s has parent map.  Overwrite it by `loophole-base-map'? "
+                    map-variable)))
+        (setq without-base-map t)))
   (if global
       (if (local-variable-if-set-p state-variable)
           (if (or loophole-force-unintern
@@ -1070,6 +1083,14 @@ If called interactively with prefix argument, it is assigned
 to KEEP-PARENT-MAP."
   (interactive
    (list (loophole-read-map-variable "Unregister keymap:") current-prefix-arg))
+  (if (and (not keep-parent-map)
+           (not (eq (keymap-parent (symbol-value map-variable))
+                    loophole-base-map)))
+      (unless (or loophole-force-overwrite-parent-map
+                  (yes-or-no-p
+                   (format "Parent of %s is not base map.  Remove it? "
+                           map-variable)))
+        (setq keep-parent-map t)))
   (mapc (lambda (buffer)
           (with-current-buffer buffer
             (if (and (local-variable-p 'loophole--editing)
