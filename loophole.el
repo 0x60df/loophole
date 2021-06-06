@@ -30,6 +30,10 @@
 ;; Keys can be set by interactive interface in disposable keymaps
 ;; which are automatically generated for temporary use.
 
+;; Run `loophole-mode' to setup Loophole.
+;; Call `loophole-set-key' to set a temporary key binding.
+;; See https://github.com/0x60df/loophole/blob/master/README.md for datails.
+
 ;;; Code:
 
 (require 'kmacro)
@@ -37,6 +41,8 @@
 (defgroup loophole nil
   "Manage temporary key bindings."
   :group 'convenience)
+
+;;; Internal variables
 
 (defvar-local loophole--map-alist nil
   "Alist of keymaps for loophole.
@@ -77,6 +83,8 @@ Default value holds timers for global Loophole map.")
 (defvar loophole--read-map-variable-help-condition
   '((index . 0) (last))
   "Condition of help for `loophole-read-map-variable'.")
+
+;;; User options
 
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
@@ -486,6 +494,8 @@ format."
   '((t :inherit shadow))
   "Face used for suffixes of lighter while loophole is suspending."
   :group 'loophole)
+
+;;; Auxiliary functions
 
 (defun loophole-map-variable-list ()
   "Return list of all keymap variables for loophole.
@@ -937,6 +947,8 @@ registered, and they are associated."
          (setq state-variable (get map-variable :loophole-state-variable)))
        (eq map-variable (get state-variable :loophole-map-variable))
        (assq state-variable (default-value 'loophole--map-alist))))
+
+;;; Main functions
 
 (defun loophole-register (map-variable state-variable &optional tag
                                        global without-base-map)
@@ -1545,6 +1557,8 @@ which had been already unbound." named-map-variable state-variable))
       (save-excursion
         (re-search-backward "`\\([^`']+\\)'" nil t)
         (help-xref-button 1 'help-variable map-variable)))))
+
+;;; Binding utilities
 
 (define-derived-mode loophole-write-lisp-mode emacs-lisp-mode
   "Loophole Write Lisp"
@@ -1613,6 +1627,21 @@ Definition can be finished by calling `loophole-end-kmacro'."
   (interactive)
   (unless (zerop (recursion-depth)) (abort-recursive-edit))
   (keyboard-quit))
+
+(defun loophole-prefix-rank-value (arg)
+  "Return rank value for raw prefix argument ARG.
+In the context of this function, rank of prefix argument is
+defined as follows.
+The rank of no prefix argument is 0.
+The rank of prefix argument specified by \\[universal-argument] and C-1 is 1,
+The rank of \\[universal-argument] \\[universal-argument] and C-2 is 2,
+Likewise, rank n means \\[universal-argument] * n or C-[n]."
+  (cond ((null arg) 0)
+        ((listp arg) (truncate (log (prefix-numeric-value arg) 4)))
+        ((natnump arg) arg)
+        (t 0)))
+
+;;; Obtaining methods
 
 (defun loophole-obtain-key-and-object ()
   "Return set of key and any Lisp object.
@@ -1890,19 +1919,8 @@ or a symbol whose function cell is ultimately a keymap."
     (list key (read-command
                (format "Set key %s to symbol whose function cell is command: "
                        (key-description key))))))
-
-(defun loophole-prefix-rank-value (arg)
-  "Return rank value for raw prefix argument ARG.
-In the context of this function, rank of prefix argument is
-defined as follows.
-The rank of no prefix argument is 0.
-The rank of prefix argument specified by \\[universal-argument] and C-1 is 1,
-The rank of \\[universal-argument] \\[universal-argument] and C-2 is 2,
-Likewise, rank n means \\[universal-argument] * n or C-[n]."
-  (cond ((null arg) 0)
-        ((listp arg) (truncate (log (prefix-numeric-value arg) 4)))
-        ((natnump arg) arg)
-        (t 0)))
+
+;;; Binding commands
 
 (defun loophole-bind-entry (key entry &optional keymap)
   "Bind KEY to ENTRY temporarily.
@@ -2121,6 +2139,8 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
         (if (lookup-key map key)
             (loophole-bind-entry key nil map)
           (message "No entry found in editing keymap: %s" loophole--editing)))))
+
+;;; Entry modifiers
 
 (defun loophole-modify-lambda-form (key &optional map-variable)
   "Modify lambda form bound to KEY in MAP-VARIABLE.
@@ -2279,6 +2299,8 @@ the first one will be read."
       (if (frame-live-p frame) (select-frame-set-input-focus frame t))
       (if (window-live-p window) (select-window window t))
       (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
+
+;;; Main control
 
 (defun loophole-suspend ()
   "Suspend Loophole.
@@ -2412,6 +2434,8 @@ Followings are the key bindings for Loophole commands.
       (remove-variable-watcher variable
                                #'loophole--follow-adding-local-variable))
     (setq loophole--buffer-list t)))
+
+;;; Customization helpers
 
 (defun loophole-turn-on-auto-prioritize ()
   "Turn on auto prioritize as user customization.
@@ -2800,6 +2824,8 @@ For more detailed customization, see documentation string of
          (if value
              (loophole-turn-on-editing-timer)
            (loophole-turn-off-editing-timer))))
+
+;;; Aliases for main interfaces
 
 (defalias 'loophole-dig 'loophole-set-key)
 (defalias 'loophole-bury 'loophole-unset-key)

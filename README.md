@@ -29,7 +29,7 @@ You can see editing status on the mode-line as
 `loophole-mode-lighter-editing-sign` (is "+" by default).
 
 If you done your operation with temporary key bindings,
-call `loophole-disable-last-map` to abandon that one.
+call `loophole-disable-latest-map` to abandon that one.
 Note that even after disabling the keymap,
 it is stored in `loophole-n-map` for a while. (`n` is something integer.)
 You can reactivate it by `loophole-enable-map`,
@@ -43,11 +43,11 @@ which save your left little finger.
 
 * `C-c [` `n` `next-line`
 * `C-c [` `p` `previous-line`
-* `C-c [` `v` `scroll-up-command`
-* `C-c [` `V` `scroll-down-command`
+* `C-c [` `f` `scroll-up-command`
+* `C-c [` `b` `scroll-down-command`
 
 When you are finished reading the buffer,
-type `C-c \` (`loophole-disable-last-map`) to abandon the key bindings above.
+type `C-c \` (`loophole-disable-latest-map`) to abandon the key bindings above.
 Then, your keymap environment stays clean.
 
 ### Details
@@ -62,11 +62,10 @@ They are mainly generated automatically,
 and listed in `loophole--map-alist`.
 They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
 
-Second one is `loophole-base-map` which will be inherited to most of
-loophole-map.
+Second one is `loophole-base-map` which will be inherited to most loophole-maps.
 This keymap offers the place for binding which can be used commonly when
 any of loophole-map is activated.
-For example, binding `C-q` to `loophole-disable-last-map` reduces the number
+For example, binding `C-q` to `loophole-disable-latest-map` reduces the number
 of typing, and `C-q` recovers the original binding `quoted-insert` immediately
 after all loophole-map are disabled.
 
@@ -87,7 +86,7 @@ If you like some loophole-map, naming them may help.
 Loophole-maps are initially named as `loophole-n-map`.
 They can be renamed by `loophole-name`.
 Once loophole-map gets name other than `loophole-n-map`,
-it goes out of range of automatic keymap generation and never overwritten.
+it goes out of range of automatic keymap generation and is never overwritten.
 
 #### Loophole mode
 
@@ -115,11 +114,11 @@ It disables all loophole-maps and `loophole-mode`.
 `loophole-set-key` ask you the command symbol to be bound
 by using `read-command` like `global-set-key`.
 However, you can bind not only command
-but also keyboard macro as key binding entry.
+but also keyboard macro, keymap and symbol as well.
 Furthermore, you can choose specifying method for these entries.
 For example, command can alternatively be specified by key sequence
 which is found in the currently active keymaps.
-Details of all specifying method is described below.
+Details of major specifying method is described below.
 
 You can use prefix arguments to specify
 which key binding entry and its specifying method is employed.
@@ -150,7 +149,7 @@ in currently active keymaps.
 
 Setup temporary buffer with template for writing lambda form and start
 recursive edit.
-When you complete writing lambda form,
+When you finish writing lambda form,
 type `C-c C-c` (`loophole-complete-writing-lisp`).
 Then, buffer contents will be read and evaluated,
 and returned object will be bound.
@@ -172,8 +171,8 @@ Similar to built-in keyboard macro defining environment except that
 we are in recursive edit.
 In recursive edit, you can define your keyboard macro while you are getting
 the feedback on your eyes.
-When you are finished, type `C-c ] )` (`loophole-end-kmacro`),
-or you want to abort, type `C-c k a` (`loophole-abort-kmacro`).
+When you are finished, type `C-c [` (`loophole-end-kmacro`),
+or you want to abort, type `C-c \` (`loophole-abort-kmacro`).
 
 While you are defining keyboard macro, not only recursive edit but also
 kbd-macro environment is enabled.
@@ -192,7 +191,7 @@ Finish key is specified by customizable variable
 whose default value is key sequence for `keyboard-quit`.
 By default, you can only finish and cannot abort definition.
 Once you set another key sequence to `loophole-kmacro-by-read-key-finish-key`,
-you can finish by your completing key,
+you can finish by your finish key,
 and can abort by the key sequence bound to `keyboard-quit`.
 
 ##### kmacro by recall record
@@ -217,8 +216,8 @@ Details of mode line format is described in customization section.
 
 `loophole-describe` describes loophole-map.
 As well as `M-x` `loophole-describe`,
-`help-char` in minibuffer for some commands like
-`loophole-enable`, `loophole-name` also invokes `loophole-describe`.
+`help-char` in minibuffer for some commands which reads loophole-map
+ike `loophole-enable`, `loophole-name`, ... also invokes `loophole-describe`.
 Multiple input of `help-char` in minibuffer cycles loophole-map description
 among completion candidates.
 
@@ -332,7 +331,7 @@ overwrite it by using settings like the following lines.
 ``` emacs-lisp
 (setcdr loophole-mode-map nil)
 (define-key loophole-mode-map (kbd "C-c [") #'loophole-set-key)
-(define-key loophole-mode-map (kbd "C-c ,") #'loophole-disable-last-map)
+(define-key loophole-mode-map (kbd "C-c ,") #'loophole-disable-latest-map)
 ```
 
 ### Mode line format
