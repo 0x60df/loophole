@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.5.2
+;; Version: 0.6.0
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -2824,6 +2824,64 @@ For more detailed customization, see documentation string of
          (if value
              (loophole-turn-on-editing-timer)
            (loophole-turn-off-editing-timer))))
+
+;;; A macro for defining keymap
+
+;;;###autoload
+(defmacro loophole-define-map (map &optional spec docstring
+                                   state state-init-value state-docstring
+                                   tag global without-base-map)
+  "Macro for defining loophole map.
+Define map variable and state variable, and register them.
+
+Define map variable by MAP, SPEC and DOCSTRING.
+If SPEC is evaluated as keymap, use it as init value of
+MAP.  If SPEC evaluated as alist whose all cars are array,
+use keymap in which cars are defined as cdrs.
+Otherwise, use sparse keymap.
+DOCSTRING is passed to `defvar'.
+
+Define state variable by STATE, STATE-INIT-VALUE and
+STATE-DOCSTRING.
+If STATE is nil, define variable named MAP-state.
+STATE-INIT-VALUE is used as it is.
+If STATE-DOCSTRING is nil, use fixed phrase.
+
+TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
+`loophole-register'."
+  (declare (doc-string 3) (indent 1))
+  (unless state
+    (setq state (intern (concat (symbol-name map) "-state"))))
+  `(progn
+     (defvar ,map (cond ((keymapp ,spec) ,spec)
+                        ((and (sequencep ,spec)
+                              (not (seq-some
+                                    (lambda (key-binding)
+                                      (not (arrayp (car key-binding))))
+                                    ,spec)))
+                         (let ((m (make-sparse-keymap)))
+                           (mapc (lambda (key-binding)
+                                   (define-key m
+                                     (car key-binding)
+                                     (cdr key-binding)))
+                                 ,spec)
+                           m))
+                        (t (make-sparse-keymap)))
+       ,docstring)
+     (defvar ,state ,state-init-value
+       (if ,state-docstring
+           ,state-docstring
+         (format "State of Loophole map `%s'." ',map)))
+     ,(unless global
+        `(make-variable-buffer-local ',state))
+     (loophole-register ',map ',state ,tag ,global ,without-base-map)))
+
+(dolist (mode '(emacs-lisp-mode lisp-interaction-mode))
+  (font-lock-add-keywords
+   mode
+   '(("(\\(loophole-define-map\\)\\_>[ 	]*\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)?"
+      (1 font-lock-keyword-face)
+      (2 font-lock-variable-name-face nil t)))))
 
 ;;; Aliases for main interfaces
 

@@ -392,3 +392,61 @@ loophole cannot set key bindings for the key sequence of `keyboard-quit`,
 which may be `C-g`.
 
 Default value of this user option is `t`.
+
+### Defining Loophole map
+
+You can use existing or your own keymap and state variable on loophole.
+To register them, use `loophole-register`.
+
+Although loophole main focus is interactive interface,
+you can setup your loophole-map during initialization by putting the following
+forms in your init file.
+
+```emacs-lisp
+(defvar loophole-navigation-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "n") #'next-line)
+    (define-key map (kbd "p") #'previous-line)
+    (define-key map (kbd "f") #'scroll-up-command)
+    (define-key map (kbd "b") #'scroll-down-command)
+    map)
+  "Keymap for simple navigation.")
+
+(defvar loophole-navigation-map-state nil "State of `loophole-navigation-map'")
+
+(loophole-register 'loophole-navigation-map 'loophole-navigation-map-state "n")
+```
+
+Loophole also offers the macro `loophole-define-map` to do this by one form.
+
+```emacs-lisp
+(loophole-define-map loophole-navigation-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "n") #'next-line)
+    (define-key map (kbd "p") #'previous-line)
+    (define-key map (kbd "f") #'scroll-up-command)
+    (define-key map (kbd "b") #'scroll-down-command)
+    map)
+  "Keymap for simple navigation."
+  loophole-navigation-map-state nil "State of `loophole-navigation-map'"
+  "n")
+```
+
+In such cases, defining minor-mode is a canonical way.
+
+```emacs-lisp
+(define-minor-mode simple-navigation-mode
+  "Minor mode for simple navigation."
+  nil
+  " Nav"
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "n") #'next-line)
+    (define-key map (kbd "p") #'previous-line)
+    (define-key map (kbd "f") #'scroll-up-command)
+    (define-key map (kbd "b") #'scroll-down-command)
+    map))
+```
+
+However, loophole offers some utilities for managing keymaps.
+If your keymap is small, developing or with which loophole utilities work well,
+please try loophole.
