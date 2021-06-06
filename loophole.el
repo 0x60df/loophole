@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.5.1
+;; Version: 0.5.2
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -569,13 +569,10 @@ If there are no candidates after PREDICATE is applied to
                           loophole--read-map-variable-help-condition)
                     (push `(last . ,completions)
                           loophole--read-map-variable-help-condition))
-                  (let ((map-variable
-                         (elt
-                          completions
-                          (cdr
-                           (assq
-                            'index
-                            loophole--read-map-variable-help-condition)))))
+                  (let* ((i (cdr (assq
+                                  'index
+                                  loophole--read-map-variable-help-condition)))
+                         (map-variable (intern (elt completions i))))
                     (if map-variable (loophole-describe map-variable))))
               (push '(index . 0)
                     loophole--read-map-variable-help-condition)
