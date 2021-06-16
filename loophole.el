@@ -1334,8 +1334,9 @@ generate new one, prepare it, and return it."
         (let ((state (symbol-value state-variable)))
           (set state-variable nil)
           (make-variable-buffer-local state-variable)
-          (add-variable-watcher state-variable
-                                #'loophole--follow-adding-local-variable)
+          (if (listp loophole--buffer-list)
+              (add-variable-watcher state-variable
+                                    #'loophole--follow-adding-local-variable))
           (set state-variable state)
           (force-mode-line-update t))
       (user-error (concat "Abort localize."
@@ -1492,9 +1493,10 @@ which had been already unbound." named-map-variable state-variable))
                  (set named-state-variable (symbol-value state-variable)))))
          (if (listp loophole--buffer-list)
              loophole--buffer-list
-           (buffer-list))))
-      (add-variable-watcher named-state-variable
-                            #'loophole--follow-adding-local-variable)
+           (buffer-list)))
+        (if (listp loophole--buffer-list)
+            (add-variable-watcher named-state-variable
+                                  #'loophole--follow-adding-local-variable)))
       (put named-map-variable :loophole-state-variable named-state-variable)
       (put named-state-variable :loophole-map-variable named-map-variable)
       (put named-map-variable :loophole-tag tag)
