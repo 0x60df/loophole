@@ -2859,6 +2859,8 @@ STATE-DOCSTRING.
 If STATE is nil, define variable named MAP-state.
 STATE-INIT-VALUE is used as it is.
 If STATE-DOCSTRING is nil, use fixed phrase.
+If GLOBAL is nil, `make-variable-buffer-local' is called for
+state-variable.
 
 TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
 `loophole-register'."

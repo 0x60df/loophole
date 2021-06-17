@@ -413,6 +413,7 @@ forms in your init file.
   "Keymap for simple navigation.")
 
 (defvar loophole-navigation-map-state nil "State of `loophole-navigation-map'")
+(make-variable-buffer-local 'loophole-navigation-map-state)
 
 (loophole-register 'loophole-navigation-map 'loophole-navigation-map-state "n")
 ```
