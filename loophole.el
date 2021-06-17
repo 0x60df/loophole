@@ -950,6 +950,7 @@ registered, and they are associated."
 
 ;;; Main functions
 
+;;;###autoload
 (defun loophole-register (map-variable state-variable &optional tag
                                        global without-base-map)
   "Register the set of MAP-VARIABLE and STATE-VARIABLE to loophole.
@@ -1925,6 +1926,7 @@ or a symbol whose function cell is ultimately a keymap."
 
 ;;; Binding commands
 
+;;;###autoload
 (defun loophole-bind-entry (key entry &optional keymap)
   "Bind KEY to ENTRY temporarily.
 Any Lisp object is acceptable for ENTRY, but only few types
@@ -1947,6 +1949,7 @@ and it is registered to loophole, KEYMAP is used instead."
     entry)
   (run-hooks 'loophole-bind-hook))
 
+;;;###autoload
 (defun loophole-bind-command (key command &optional keymap)
   "Bind KEY to COMMAND temporarily.
 COMMAND must be a command.
@@ -1975,6 +1978,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
       (loophole-bind-entry key command keymap)
     (error "Invalid command: %s" command)))
 
+;;;###autoload
 (defun loophole-bind-kmacro (key kmacro &optional keymap)
   "Bind KEY to KMACRO temporarily.
 KMACRO must be a `kmacro' object.
@@ -2003,6 +2007,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
       (loophole-bind-entry key kmacro keymap)
     (error "Invalid kmacro: %s" kmacro)))
 
+;;;###autoload
 (defun loophole-bind-last-kmacro (key)
   "Bind KEY to the lastly accessed keyboard macro.
 Currently editing keymap or generated new one is used for
@@ -2010,6 +2015,7 @@ binding."
   (interactive (list (loophole-read-key "Set key temporarily: ")))
   (loophole-bind-kmacro key (kmacro-lambda-form (kmacro-ring-head))))
 
+;;;###autoload
 (defun loophole-bind-array (key array &optional keymap)
   "Bind KEY to ARRAY temporarily.
 ARRAY must be either a string or vector, which work as
@@ -2039,6 +2045,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
       (loophole-bind-entry key array keymap)
     (error "Invalid array : %s" array)))
 
+;;;###autoload
 (defun loophole-bind-keymap (key another-keymap &optional keymap)
   "Bind KEY to ANOTHER-KEYMAP temporarily.
 ANOTHER-KEYMAP must be a keymap object, and KEY will be
@@ -2068,6 +2075,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
       (loophole-bind-entry key another-keymap keymap)
     (error "Invalid keymap : %s" another-keymap)))
 
+;;;###autoload
 (defun loophole-bind-symbol (key symbol &optional keymap)
   "Bind KEY to SYMBOL temporarily.
 SYMBOL must be a symbol whose function cell is a keymap,
@@ -2107,6 +2115,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
         (loophole-bind-entry key symbol keymap)
       (error "Invalid symbol : %s" symbol))))
 
+;;;###autoload
 (defun loophole-set-key (key entry)
   "Set the temporary binding for KEY and ENTRY.
 This function finally calls `loophole-bind-entry', so that
@@ -2305,6 +2314,7 @@ the first one will be read."
 
 ;;; Main control
 
+;;;###autoload
 (defun loophole-suspend ()
   "Suspend Loophole.
 To suspend Loophole, this function delete
