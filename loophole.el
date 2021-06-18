@@ -391,30 +391,27 @@ this hook is run with all of them."
                                        'face 'loophole-editing)
                          tag)))))
             (:eval
-             (let ((l (delq
-                       nil
-                       (mapcar
-                        (lambda (a)
-                          (if (symbol-value (car a))
-                              (let ((e (replace-regexp-in-string
-                                        "%" "%%"
-                                        (substitute-command-keys
-                                         (get (get (car a)
-                                                   :loophole-map-variable)
-                                              :loophole-tag)))))
-                                (if (and loophole-mode-lighter-use-face
-                                         (stringp e))
-                                    (propertize
-                                     e 'face
-                                     (if (loophole-suspending-p)
-                                         'loophole-suspending
-                                       'loophole-using))
-                                  e))))
-                        loophole--map-alist))))
+             (let ((l (seq-filter (lambda (a) (symbol-value (car a)))
+                                  loophole--map-alist)))
                (if (zerop (length l))
                    ""
                  (concat loophole-tag-sign
-                         (mapconcat #'identity l ",")))))))
+                         (mapconcat
+                          (lambda (a)
+                            (let ((e (replace-regexp-in-string
+                                      "%" "%%"
+                                      (substitute-command-keys
+                                       (get (get (car a)
+                                                 :loophole-map-variable)
+                                            :loophole-tag)))))
+                              (if (and loophole-mode-lighter-use-face
+                                       (stringp e))
+                                  (propertize e
+                                              'face (if (loophole-suspending-p)
+                                                        'loophole-suspending
+                                                      'loophole-using))
+                                e)))
+                          l ",")))))))
     (number . (""
                loophole-mode-lighter-base
                (:eval (if (and (loophole-suspending-p)
