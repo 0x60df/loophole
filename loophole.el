@@ -567,8 +567,7 @@ If there are no candidates after PREDICATE is applied to
             (if completions
                 (progn
                   (if (equal completions last)
-                      (push `(index . ,(if (< index
-                                              (- (length completions) 1))
+                      (push `(index . ,(if (< index (- (length completions) 1))
                                            (1+ index)
                                          0))
                             loophole--read-map-variable-help-condition)
