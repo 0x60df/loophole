@@ -388,7 +388,7 @@ this hook is run with all of them."
                                 (stringp tag))
                            (propertize (replace-regexp-in-string
                                         "%" "%%" (substitute-command-keys tag))
-                            'face nil)
+                                       'face 'loophole-editing)
                          tag)))))
             (:eval
              (let ((l (delq
