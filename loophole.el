@@ -928,12 +928,11 @@ This function is intended to be added to
 `change-major-mode-hook' and `kill-buffer-hook'.
 Only while `loophole-mode' is enabled, this functions is
 added to the hooks above."
-  (when (memq (current-buffer) loophole--buffer-list)
-    (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))
-    (remove-hook 'change-major-mode-hook
-                 #'loophole--follow-killing-local-variable t)
-    (remove-hook 'kill-buffer-hook
-                 #'loophole--follow-killing-local-variable t)))
+  (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))
+  (remove-hook 'change-major-mode-hook
+               #'loophole--follow-killing-local-variable t)
+  (remove-hook 'kill-buffer-hook
+               #'loophole--follow-killing-local-variable t))
 
 (defun loophole-registered-p (map-variable &optional state-variable)
   "Return non-nil if MAP-VARIABLE is registered to loophole.
