@@ -631,7 +631,7 @@ is preserved."
         (progn
           (timer-set-time timer (timer-relative-time nil loophole-timer-delay))
           (if (or (timer--triggered timer)
-                  (not (member timer  timer-list)))
+                  (not (memq timer timer-list)))
               (timer-activate timer)))
       (if (loophole-global-p map-variable)
           (setq-default loophole--timer-alist
@@ -669,11 +669,12 @@ is preserved."
                               (default-value 'loophole--timer-alist)
                             loophole--timer-alist)))))
     (if (and (timerp timer)
-             (not (timer--triggered timer)))
+             (not (timer--triggered timer))
+             (memq timer timer-list))
         (cancel-timer timer))))
 
 (defun loophole--remove-timers (map-variable)
-  "Cancel and remove all timers for disabling MAP-VARIABLE."
+  "Cancel and remove all timers for unregistering MAP-VARIABLE."
   (let ((timer (cdr (assq map-variable
                           (default-value 'loophole--timer-alist)))))
     (if (timerp timer) (cancel-timer timer)))
@@ -804,6 +805,34 @@ This function is intended to be added to
               loophole--buffer-list))))
   (put 'loophole--timer-alist :loophole-ghost-timer-list nil))
 
+(defun loophole--globalize-timer (map-variable)
+  "Remove local timers and may add global timer for MAP-VARIABLE."
+  (mapc (lambda (buffer)
+          (with-current-buffer buffer
+            (let ((timer (cdr (assq map-variable loophole--timer-alist))))
+              (if (timerp timer) (cancel-timer timer)))
+            (setq loophole--timer-alist
+                  (seq-filter (lambda (cell)
+                                (not (eq (car cell) map-variable)))
+                              loophole--timer-alist))))
+        (if (listp loophole--buffer-list)
+            loophole--buffer-list
+          (buffer-list)))
+  (if (symbol-value (get map-variable :loophole-state-variable))
+      (loophole-start-timer map-variable)))
+
+(defun loophole--localize-timer (map-variable)
+  "Remove a global timer and may add local timer for MAP-VARIABLE."
+  (let ((timer
+         (cdr (assq map-variable (default-value 'loophole--timer-alist)))))
+    (if (timerp timer) (cancel-timer timer)))
+  (setq-default loophole--timer-alist
+                (seq-filter (lambda (cell)
+                              (not (eq (car cell) map-variable)))
+                            (default-value 'loophole--timer-alist)))
+  (if (symbol-value (get map-variable :loophole-state-variable))
+      (loophole-start-timer map-variable)))
+
 (defun loophole-start-editing-timer ()
   "Setup or update timer for editing state."
   (if (timerp loophole--editing-timer)
@@ -874,34 +903,6 @@ This function is intended to be added to
                   (loophole-start-editing-timer))))
           loophole--buffer-list))
   (put 'loophole--editing-timer :loophole-ghost-editing-timer-list nil))
-
-(defun loophole--globalize-timer (map-variable)
-  "Remove local timers and may add global timer for MAP-VARIABLE."
-  (mapc (lambda (buffer)
-          (with-current-buffer buffer
-            (let ((timer (cdr (assq map-variable loophole--timer-alist))))
-              (if (timerp timer) (cancel-timer timer)))
-            (setq loophole--timer-alist
-                  (seq-filter (lambda (cell)
-                                (not (eq (car cell) map-variable)))
-                              loophole--timer-alist))))
-        (if (listp loophole--buffer-list)
-            loophole--buffer-list
-          (buffer-list)))
-  (if (symbol-value (get map-variable :loophole-state-variable))
-      (loophole-start-timer map-variable)))
-
-(defun loophole--localize-timer (map-variable)
-  "Remove a global timer and may add local timer for MAP-VARIABLE."
-  (let ((timer
-         (cdr (assq map-variable (default-value 'loophole--timer-alist)))))
-    (if (timerp timer) (cancel-timer timer)))
-  (setq-default loophole--timer-alist
-                (seq-filter (lambda (cell)
-                              (not (eq (car cell) map-variable)))
-                            (default-value 'loophole--timer-alist)))
-  (if (symbol-value (get map-variable :loophole-state-variable))
-      (loophole-start-timer map-variable)))
 
 (defun loophole--follow-adding-local-variable (_symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
