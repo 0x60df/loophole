@@ -840,7 +840,7 @@ This function is intended to be added to
         (timer-set-time loophole--editing-timer
                         (timer-relative-time nil loophole-editing-timer-delay))
         (if (or (timer--triggered loophole--editing-timer)
-                (not (member loophole--editing-timer  timer-list)))
+                (not (memq loophole--editing-timer timer-list)))
             (timer-activate loophole--editing-timer)))
     (setq loophole--editing-timer
           (run-with-timer loophole-editing-timer-delay
@@ -855,7 +855,8 @@ This function is intended to be added to
 (defun loophole-stop-editing-timer ()
   "Cancel timer for editing state."
   (if (and (timerp loophole--editing-timer)
-           (not (timer--triggered loophole--editing-timer)))
+           (not (timer--triggered loophole--editing-timer))
+           (memq loophole--editing-timer timer-list))
       (cancel-timer loophole--editing-timer)))
 
 (defun loophole--stop-all-alive-editing-timers ()
