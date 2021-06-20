@@ -140,6 +140,11 @@ or enabled earliest used one."
   :group 'loophole
   :type 'boolean)
 
+(defcustom loophole-register-force-read-tag t
+  "Flag if interactive `loophole-register' reads tag string."
+  :group 'loophole
+  :type 'boolean)
+
 (defcustom loophole-timer-delay (* 60 60)
   "Delay time in seconds for auto disabling timer."
   :group 'loophole
@@ -996,7 +1001,8 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                                     obarray
                                     (lambda (s)
                                       (and (boundp s) (not (keywordp s)))))))
-          (arg-tag (if current-prefix-arg
+          (arg-tag (if (or loophole-register-force-read-tag
+                           current-prefix-arg)
                        (read-string
                         (format "Tag for keymap %s: " arg-map-variable))))
           (arg-global (if current-prefix-arg (y-or-n-p "Global? ")))
