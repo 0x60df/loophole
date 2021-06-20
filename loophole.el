@@ -1025,7 +1025,7 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                    loophole--map-alist)
          (user-error
           "Specified map-variable holds keymap which is already used: %s"
-          state-variable)))
+          map-variable)))
   (if (and (not without-base-map)
            (keymap-parent (symbol-value map-variable)))
       (unless (or loophole-force-overwrite-parent-map
