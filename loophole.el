@@ -401,9 +401,13 @@ this hook is run with all of them."
                             (let ((e (replace-regexp-in-string
                                       "%" "%%"
                                       (substitute-command-keys
-                                       (get (get (car a)
-                                                 :loophole-map-variable)
-                                            :loophole-tag)))))
+                                       (let ((tag (get
+                                                   (get (car a)
+                                                        :loophole-map-variable)
+                                                   :loophole-tag)))
+                                         (if (stringp tag)
+                                             tag
+                                           ""))))))
                               (if (and loophole-mode-lighter-use-face
                                        (stringp e))
                                   (propertize e
