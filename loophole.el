@@ -1089,23 +1089,9 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
           (buffer-list)))
   (run-hook-with-args 'loophole-register-functions map-variable))
 
-(defun loophole-unregister (map-variable &optional keep-parent-map)
-  "Unregister MAP-VARIABLE from loophole.
-If an optional argument KEEP-PARENT-MAP is non-nil, parent
-of MAP-VARIABLE will not be removed.
-
-If called interactively with prefix argument, it is assigned
-to KEEP-PARENT-MAP."
-  (interactive
-   (list (loophole-read-map-variable "Unregister keymap:") current-prefix-arg))
-  (if (and (not keep-parent-map)
-           (not (eq (keymap-parent (symbol-value map-variable))
-                    loophole-base-map)))
-      (unless (or loophole-force-overwrite-parent-map
-                  (yes-or-no-p
-                   (format "Parent of %s is not base map.  Remove it? "
-                           map-variable)))
-        (setq keep-parent-map t)))
+(defun loophole-unregister (map-variable)
+  "Unregister MAP-VARIABLE from loophole."
+  (interactive (list (loophole-read-map-variable "Unregister keymap:")))
   (mapc (lambda (buffer)
           (with-current-buffer buffer
             (if (and (local-variable-p 'loophole--editing)
@@ -1140,8 +1126,9 @@ to KEEP-PARENT-MAP."
             loophole--buffer-list)
       (remove-variable-watcher state-variable
                                #'loophole--follow-adding-local-variable))
-    (unless keep-parent-map
-      (set-keymap-parent (symbol-value map-variable) nil))
+    (if (eq (keymap-parent (symbol-value map-variable))
+            loophole-base-map)
+        (set-keymap-parent (symbol-value map-variable) nil))
     (put map-variable :loophole-tag nil)
     (put state-variable :loophole-map-variable nil)
     (put map-variable :loophole-state-variable nil))
