@@ -1064,17 +1064,6 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (put map-variable :loophole-state-variable state-variable)
   (put state-variable :loophole-map-variable map-variable)
   (put map-variable :loophole-tag tag)
-  (when (and (listp loophole--buffer-list)
-             (not global))
-    (mapc (lambda (buffer)
-            (with-current-buffer buffer
-              (if (local-variable-p state-variable)
-                  (add-to-list 'loophole--buffer-list buffer nil #'eq))))
-          (buffer-list))
-    (add-variable-watcher state-variable
-                          #'loophole--follow-adding-local-variable))
-  (unless without-base-map
-    (set-keymap-parent (symbol-value map-variable) loophole-base-map))
   (setq-default loophole--map-alist
                 (cons `(,state-variable . ,(symbol-value map-variable))
                       (default-value 'loophole--map-alist)))
@@ -1087,6 +1076,17 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
         (if (listp loophole--buffer-list)
             loophole--buffer-list
           (buffer-list)))
+  (unless without-base-map
+    (set-keymap-parent (symbol-value map-variable) loophole-base-map))
+  (when (and (listp loophole--buffer-list)
+             (not global))
+    (mapc (lambda (buffer)
+            (with-current-buffer buffer
+              (if (local-variable-p state-variable)
+                  (add-to-list 'loophole--buffer-list buffer nil #'eq))))
+          (buffer-list))
+    (add-variable-watcher state-variable
+                          #'loophole--follow-adding-local-variable))
   (run-hook-with-args 'loophole-register-functions map-variable))
 
 (defun loophole-unregister (map-variable)
@@ -1101,6 +1101,20 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
             loophole--buffer-list
           (buffer-list)))
   (let ((state-variable (get map-variable :loophole-state-variable)))
+    (when (listp loophole--buffer-list)
+      (remove-variable-watcher state-variable
+                               #'loophole--follow-adding-local-variable)
+      (mapc (lambda (buffer)
+              (with-current-buffer buffer
+                (if (and (local-variable-p state-variable)
+                         (not (seq-some #'local-variable-p
+                                        (loophole-local-variable-if-set-list))))
+                    (setq loophole--buffer-list
+                          (delq buffer loophole--buffer-list)))))
+            loophole--buffer-list))
+    (if (eq (keymap-parent (symbol-value map-variable))
+            loophole-base-map)
+        (set-keymap-parent (symbol-value map-variable) nil))
     (mapc (lambda (buffer)
             (with-current-buffer buffer
               (if (local-variable-p 'loophole--map-alist)
@@ -1115,20 +1129,6 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                   (seq-filter (lambda (cell)
                                   (not (eq (car cell) state-variable)))
                               (default-value 'loophole--map-alist)))
-    (when (listp loophole--buffer-list)
-      (mapc (lambda (buffer)
-              (with-current-buffer buffer
-                (if (and (local-variable-p state-variable)
-                         (not (seq-some #'local-variable-p
-                                        (loophole-local-variable-if-set-list))))
-                    (setq loophole--buffer-list
-                          (delq buffer loophole--buffer-list)))))
-            loophole--buffer-list)
-      (remove-variable-watcher state-variable
-                               #'loophole--follow-adding-local-variable))
-    (if (eq (keymap-parent (symbol-value map-variable))
-            loophole-base-map)
-        (set-keymap-parent (symbol-value map-variable) nil))
     (put map-variable :loophole-tag nil)
     (put state-variable :loophole-map-variable nil)
     (put map-variable :loophole-state-variable nil))
