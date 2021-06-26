@@ -1769,7 +1769,8 @@ Besides, Definition can be aborted by calling
                              'loophole-use-kmacro-by-recursive-edit-map
                              loophole-kmacro-by-recursive-edit-map-tag
                              t)
-          (unwind-protect (loophole-start-kmacro)
+          (unwind-protect
+              (loophole-start-kmacro)
             (loophole-unregister 'loophole-kmacro-by-recursive-edit-map))
           (kmacro-lambda-form (kmacro-ring-head)))))
 
