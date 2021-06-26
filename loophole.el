@@ -2038,18 +2038,20 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
     (error "Invalid array : %s" array)))
 
 ;;;###autoload
-(defun loophole-bind-keymap (key another-keymap &optional keymap)
-  "Bind KEY to ANOTHER-KEYMAP temporarily.
-ANOTHER-KEYMAP must be a keymap object, and KEY will be
-a prefix key for ANOTHER-KEYMAP.
+(defun loophole-bind-keymap (key keymap &optional another-keymap)
+  "Bind KEY to KEYMAP temporarily.
+KEYMAP must be a keymap object, and KEY will be
+a prefix key for KEYMAP.
 
 This function finally calls `loophole-bind-entry', so that
-the keymap used for binding and the meaning of optional
-arguments KEYMAP are same as `loophole-bind-entry'.
-See docstring of `loophole-bind-entry'for more details.
+the keymap in which KEY and KEYMAP are bound is samely
+determined as `loophole-bind-entry'.
+Optional argument ANOTHER-KEYMAP has same meaning with the
+argument KEYMAP of `loophole-bind-entry'.
+See docstring of `loophole-bind-entry' for more details.
 
 When called interactively, this function determines
-obtaining method for KEY and ANOTHER-KEYMAP according to
+obtaining method for KEY and KEYMAP according to
 `loophole-bind-keymap-order'.
 When this function called without prefix argument,
 the first element of `loophole-bind-keymap-order' is
@@ -2063,9 +2065,9 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
      (if (null obtaining-method)
          (user-error "Undefined prefix argument"))
      (funcall obtaining-method)))
-  (if (keymapp another-keymap)
-      (loophole-bind-entry key another-keymap keymap)
-    (error "Invalid keymap : %s" another-keymap)))
+  (if (keymapp keymap)
+      (loophole-bind-entry key keymap another-keymap)
+    (error "Invalid keymap : %s" keymap)))
 
 ;;;###autoload
 (defun loophole-bind-symbol (key symbol &optional keymap)
