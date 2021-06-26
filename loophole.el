@@ -1600,12 +1600,17 @@ Definition can be finished by calling `loophole-end-kmacro'."
   (kmacro-start-macro nil)
   (let* ((end (where-is-internal 'loophole-end-kmacro nil t))
          (abort (where-is-internal 'loophole-abort-kmacro nil t))
-         (body (if (and end abort)
-                   (format "[End: %s, Abort: %s]"
+         (prefix (if (or end abort)
+                     "Defining keyboard macro... "
+                   "Defining kmacro "))
+         (body (format "[End: %s, Abort: %s]"
+                       (if end
                            (key-description end)
-                           (key-description abort))
-                 "[loophole-end/abort-kmacro should be bound to key]")))
-    (message "Defining keyboard macro... %s" body))
+                         "M-x loophole-end-kmacro")
+                       (if abort
+                           (key-description abort)
+                         "M-x loophole-abort-kmacro"))))
+    (message "%s%s" prefix body))
   (unless (called-interactively-p 'any) (recursive-edit)))
 
 (defun loophole-end-kmacro ()
