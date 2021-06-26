@@ -1262,12 +1262,8 @@ generate new one, prepare it, and return it."
   (let ((map-variable
          (cond (loophole--editing loophole--editing)
                (t (let ((generated (loophole-generate)))
-                    (loophole-prioritize generated)
+                    (loophole-enable generated)
                     (loophole-start-editing generated)
-                    (set (get generated :loophole-state-variable) t)
-                    (if (and (listp loophole--buffer-list)
-                             (not (local-variable-p 'loophole--map-alist)))
-                      (setq loophole--map-alist loophole--map-alist))
                     generated)))))
     (symbol-value map-variable)))
 
