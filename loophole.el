@@ -2432,9 +2432,9 @@ Followings are the key bindings for Loophole commands.
       (setq loophole--suspended flag))
     (mapc (lambda (buffer)
             (with-current-buffer buffer
-              (remove-hook 'change-major-mode-hook
-                           #'loophole--follow-killing-local-variable t)
               (remove-hook 'kill-buffer-hook
+                           #'loophole--follow-killing-local-variable t)
+              (remove-hook 'change-major-mode-hook
                            #'loophole--follow-killing-local-variable t)))
           loophole--buffer-list)
     (dolist (variable (loophole-local-variable-if-set-list))
