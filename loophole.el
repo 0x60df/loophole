@@ -1864,7 +1864,8 @@ takes effect as quit."
                          (key-description key))
                  obarray
                  (lambda (s)
-                   (and (boundp s) (not (keywordp s))
+                   (and (boundp s)
+                        (not (keywordp s))
                         (keymapp (symbol-value s))))))))))
 
 (defun loophole-obtain-key-and-keymap-by-read-keymap-function ()
