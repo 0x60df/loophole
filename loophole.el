@@ -1275,44 +1275,46 @@ generate new one, prepare it, and return it."
                         (not (loophole-global-p map-variable))))))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
-  (let ((state-variable (get map-variable :loophole-state-variable))
-        globalized-state-variable)
-    (if (or loophole-force-unintern
-            (yes-or-no-p (format "%s is defined as local.  Unintern it? "
-                                 state-variable)))
-        (let ((value (if (boundp state-variable)
-                         (symbol-value state-variable)))
-              (function (symbol-function state-variable))
-              (plist (symbol-plist state-variable)))
-          (unintern (symbol-name state-variable) nil)
-          (setq globalized-state-variable
-                (intern (symbol-name state-variable)))
-          (set globalized-state-variable value)
-          (fset globalized-state-variable function)
-          (setplist globalized-state-variable plist)
-          (force-mode-line-update t))
-      (user-error (concat "Abort globalize."
-                          "  Local variable if set cannot be used"
-                          " for global state-variable")))
-    (put map-variable :loophole-state-variable globalized-state-variable)
-    (let ((cell (assq state-variable (default-value 'loophole--map-alist))))
-      (if (consp cell) (setcar cell globalized-state-variable)))
-    (mapc
-     (lambda (buffer)
-       (with-current-buffer buffer
-         (if (local-variable-p 'loophole--map-alist)
-             (let ((cell (assq state-variable loophole--map-alist)))
-               (if (consp cell)
-                   (setcar cell globalized-state-variable))))
-         (if (listp loophole--buffer-list)
-             (unless (seq-some
-                      #'local-variable-p
-                      (loophole-local-variable-if-set-list))
-               (setq loophole--buffer-list
-                     (delq buffer loophole--buffer-list))))))
-     (if (listp loophole--buffer-list)
-         loophole--buffer-list
-       (buffer-list)))))
+  (if (loophole-global-p map-variable)
+      (message "Specified map-variable %s is already global" map-variable)
+    (let ((state-variable (get map-variable :loophole-state-variable))
+          globalized-state-variable)
+      (if (or loophole-force-unintern
+              (yes-or-no-p (format "%s is defined as local.  Unintern it? "
+                                   state-variable)))
+          (let ((value (if (boundp state-variable)
+                           (symbol-value state-variable)))
+                (function (symbol-function state-variable))
+                (plist (symbol-plist state-variable)))
+            (unintern (symbol-name state-variable) nil)
+            (setq globalized-state-variable
+                  (intern (symbol-name state-variable)))
+            (set globalized-state-variable value)
+            (fset globalized-state-variable function)
+            (setplist globalized-state-variable plist)
+            (force-mode-line-update t))
+        (user-error (concat "Abort globalize."
+                            "  Local variable if set cannot be used"
+                            " for global state-variable")))
+      (put map-variable :loophole-state-variable globalized-state-variable)
+      (let ((cell (assq state-variable (default-value 'loophole--map-alist))))
+        (if (consp cell) (setcar cell globalized-state-variable)))
+      (mapc
+       (lambda (buffer)
+         (with-current-buffer buffer
+           (if (local-variable-p 'loophole--map-alist)
+               (let ((cell (assq state-variable loophole--map-alist)))
+                 (if (consp cell)
+                     (setcar cell globalized-state-variable))))
+           (if (listp loophole--buffer-list)
+               (unless (seq-some
+                        #'local-variable-p
+                        (loophole-local-variable-if-set-list))
+                 (setq loophole--buffer-list
+                       (delq buffer loophole--buffer-list))))))
+       (if (listp loophole--buffer-list)
+           loophole--buffer-list
+         (buffer-list))))))
 
 (defun loophole-localize (map-variable)
   "Make MAP-VARIABLE local."
@@ -1320,21 +1322,23 @@ generate new one, prepare it, and return it."
                                                  #'loophole-global-p)))
   (unless (loophole-registered-p map-variable)
       (user-error "Specified map-variable %s is not registered" map-variable))
-  (let ((state-variable (get map-variable :loophole-state-variable)))
-    (if (or loophole-force-make-variable-buffer-local
-            (yes-or-no-p (format "%s is defined as gloabl.  Make it local? "
-                                 state-variable)))
-        (let ((state (symbol-value state-variable)))
-          (set state-variable nil)
-          (make-variable-buffer-local state-variable)
-          (if (listp loophole--buffer-list)
-              (add-variable-watcher state-variable
-                                    #'loophole--follow-adding-local-variable))
-          (set state-variable state)
-          (force-mode-line-update t))
-      (user-error (concat "Abort localize."
-                          "  Gloabl variable cannot be used"
-                          " for local state-variable")))))
+  (if (not (loophole-global-p map-variable))
+      (message "Specified map-variable %s is already local" map-variable)
+    (let ((state-variable (get map-variable :loophole-state-variable)))
+      (if (or loophole-force-make-variable-buffer-local
+              (yes-or-no-p (format "%s is defined as gloabl.  Make it local? "
+                                   state-variable)))
+          (let ((state (symbol-value state-variable)))
+            (set state-variable nil)
+            (make-variable-buffer-local state-variable)
+            (if (listp loophole--buffer-list)
+                (add-variable-watcher state-variable
+                                      #'loophole--follow-adding-local-variable))
+            (set state-variable state)
+            (force-mode-line-update t))
+        (user-error (concat "Abort localize."
+                            "  Gloabl variable cannot be used"
+                            " for local state-variable"))))))
 
 (defun loophole-enable (map-variable)
   "Enable the keymap stored in MAP-VARIABLE."
