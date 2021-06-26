@@ -1782,18 +1782,16 @@ Besides, Definition can be aborted by calling
           (lambda (ring counter)
             (let* ((raw-label (key-description (car (car ring))))
                    (entry (assoc raw-label counter))
+                   (number (if entry (1+ (cdr entry)) 1))
                    (label (if entry
-                              (format "%s <%d>" raw-label (1+ (cdr entry)))
+                              (format "%s <%d>" raw-label number)
                             raw-label)))
               (cond ((null ring) ring)
                     (t (cons
                         `(,label . ,(car ring))
                         (funcall make-label-kmacro-alist
                                  (cdr ring)
-                                 (cons (if entry
-                                           `(,raw-label . ,(1+ (cdr entry)))
-                                         `(,raw-label . 1))
-                                       counter)))))))))
+                                 (cons `(,raw-label . ,number) counter)))))))))
       (let* ((head (kmacro-ring-head))
              (alist (funcall make-label-kmacro-alist
                              (if head
