@@ -1141,19 +1141,17 @@ the front."
   (interactive (list (loophole-read-map-variable "Prioritize keymap: ")))
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
-        (unless (eq (assq state-variable loophole--map-alist)
-                    (car loophole--map-alist))
-          (setq loophole--map-alist
-                (cons `(,state-variable . ,(symbol-value map-variable))
-                      (seq-filter (lambda (cell)
-                                    (not (eq (car cell) state-variable)))
-                                  loophole--map-alist)))
-          (setq-default
-           loophole--map-alist
-           (cons `(,state-variable . ,(symbol-value map-variable))
-                 (seq-filter (lambda (cell)
-                               (not (eq (car cell) state-variable)))
-                             (default-value 'loophole--map-alist)))))
+        (setq loophole--map-alist
+              (cons `(,state-variable . ,(symbol-value map-variable))
+                    (seq-filter (lambda (cell)
+                                  (not (eq (car cell) state-variable)))
+                                loophole--map-alist)))
+        (setq-default
+         loophole--map-alist
+         (cons `(,state-variable . ,(symbol-value map-variable))
+               (seq-filter (lambda (cell)
+                             (not (eq (car cell) state-variable)))
+                           (default-value 'loophole--map-alist))))
         (run-hook-with-args 'loophole-prioritize-functions map-variable))))
 
 (defun loophole-generate ()
@@ -1350,8 +1348,6 @@ generate new one, prepare it, and return it."
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (set state-variable t)
-        (unless (local-variable-p 'loophole--map-alist)
-          (setq loophole--map-alist loophole--map-alist))
         (run-hook-with-args 'loophole-enable-functions map-variable))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
@@ -1365,8 +1361,6 @@ generate new one, prepare it, and return it."
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (set state-variable nil)
-        (unless (local-variable-p 'loophole--map-alist)
-          (setq loophole--map-alist loophole--map-alist))
         (run-hook-with-args 'loophole-disable-functions map-variable))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
