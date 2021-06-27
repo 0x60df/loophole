@@ -1430,6 +1430,8 @@ string as TAG regardless of the value of prefix-argument."
      (list arg-map-variable arg-map-name arg-tag)))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
+  (unless (< 0 (length map-name))
+    (user-error "Name cannot be empty"))
   (let* ((state-variable (get map-variable :loophole-state-variable))
          (map-variable-name (format "loophole-%s-map" map-name))
          (state-variable-name (concat map-variable-name "-state"))
