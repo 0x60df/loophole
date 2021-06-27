@@ -1936,7 +1936,7 @@ and it is registered to loophole, KEYMAP is used instead."
           (if (and map-variable
                    (loophole-registered-p map-variable))
               keymap
-            (error "Invalid keymap: %s" keymap)))
+            (user-error "Invalid keymap: %s" keymap)))
       (loophole-ready-map))
     key
     entry)
@@ -1969,7 +1969,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
      (funcall obtaining-method)))
   (if (commandp command)
       (loophole-bind-entry key command keymap)
-    (error "Invalid command: %s" command)))
+    (user-error "Invalid command: %s" command)))
 
 ;;;###autoload
 (defun loophole-bind-kmacro (key kmacro &optional keymap)
@@ -1998,7 +1998,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
      (funcall obtaining-method)))
   (if (kmacro-p kmacro)
       (loophole-bind-entry key kmacro keymap)
-    (error "Invalid kmacro: %s" kmacro)))
+    (user-error "Invalid kmacro: %s" kmacro)))
 
 ;;;###autoload
 (defun loophole-bind-last-kmacro (key)
@@ -2036,7 +2036,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
      (funcall obtaining-method)))
   (if (or (vectorp array) (stringp array))
       (loophole-bind-entry key array keymap)
-    (error "Invalid array : %s" array)))
+    (user-error "Invalid array : %s" array)))
 
 ;;;###autoload
 (defun loophole-bind-keymap (key keymap &optional another-keymap)
@@ -2068,7 +2068,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
      (funcall obtaining-method)))
   (if (keymapp keymap)
       (loophole-bind-entry key keymap another-keymap)
-    (error "Invalid keymap : %s" keymap)))
+    (user-error "Invalid keymap : %s" keymap)))
 
 ;;;###autoload
 (defun loophole-bind-symbol (key symbol &optional keymap)
@@ -2109,7 +2109,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
     (if (and (symbolp symbol)
              (funcall inspect-function-cell symbol))
         (loophole-bind-entry key symbol keymap)
-      (error "Invalid symbol : %s" symbol))))
+      (user-error "Invalid symbol : %s" symbol))))
 
 ;;;###autoload
 (defun loophole-set-key (key entry)
