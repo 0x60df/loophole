@@ -2164,7 +2164,9 @@ the first one will be read."
   (interactive (list (loophole-read-key "Modify lambda form for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
-  (unless map-variable
+  (if map-variable
+      (unless (loophole-registered-p map-variable)
+        (user-error "Specified map-variable %s is not registered" map-variable))
     (setq map-variable (loophole-map-variable-for-key-binding key))
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
@@ -2175,11 +2177,13 @@ the first one will be read."
         (configuration-list (mapcar #'current-window-configuration
                                     (frame-list)))
         (entry (lookup-key (symbol-value map-variable) key)))
-    (unless (and (commandp entry)
-                 (not (symbolp entry))
-                 (not (vectorp entry))
-                 (not (stringp entry)))
-      (user-error "Bound entry is not lambda form: %s" entry))
+    (cond ((null entry)
+           (user-error "No entry found in loophole map: %s" map-variable))
+          ((not (and (commandp entry)
+                     (not (symbolp entry))
+                     (not (vectorp entry))
+                     (not (stringp entry))))
+           (user-error "Bound entry is not lambda form: %s" entry)))
     (unwind-protect
         (let ((workspace (get-buffer-create "*Loophole*")))
           (switch-to-buffer-other-window workspace t)
@@ -2224,7 +2228,9 @@ the first one will be read."
   (interactive (list (loophole-read-key "Modify kmacro for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
-  (unless map-variable
+  (if map-variable
+      (unless (loophole-registered-p map-variable)
+        (user-error "Specified map-variable %s is not registered" map-variable))
     (setq map-variable (loophole-map-variable-for-key-binding key))
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
@@ -2235,8 +2241,10 @@ the first one will be read."
         (configuration-list (mapcar #'current-window-configuration
                                     (frame-list)))
         (entry (lookup-key (symbol-value map-variable) key)))
-    (unless (kmacro-p entry)
-      (user-error "Bound entry is not kmacro: %s" entry))
+    (cond ((null entry)
+           (user-error "No entry found in loophole map: %s" map-variable))
+          ((not (kmacro-p entry))
+           (user-error "Bound entry is not kmacro: %s" entry)))
     (unwind-protect
         (let ((workspace (get-buffer-create "*Loophole*")))
           (switch-to-buffer-other-window workspace t)
@@ -2273,7 +2281,9 @@ the first one will be read."
   (interactive (list (loophole-read-key "Modify array for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
-  (unless map-variable
+  (if map-variable
+      (unless (loophole-registered-p map-variable)
+        (user-error "Specified map-variable %s is not registered" map-variable))
     (setq map-variable (loophole-map-variable-for-key-binding key))
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
@@ -2284,8 +2294,10 @@ the first one will be read."
         (configuration-list (mapcar #'current-window-configuration
                                     (frame-list)))
         (entry (lookup-key (symbol-value map-variable) key)))
-    (unless (or (vectorp entry) (stringp entry))
-      (user-error "Bound entry is not array: %s" entry))
+    (cond ((null entry)
+           (user-error "No entry found in loophole map: %s" map-variable))
+          ((not (or (vectorp entry) (stringp entry)))
+           (user-error "Bound entry is not array: %s" entry)))
     (unwind-protect
         (let ((workspace (get-buffer-create "*Loophole*")))
           (switch-to-buffer-other-window workspace t)
