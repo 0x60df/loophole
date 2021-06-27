@@ -1691,7 +1691,8 @@ valid lambda command, this function return it."
             (let ((lambda-form (eval (read workspace))))
               (if (and (commandp lambda-form)
                        (not (symbolp lambda-form))
-                       (not (arrayp lambda-form)))
+                       (not (vectorp lambda-form))
+                       (not (stringp lambda-form)))
                   (list key lambda-form)
                 (user-error
                  "Obtained Lisp object is not valid lambda command: %s"
@@ -2033,7 +2034,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
      (if (null obtaining-method)
          (user-error "Undefined prefix argument"))
      (funcall obtaining-method)))
-  (if (arrayp array)
+  (if (or (vectorp array) (stringp array))
       (loophole-bind-entry key array keymap)
     (error "Invalid array : %s" array)))
 
@@ -2101,7 +2102,8 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
               (let ((function-cell (symbol-function symbol)))
                 (or (keymapp function-cell)
                     (commandp function-cell)
-                    (arrayp function-cell)
+                    (vectorp function-cell)
+                    (stringp function-cell)
                     (if (and function-cell (symbolp function-cell))
                         (funcall inspect-function-cell function-cell)))))))
     (if (and (symbolp symbol)
@@ -2175,7 +2177,8 @@ the first one will be read."
         (entry (lookup-key (symbol-value map-variable) key)))
     (unless (and (commandp entry)
                  (not (symbolp entry))
-                 (not (arrayp entry)))
+                 (not (vectorp entry))
+                 (not (stringp entry)))
       (user-error "Bound entry is not lambda form: %s" entry))
     (unwind-protect
         (let ((workspace (get-buffer-create "*Loophole*")))
@@ -2188,7 +2191,8 @@ the first one will be read."
           (let ((lambda-form (read workspace)))
             (if (and (commandp lambda-form)
                      (not (symbolp lambda-form))
-                     (not (arrayp lambda-form)))
+                     (not (vectorp lambda-form))
+                     (not (stringp lambda-form)))
                 (loophole-bind-entry key lambda-form
                                      (symbol-value map-variable))
               (user-error
@@ -2280,7 +2284,7 @@ the first one will be read."
         (configuration-list (mapcar #'current-window-configuration
                                     (frame-list)))
         (entry (lookup-key (symbol-value map-variable) key)))
-    (unless (arrayp entry)
+    (unless (or (vectorp entry) (stringp entry))
       (user-error "Bound entry is not array: %s" entry))
     (unwind-protect
         (let ((workspace (get-buffer-create "*Loophole*")))
@@ -2291,7 +2295,7 @@ the first one will be read."
           (loophole-write-lisp-mode)
           (with-current-buffer workspace (goto-char 1))
           (let ((array (read workspace)))
-            (if (arrayp array)
+            (if (or (vectorp array) (stringp array))
                 (loophole-bind-entry key array (symbol-value map-variable))
               (user-error
                "Modified Lisp object is not array: %s" array))))
