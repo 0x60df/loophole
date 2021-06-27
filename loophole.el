@@ -1092,6 +1092,8 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
 (defun loophole-unregister (map-variable)
   "Unregister MAP-VARIABLE from loophole."
   (interactive (list (loophole-read-map-variable "Unregister keymap:")))
+  (unless (loophole-registered-p map-variable)
+    (user-error "Specified map-variable %s is not registered" map-variable))
   (mapc (lambda (buffer)
           (with-current-buffer buffer
             (if (and (local-variable-p 'loophole--editing)
@@ -1152,7 +1154,8 @@ the front."
                (seq-filter (lambda (cell)
                              (not (eq (car cell) state-variable)))
                            (default-value 'loophole--map-alist))))
-        (run-hook-with-args 'loophole-prioritize-functions map-variable))))
+        (run-hook-with-args 'loophole-prioritize-functions map-variable))
+    (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-generate ()
   "Return Loophole map variable whose value is newly generated keymap.
@@ -1524,6 +1527,8 @@ which had been already unbound." named-map-variable state-variable))
 (defun loophole-start-editing (map-variable)
   "Start keymap edit session with MAP-VARIABLE."
   (interactive (list (loophole-read-map-variable "Start editing keymap: ")))
+  (unless (loophole-registered-p map-variable)
+    (user-error "Specified map-variable %s is not registered" map-variable))
   (setq loophole--editing map-variable)
   (run-hook-with-args 'loophole-start-editing-functions map-variable))
 
@@ -1537,6 +1542,8 @@ which had been already unbound." named-map-variable state-variable))
 (defun loophole-describe (map-variable)
   "Display all key bindings in MAP-VARIABLE."
   (interactive (list (loophole-read-map-variable "Describe keymap: ")))
+  (unless (loophole-registered-p map-variable)
+    (user-error "Specified map-variable %s is not registered" map-variable))
   (help-setup-xref `(loophole-describe ,map-variable)
                    (called-interactively-p 'interactive))
   (with-help-window (help-buffer)
