@@ -1455,14 +1455,10 @@ string as TAG regardless of the value of prefix-argument."
                     (yes-or-no-p (format
                                   "%s is defined as local.  Unintern it? "
                                   named-state-variable)))
-                (let ((value (if (boundp named-state-variable)
-                                 (symbol-value named-state-variable)))
-                      (function (symbol-function named-state-variable))
+                (let ((function (symbol-function named-state-variable))
                       (plist (symbol-plist named-state-variable)))
                   (unintern (symbol-name named-state-variable) nil)
-                  (setq named-state-variable
-                        (intern (symbol-name named-state-variable)))
-                  (set named-state-variable value)
+                  (setq named-state-variable (intern state-variable-name))
                   (fset named-state-variable function)
                   (setplist named-state-variable plist))
               (user-error (concat "Abort naming."
@@ -1487,21 +1483,21 @@ which had been already unbound." named-map-variable state-variable))
                  (set named-state-variable (symbol-value state-variable)))))
          (if (listp loophole--buffer-list)
              loophole--buffer-list
-           (buffer-list)))
-        (if (listp loophole--buffer-list)
-            (add-variable-watcher named-state-variable
-                                  #'loophole--follow-adding-local-variable)))
+           (buffer-list))))
       (put named-map-variable :loophole-state-variable named-state-variable)
       (put named-state-variable :loophole-map-variable named-map-variable)
       (put named-map-variable :loophole-tag tag)
+      (if (and (local-variable-if-set-p named-state-variable)
+               (listp loophole--buffer-list))
+          (add-variable-watcher named-state-variable
+                                #'loophole--follow-adding-local-variable))
       (let ((cell (assq state-variable (default-value 'loophole--map-alist))))
-        (setcar cell named-state-variable))
+        (if (consp cell) (setcar cell named-state-variable)))
       (mapc (lambda (buffer)
               (with-current-buffer buffer
                 (if (local-variable-p 'loophole--map-alist)
                     (let ((cell (assq state-variable loophole--map-alist)))
-                      (if (consp cell)
-                          (setcar cell named-state-variable))))))
+                      (if (consp cell) (setcar cell named-state-variable))))))
             (if (listp loophole--buffer-list)
                 loophole--buffer-list
               (buffer-list)))
@@ -1513,15 +1509,16 @@ which had been already unbound." named-map-variable state-variable))
             (if (listp loophole--buffer-list)
                 loophole--buffer-list
               (buffer-list)))
-      (remove-variable-watcher state-variable
-                               #'loophole--follow-adding-local-variable)
-      (put state-variable 'variable-documentation nil)
-      (put map-variable 'variable-documentation nil)
-      (makunbound state-variable)
-      (makunbound map-variable)
+      (if (listp loophole--buffer-list)
+          (remove-variable-watcher state-variable
+                                   #'loophole--follow-adding-local-variable))
       (put map-variable :loophole-tag nil)
       (put state-variable :loophole-map-variable nil)
       (put map-variable :loophole-state-variable nil)
+      (makunbound state-variable)
+      (makunbound map-variable)
+      (put state-variable 'variable-documentation nil)
+      (put map-variable 'variable-documentation nil)
       (run-hook-with-args 'loophole-name-functions named-map-variable))))
 
 (defun loophole-start-editing (map-variable)
