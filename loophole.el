@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.6.0
+;; Version: 0.6.1
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -262,6 +262,7 @@ case, the list looks like (key keymap keymap)."
 (defcustom loophole-bind-symbol-order
   '(loophole-obtain-key-and-symbol-by-read-keymap-function
     loophole-obtain-key-and-symbol-by-read-command
+    loophole-obtain-key-and-symbol-by-read-array-function
     loophole-obtain-key-and-object)
   "The priority list of methods to obtain key and symbol for binding.
 `loophole-bind-symbol' refers this variable to select
@@ -1938,6 +1939,26 @@ or a symbol whose function cell is ultimately a keymap."
     (list key (read-command
                (format "Set key %s to symbol whose function cell is command: "
                        (key-description key))))))
+
+(defun loophole-obtain-key-and-symbol-by-read-array-function ()
+  "Return set of key and symbol obtained by reading array function.
+Array function is a symbol whose function cell is an array
+or a symbol whose function cell is ultimately an array."
+  (let ((key (loophole-read-key "Set key temporarily: ")))
+    (letrec ((symbol-function-recursively
+              (lambda (s)
+                (let ((f (symbol-function s)))
+                  (cond ((eq f s) f)
+                        ((not (symbolp f)) f)
+                        (t (funcall symbol-function-recursively f)))))))
+      (list key (intern
+                 (completing-read
+                  (format "Set key %s to symbol whose function cell is array: "
+                          (key-description key))
+                  obarray
+                  (lambda (s)
+                    (let ((f (funcall symbol-function-recursively s)))
+                      (or (vectorp f) (stringp f))))))))))
 
 ;;; Binding commands
 
