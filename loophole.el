@@ -1523,6 +1523,22 @@ which had been already unbound." named-map-variable state-variable))
       (put map-variable 'variable-documentation nil)
       (run-hook-with-args 'loophole-name-functions named-map-variable))))
 
+(defun loophole-tag (map-variable tag)
+  "Set TAG to tag string of MAP-VARIABLE."
+  (interactive
+   (let* ((arg-map-variable
+           (loophole-read-map-variable "Tag keymap: "))
+          (arg-tag (read-string
+                    (format "New tag for keymap %s%s%s: "
+                            arg-map-variable
+                            loophole-tag-sign
+                            (get arg-map-variable :loophole-tag)))))
+     (list arg-map-variable arg-tag)))
+  (unless (loophole-registered-p map-variable)
+    (user-error "Specified map-variable %s is not registered" map-variable))
+  (put map-variable :loophole-tag tag)
+  (force-mode-line-update t))
+
 (defun loophole-start-editing (map-variable)
   "Start keymap edit session with MAP-VARIABLE."
   (interactive (list (loophole-read-map-variable "Start editing keymap: ")))
@@ -2399,6 +2415,7 @@ Followings are the key bindings for Loophole commands.
             (define-key map (kbd "C-c ] [") #'loophole-start-editing)
             (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
             (define-key map (kbd "C-c ] ;") #'loophole-name)
+            (define-key map (kbd "C-c ] #") #'loophole-tag)
             (define-key map (kbd "C-c ] /") #'loophole-describe)
             (define-key map (kbd "C-c ] ,") #'loophole-suspend)
             (define-key map (kbd "C-c ] .") #'loophole-resume)
