@@ -2843,18 +2843,21 @@ Define map variable and state variable, and register them.
 
 Define map variable by MAP, SPEC and DOCSTRING.
 If SPEC is evaluated as keymap, use it as init value of
-MAP.  If SPEC evaluated as alist whose all cars are array,
-use keymap in which cars are defined as cdrs.
-Otherwise, use sparse keymap.
+MAP.  If SPEC is evaluated as list, this macro expect it as
+alist of which element looks like (KEY . ENTRY).
+If SPEC is evaluated as nil, make sparse keymap.
+Otherwise, emit error signal.
 DOCSTRING is passed to `defvar'.
 
 Define state variable by STATE, STATE-INIT-VALUE and
 STATE-DOCSTRING.
-If STATE is nil, define variable named MAP-state.
+If STATE is literal nil or omitted, define variable named as
+MAP-state.
 STATE-INIT-VALUE is used as it is.
 If STATE-DOCSTRING is nil, use fixed phrase.
-If GLOBAL is nil, `make-variable-buffer-local' is called for
-state-variable.
+If GLOBAL is literal nil or omitted,
+`make-variable-buffer-local' for state-variable is added to
+expanded forms.
 
 TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
 `loophole-register'."
@@ -2862,20 +2865,18 @@ TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
   (unless state
     (setq state (intern (concat (symbol-name map) "-state"))))
   `(progn
-     (defvar ,map (cond ((keymapp ,spec) ,spec)
-                        ((and (sequencep ,spec)
-                              (not (seq-some
-                                    (lambda (key-binding)
-                                      (not (arrayp (car key-binding))))
-                                    ,spec)))
-                         (let ((m (make-sparse-keymap)))
-                           (mapc (lambda (key-binding)
-                                   (define-key m
-                                     (car key-binding)
-                                     (cdr key-binding)))
-                                 ,spec)
-                           m))
-                        (t (make-sparse-keymap)))
+     (defvar ,map (let ((s ,spec))
+                    (cond ((keymapp s) s)
+                          ((listp s)
+                           (let ((m (make-sparse-keymap)))
+                             (mapc (lambda (key-binding)
+                                     (define-key m
+                                       (car key-binding)
+                                       (cdr key-binding)))
+                                   s)
+                             m))
+                          ((null s) (make-sparse-keymap))
+                          (t (error "Invalid keymap %" s))))
        ,docstring)
      (defvar ,state ,state-init-value
        (if ,state-docstring
