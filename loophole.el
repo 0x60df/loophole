@@ -150,8 +150,8 @@ or enabled earliest used one."
   :group 'loophole
   :type 'number)
 
-(defcustom loophole-editing-timer-delay (* 60 5)
-  "Delay time in seconds for auto stopping editing timer."
+(defcustom loophole-editing-timer-default-time (* 60 5)
+  "Default time in seconds for auto stopping editing timer."
   :group 'loophole
   :type 'number)
 
@@ -527,6 +527,7 @@ key, and compare them by `equal'."
   `(loophole--map-alist
     loophole--editing
     loophole--timer-alist
+    loophole--editing-timer
     ,@(seq-filter #'local-variable-if-set-p (loophole-state-variable-list))))
 
 (defun loophole-read-key (prompt)
@@ -715,78 +716,6 @@ All buffer local alists and timers are updated."
           (if (listp loophole--buffer-list)
               loophole--buffer-list
             (buffer-list)))))
-
-(defun loophole-start-editing-timer ()
-  "Setup or update timer for editing state."
-  (if (timerp loophole--editing-timer)
-      (progn
-        (timer-set-time loophole--editing-timer
-                        (timer-relative-time nil loophole-editing-timer-delay))
-        (if (or (timer--triggered loophole--editing-timer)
-                (not (memq loophole--editing-timer timer-list)))
-            (timer-activate loophole--editing-timer)))
-    (setq loophole--editing-timer
-          (run-with-timer loophole-editing-timer-delay
-                          nil
-                          (lambda (buffer)
-                            (if (buffer-live-p buffer)
-                                (with-current-buffer buffer
-                                  (loophole-stop-editing)
-                                  (force-mode-line-update))))
-                          (current-buffer)))))
-
-(defun loophole-stop-editing-timer ()
-  "Cancel timer for editing state."
-  (if (and (timerp loophole--editing-timer)
-           (not (timer--triggered loophole--editing-timer))
-           (memq loophole--editing-timer timer-list))
-      (cancel-timer loophole--editing-timer)))
-
-(defun loophole--stop-all-alive-editing-timers ()
-  "Cancel all editing timers with saving active timers.
-If any timers has already been saved, which are named as
-ghost timer, keep existing ghost timers.
-Ghost timers can be revived by
-`loophole--revive-or-start-all-editing-timers'.
-This function is intended to be added to
-`loophole-mode-hook' for disabling `loophole-mode'."
-  (let ((ghost-timers-exist
-         (get 'loophole--editing-timer :loophole-ghost-editing-timer-list)))
-    (unless ghost-timers-exist
-      (put 'loophole--editing-timer :loophole-ghost-editing-timer-list nil))
-    (mapc (lambda (buffer)
-            (with-current-buffer buffer
-              (when (and (local-variable-p 'loophole--editing-timer)
-                         (timerp loophole--editing-timer))
-                (if (and (not (timer--triggered loophole--editing-timer))
-                         (memq loophole--editing-timer timer-list)
-                         (not ghost-timers-exist))
-                    (push loophole--editing-timer
-                          (get 'loophole--editing-timer
-                               :loophole-ghost-editing-timer-list)))
-                (loophole-stop-editing-timer))))
-          (buffer-list))))
-
-(defun loophole--revive-or-start-all-editing-timers ()
-  "Revive or start all editing timers.
-Ghost timers saved by
-`loophole--stop-all-alive-editing-timers' will be revived,
-in other words, activated without changing trigering time.
-Others are newly started.
-This function is intended to be added to
-`loophole-mode-hook' for enabling `loophole-mode'."
-  (let ((ghost-timer-list
-         (get 'loophole--editing-timer :loophole-ghost-editing-timer-list)))
-    (dolist (ghost-timer ghost-timer-list)
-      (timer-activate ghost-timer))
-    (mapc (lambda (buffer)
-            (with-current-buffer buffer
-              (if (and (local-variable-p 'loophole--editing)
-                       loophole--editing
-                       (not (memq loophole--editing-timer ghost-timer-list)))
-                  (loophole-start-editing-timer))))
-          loophole--buffer-list))
-  (put 'loophole--editing-timer :loophole-ghost-editing-timer-list nil))
 
 (defun loophole--follow-adding-local-variable (_symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
@@ -1510,6 +1439,43 @@ is non-nil."
              (not (timer--triggered timer))
              (memq timer timer-list))
         (cancel-timer timer))))
+
+(defun loophole-start-editing-timer (&optional time)
+  "Setup or update timer for editing state.
+If optional argument TIME is integer describing time in
+second, use it for timer; otherwise use
+`loophole-editing-timer-default-time'.
+
+When called interactively, TIME is asked if prefix argument
+is non-nil."
+  (interactive
+   (list (if current-prefix-arg
+             (read-number "Time for stopping editing in sec: "
+                          loophole-editing-timer-default-time))))
+  (unless (integerp time) (setq time loophole-editing-timer-default-time))
+  (if (timerp loophole--editing-timer)
+      (progn
+        (timer-set-time loophole--editing-timer (timer-relative-time nil time))
+        (if (or (timer--triggered loophole--editing-timer)
+                (not (memq loophole--editing-timer timer-list)))
+            (timer-activate loophole--editing-timer)))
+    (setq loophole--editing-timer
+          (run-with-timer time nil (lambda (buffer)
+                                     (if (buffer-live-p buffer)
+                                         (with-current-buffer buffer
+                                           (loophole-stop-editing)
+                                           (force-mode-line-update))))
+                          (current-buffer))))
+  (message "Editing timer is started"))
+
+(defun loophole-stop-editing-timer ()
+  "Cancel timer for editing state."
+  (interactive)
+  (when (and (timerp loophole--editing-timer)
+             (not (timer--triggered loophole--editing-timer))
+             (memq loophole--editing-timer timer-list))
+    (cancel-timer loophole--editing-timer)
+    (message "Editing timer is stopped")))
 
 (defun loophole-describe (map-variable)
   "Display all key bindings in MAP-VARIABLE."
@@ -2407,6 +2373,8 @@ Followings are the key bindings for Loophole commands.
             (define-key map (kbd "C-c ] D") #'loophole-disable-all)
             (define-key map (kbd "C-c ] t [") #'loophole-start-timer)
             (define-key map (kbd "C-c ] t ]") #'loophole-stop-timer)
+            (define-key map (kbd "C-c ] t e [") #'loophole-start-editing-timer)
+            (define-key map (kbd "C-c ] t e ]") #'loophole-stop-editing-timer)
             (define-key map (kbd "C-c ] \\") #'loophole-disable-latest)
             (define-key map (kbd "C-c ] (") #'loophole-start-kmacro)
             (define-key map (kbd "C-c ] )") #'loophole-end-kmacro)
@@ -2602,84 +2570,25 @@ Remove hooks and advice added by `loophole-turn-on-auto-timer'."
                         (get map-variable :loophole-state-variable))
                        (loophole-start-timer map-variable)))))
 
-(defun loophole-initialize-editing-timer ()
-  "Initialize manipulating editing timers.
-This function setup a hook and advice which are
-mandatory for `loophole-turn-on-editing-timer'.
-Then start timers for all editing map if `loophole-mode' is
-enabled."
-  (advice-add 'loophole-local-variable-if-set-list
-              :filter-return
-              (lambda (return)
-                "Add `loophole--editing-timer'
-  to return value."
-                (cons 'loophole--editing-timer return)))
-  (add-hook 'loophole-mode-hook
-            (lambda ()
-              (if loophole-mode
-                  (loophole--revive-or-start-all-editing-timers)
-                (loophole--stop-all-alive-editing-timers))))
-  (if loophole-mode
-      (mapc (lambda (buffer)
-              (with-current-buffer buffer
-                (if (and (local-variable-p 'loophole--editing)
-                         loophole--editing)
-                    (loophole-start-editing-timer))))
-            loophole--buffer-list)))
+(defun loophole-turn-on-auto-editing-timer ()
+  "Turn on auto eiditing timer as user customization.
+Add hooks to take care of editing timers .
 
-(defun loophole-finalize-editing-timer ()
-  "Finalize manipulating editing timers.
-Remove a hook and advice added by
-`loophole-initialize-editing-timer'.  Then cancel all active
-editing timers if `loophole-mode' is enabled.
-These are mandatory procedure for
-`loophole-turn-off-editing-timer'."
-  (advice-remove 'loophole-local-variable-if-set-list
-                 (lambda (return)
-                   "Add `loophole--editing-timer'
-  to return value."
-                   (cons 'loophole--editing-timer return)))
-  (remove-hook 'loophole-mode-hook
-               (lambda ()
-                 (if loophole-mode
-                     (loophole--revive-or-start-all-editing-timers)
-                   (loophole--stop-all-alive-editing-timers))))
-  (if loophole-mode
-      (mapc (lambda (buffer)
-              (with-current-buffer buffer
-                (if (and (local-variable-p 'loophole--editing-timer)
-                         (timerp loophole--editing-timer))
-                    (loophole-stop-editing-timer))))
-            loophole--buffer-list)))
-
-(defun loophole-turn-on-editing-timer ()
-  "Turn on timer for stopping editing session as user customization.
-First, `loophole-initialize-editing-timer' and second, add
-hooks to take care of timers .
-
-All of hooks and advice added on this function are
-optional.
-`loophole-initialize-editing-timer' also setup hooks and
-advice but these are mandatory for managing editing timers.
-
+All of hooks are optional.
 Instead of using this function, user can pick some hooks for
-customization.
-In that case, `loophole-initialize-editing-timer' must be
-called together."
-  (loophole-initialize-editing-timer)
+optimized customization."
   (add-hook 'loophole-start-editing-functions
-            (lambda (_) (if loophole-mode (loophole-start-editing-timer))))
+            (lambda (_) (loophole-start-editing-timer)))
   (add-hook 'loophole-stop-editing-functions
-            (lambda (_) (if loophole-mode (loophole-stop-editing-timer)))))
+            (lambda (_) (loophole-stop-editing-timer))))
 
-(defun loophole-turn-off-editing-timer ()
-  "Turn off timer for stoping editing session as user customization.
-Remove hooks and advice added by `loophole-turn-on-editing-timer'."
-  (loophole-finalize-editing-timer)
+(defun loophole-turn-off-auto-editing-timer ()
+  "Turn off auto editing timer as user customization.
+Remove hooks added by `loophole-turn-on-auto-editing-timer'."
   (remove-hook 'loophole-start-editing-functions
-               (lambda (_) (if loophole-mode (loophole-start-editing-timer))))
+               (lambda (_) (loophole-start-editing-timer)))
   (remove-hook 'loophole-stop-editing-functions
-               (lambda (_) (if loophole-mode (loophole-stop-editing-timer)))))
+               (lambda (_) (loophole-stop-editing-timer))))
 
 (defcustom loophole-use-auto-prioritize t
   "Flag if prioritize loophole map automatically.
@@ -2757,23 +2666,24 @@ For more detailed customization, see documentation string of
              (loophole-turn-on-auto-timer)
            (loophole-turn-off-auto-timer))))
 
-(defcustom loophole-use-editing-timer nil
-  "Flag if use timer for stopping editing session.
+(defcustom loophole-use-auto-editing-timer nil
+  "Flag if start timer for stopping editing session automatically.
 
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
-`loophole-turn-on-editing-timer' or `loophole-turn-off-editing-timer'
-manually.  They setup some hooks and advice.
+`loophole-turn-on-auto-editing-timer' or
+`loophole-turn-off-auto-editing-timer' manually.
+They setup some hooks.
 
 For more detailed customization, see documentation string of
-`loophole-turn-on-editing-timer'."
+`loophole-turn-on-auto-editing-timer'."
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
          (set-default symbol value)
          (if value
-             (loophole-turn-on-editing-timer)
-           (loophole-turn-off-editing-timer))))
+             (loophole-turn-on-auto-editing-timer)
+           (loophole-turn-off-auto-editing-timer))))
 
 ;;; A macro for defining keymap
 
