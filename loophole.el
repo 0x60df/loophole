@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.6.1
+;; Version: 0.6.2
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -1440,6 +1440,37 @@ is non-nil."
              (memq timer timer-list))
         (cancel-timer timer))))
 
+(defun loophole-extend-timer (map-variable time)
+  "Extend time of timer for MAP-VARIABLE by time in second.
+If TIME is negative, shorten timer."
+  (interactive
+   (let* ((arg-map-variable
+           (loophole-read-map-variable
+            "Extend time of timer for keymap: "
+            (lambda (map-variable)
+              (let ((timer (cdr (assq map-variable loophole--timer-alist))))
+                (and timer
+                     (not (timer--triggered timer))
+                     (memq timer timer-list))))))
+          (arg-time
+           (read-number
+            (format "Time to extend timer for %s in sec: "
+                    arg-map-variable)
+            loophole-timer-default-time)))
+     (list arg-map-variable arg-time)))
+  (unless (integerp time) (error "Specified time is invalid: %s" time))
+  (let ((timer (cdr (assq map-variable
+                          (if (loophole-global-p map-variable)
+                              (default-value 'loophole--timer-alist)
+                            loophole--timer-alist)))))
+    (if (timerp timer)
+        (progn
+          (timer-set-time timer (timer-relative-time (timer--time timer) time))
+          (if (or (timer--triggered timer)
+                  (not (memq timer timer-list)))
+              (timer-activate timer)))
+      (user-error "Time for keymap %s does not exist" map-variable))))
+
 (defun loophole-start-editing-timer (&optional time)
   "Setup or update timer for editing state.
 If optional argument TIME is integer describing time in
@@ -1476,6 +1507,23 @@ is non-nil."
              (memq loophole--editing-timer timer-list))
     (cancel-timer loophole--editing-timer)
     (message "Editing timer is stopped")))
+
+(defun loophole-extend-editing-timer (time)
+  "Extend time of editing timer by TIME in second.
+If TIME is negative, shorten timer."
+  (interactive
+   (list (read-number "Time to extend editing timer in sec: "
+                      loophole-editing-timer-default-time)))
+  (unless (integerp time) (error "Specified time is invalid: %s" time))
+  (if (timerp loophole--editing-timer)
+      (progn
+        (timer-set-time loophole--editing-timer
+                        (timer-relative-time
+                         (timer--time loophole--editing-timer) time))
+        (if (or (timer--triggered loophole--editing-timer)
+                (not (memq loophole--editing-timer timer-list)))
+            (timer-activate loophole--editing-timer)))
+    (user-error "Editing time does not exist")))
 
 (defun loophole-describe (map-variable)
   "Display all key bindings in MAP-VARIABLE."
@@ -2373,8 +2421,10 @@ Followings are the key bindings for Loophole commands.
             (define-key map (kbd "C-c ] D") #'loophole-disable-all)
             (define-key map (kbd "C-c ] t [") #'loophole-start-timer)
             (define-key map (kbd "C-c ] t ]") #'loophole-stop-timer)
+            (define-key map (kbd "C-c ] t +") #'loophole-extend-timer)
             (define-key map (kbd "C-c ] t e [") #'loophole-start-editing-timer)
             (define-key map (kbd "C-c ] t e ]") #'loophole-stop-editing-timer)
+            (define-key map (kbd "C-c ] t e +") #'loophole-extend-editing-timer)
             (define-key map (kbd "C-c ] \\") #'loophole-disable-latest)
             (define-key map (kbd "C-c ] (") #'loophole-start-kmacro)
             (define-key map (kbd "C-c ] )") #'loophole-end-kmacro)
