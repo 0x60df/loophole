@@ -135,6 +135,9 @@ Details of customization is described in the customization section below.
 | `C-u`\*5, `C-5`     | kmacro  | recall record     |
 | `C-u`\*6, `C-6`     | object  | eval minibuffer   |
 
+If prefix argument is negative, `loophole-set-key` ask user obtaining method by
+using `completing-read`.
+
 ##### command by read command
 
 Default method.

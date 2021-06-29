@@ -1617,11 +1617,13 @@ defined as follows.
 The rank of no prefix argument is 0.
 The rank of prefix argument specified by \\[universal-argument] and C-1 is 1,
 The rank of \\[universal-argument] \\[universal-argument] and C-2 is 2,
-Likewise, rank n means \\[universal-argument] * n or C-[n]."
+Likewise, rank n means \\[universal-argument] * n or C-[n].
+For the `negative-argument', the rank is
+`prefix-numeric-value' of prefix argument."
   (cond ((null arg) 0)
         ((listp arg) (truncate (log (prefix-numeric-value arg) 4)))
         ((natnump arg) arg)
-        (t 0)))
+        (t (prefix-numeric-value arg))))
 
 ;;; Obtaining methods
 
@@ -1955,13 +1957,21 @@ the first element of `loophole-bind-command-order' is
 employed as obtaining method.
 \\[universal-argument] and C-1 invokes the second element,
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
-Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
+If `negative-argument' is used, `completing-read' obtaining
+method."
   (interactive
    (let ((n (loophole-prefix-rank-value current-prefix-arg)))
      (if (< (1- (length loophole-bind-command-order)) n)
          (user-error "Undefined prefix argument"))
      (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-command (funcall (elt loophole-bind-command-order n) arg-key)))
+            (arg-command
+             (funcall (if (< n 0)
+                          (intern
+                           (completing-read "Obtaining method: "
+                                            loophole-bind-command-order nil t))
+                        (elt loophole-bind-command-order n))
+                      arg-key)))
        (list arg-key arg-command))))
   (if (commandp command)
       (loophole-bind-entry key command keymap)
@@ -1985,13 +1995,21 @@ the first element of `loophole-bind-kmacro-order' is
 employed as obtaining method.
 \\[universal-argument] and C-1 invokes the second element,
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
-Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
+If `negative-argument' is used, `completing-read' obtaining
+method."
   (interactive
    (let ((n (loophole-prefix-rank-value current-prefix-arg)))
      (if (< (1- (length loophole-bind-kmacro-order)) n)
          (user-error "Undefined prefix argument"))
      (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-kmacro (funcall (elt loophole-bind-kmacro-order n) arg-key)))
+            (arg-kmacro
+             (funcall (if (< n 0)
+                          (intern
+                           (completing-read "Obtaining method: "
+                                            loophole-bind-kmacro-order nil t))
+                        (elt loophole-bind-kmacro-order n))
+                      arg-key)))
        (list arg-key arg-kmacro))))
   (if (kmacro-p kmacro)
       (loophole-bind-entry key kmacro keymap)
@@ -2024,13 +2042,21 @@ the first element of `loophole-bind-array-order' is
 employed as obtaining method.
 \\[universal-argument] and C-1 invokes the second element,
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
-Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
+If `negative-argument' is used, `completing-read' obtaining
+method."
   (interactive
    (let ((n (loophole-prefix-rank-value current-prefix-arg)))
      (if (< (1- (length loophole-bind-array-order)) n)
          (user-error "Undefined prefix argument"))
      (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-array (funcall (elt loophole-bind-array-order n) arg-key)))
+            (arg-array
+             (funcall (if (< n 0)
+                          (intern
+                           (completing-read "Obtaining method: "
+                                            loophole-bind-array-order nil t))
+                        (elt loophole-bind-array-order n))
+                      arg-key)))
        (list arg-key arg-array))))
   (if (or (vectorp array) (stringp array))
       (loophole-bind-entry key array keymap)
@@ -2057,13 +2083,21 @@ the first element of `loophole-bind-keymap-order' is
 employed as obtaining method.
 \\[universal-argument] and C-1 invokes the second element,
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
-Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
+If `negative-argument' is used, `completing-read' obtaining
+method."
   (interactive
    (let ((n (loophole-prefix-rank-value current-prefix-arg)))
      (if (< (1- (length loophole-bind-keymap-order)) n)
          (user-error "Undefined prefix argument"))
      (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-keymap (funcall (elt loophole-bind-keymap-order n) arg-key)))
+            (arg-keymap
+             (funcall (if (< n 0)
+                          (intern
+                           (completing-read "Obtaining method: "
+                                            loophole-bind-keymap-order nil t))
+                        (elt loophole-bind-keymap-order n))
+                      arg-key)))
        (list arg-key arg-keymap))))
   (if (keymapp keymap)
       (loophole-bind-entry key keymap another-keymap)
@@ -2089,13 +2123,21 @@ the first element of `loophole-bind-symbol-order' is
 employed as obtaining method.
 \\[universal-argument] and C-1 invokes the second element,
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
-Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
+If `negative-argument' is used, `completing-read' obtaining
+method."
   (interactive
    (let ((n (loophole-prefix-rank-value current-prefix-arg)))
      (if (< (1- (length loophole-bind-symbol-order)) n)
          (user-error "Undefined prefix argument"))
      (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-symbol (funcall (elt loophole-bind-symbol-order n) arg-key)))
+            (arg-symbol
+             (funcall (if (< n 0)
+                          (intern
+                           (completing-read "Obtaining method: "
+                                            loophole-bind-symbol-order nil t))
+                        (elt loophole-bind-symbol-order n))
+                      arg-key)))
        (list arg-key arg-symbol))))
   (letrec ((inspect-function-cell
             (lambda (symbol)
@@ -2130,13 +2172,21 @@ the first element of `loophole-set-key-order' is
 employed as obtaining method.
 \\[universal-argument] and C-1 invokes the second element,
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
-Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
+If `negative-argument' is used, `completing-read' obtaining
+method."
   (interactive
    (let ((n (loophole-prefix-rank-value current-prefix-arg)))
      (if (< (1- (length loophole-set-key-order)) n)
          (user-error "Undefined prefix argument"))
      (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-entry (funcall (elt loophole-set-key-order n) arg-key)))
+            (arg-entry
+             (funcall (if (< n 0)
+                          (intern
+                           (completing-read "Obtaining method: "
+                                            loophole-set-key-order nil t))
+                        (elt loophole-set-key-order n))
+                      arg-key)))
        (list arg-key arg-entry))))
   (loophole-bind-entry key entry))
 
