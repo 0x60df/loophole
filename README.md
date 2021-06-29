@@ -127,7 +127,7 @@ Details of customization is described in the customization section below.
 
 | Prefix arguments    | Entry   | Specifying method |
 | ------------------- | ------- | ----------------- |
-| No prefix arguments | command | symbol            |
+| No prefix arguments | command | read command      |
 | `C-u`, `C-1`        | kmacro  | recursive edit    |
 | `C-u` `C-u`, `C-2`  | command | key sequence      |
 | `C-u`\*3, `C-3`     | kmacro  | read key          |
@@ -135,7 +135,7 @@ Details of customization is described in the customization section below.
 | `C-u`\*5, `C-5`     | kmacro  | recall record     |
 | `C-u`\*6, `C-6`     | object  | eval minibuffer   |
 
-##### command by symbol
+##### command by read command
 
 Default method.
 `read-command` and use read symbol as command.
@@ -256,21 +256,21 @@ Note that `setq` for these variables does not work.
 ### Prefix arguments table of key binding commands
 
 As mentioned above, `loophole-set-key` refers prefix arguments table
-to determine how to specify the entry (and key) of key bindings.
+to determine how to specify the entry of key bindings.
 The table is stored in `loophole-set-key-order`.
-Each element of `loophole-set-key-order` is the function which returns
-the list looks like `(KEY ENTRY)`
+Each element of `loophole-set-key-order` is a function which takes one argument 
+the key to be bound and returns any Lisp object suitable for key binding entry.
 
 Default value of `loophole-set-key-order` is
 
 ```emacs-lisp
-(loophole-obtain-key-and-command-by-read-command
- loophole-obtain-key-and-kmacro-by-recursive-edit
- loophole-obtain-key-and-command-by-key-sequence
- loophole-obtain-key-and-kmacro-by-read-key
- loophole-obtain-key-and-command-by-lambda-form
- loophole-obtain-key-and-kmacro-by-recall-record
- loophole-obtain-key-and-object)
+(loophole-obtain-command-by-read-command
+ loophole-obtain-kmacro-by-recursive-edit
+ loophole-obtain-command-by-key-sequence
+ loophole-obtain-kmacro-by-read-key
+ loophole-obtain-command-by-lambda-form
+ loophole-obtain-kmacro-by-recall-record
+ loophole-obtain-object)
 ```
 
 If you prefer binding command by key sequence and keyboard macro by read key,
@@ -279,10 +279,10 @@ and you do not need some other obtaining method, use the following lines.
 
 ``` emacs-lisp
 (setq loophole-set-key-order
-      '(loophole-obtain-key-and-command-by-key-sequence
-        loophole-obtain-key-and-kmacro-by-read-key
-        loophole-obtain-key-and-command-by-read-command
-        loophole-obtain-key-and-kmacro-by-recall-record))
+      '(loophole-obtain-command-by-key-sequence
+        loophole-obtain-kmacro-by-read-key
+        loophole-obtain-command-by-read-command
+        loophole-obtain-kmacro-by-recall-record))
 ```
 
 Some other binding commands (`loophole-bind-command`, `loophole-bind-kmacro`,
@@ -293,16 +293,18 @@ the prefix arguments table
 `loophole-bind-symbol-order`).
 It also can be customized by the same way.
 
-You can also define your specifying method for entry (and key).
+You can also define your specifying method for entry.
 The requirements for specifying method is that
-it returns a list looks like `(KEY ENTRY)`.
+it takes one argument the key to be bound and returns
+any Lisp object suitable for key binding entry.
 Entire customization codes may look like below.
 
 ``` emacs-lisp
-(defun your-specifying-method ()
-  (let (key entry)
-    ; Some codes for specifying key and entry
-    (list key entry)))
+(defun your-specifying-method (key)
+  (let (entry)
+    ; Some codes for specifying entry
+    ; KEY may help to build prompt
+    entry))
 (setq loophole-set-key-order
       '(your-specifying-method
         loophole-obtain-key-and-command-by-read-command
@@ -313,11 +315,6 @@ Entire customization codes may look like below.
         loophole-obtain-key-and-kmacro-by-recall-record
         loophole-obtain-key-and-object))
 ```
-
-`loophole-bind-` commands accept more complex specifying method,
-whose return value can contain one more additional element.
-They are assigned to the arguments of these commands.
-See documentation string of these functions for more details.
 
 ### Loophole mode map
 

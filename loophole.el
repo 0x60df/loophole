@@ -99,9 +99,9 @@ Default value holds timers for global Loophole map.")
     (define-key map (kbd "C-c [") #'loophole-end-kmacro)
     (define-key map (kbd "C-c \\") #'loophole-abort-kmacro)
     map)
-  "Keymap for `loophole-obtain-key-and-kmacro-by-recursive-edit'.
+  "Keymap for `loophole-obtain-kmacro-by-recursive-edit'.
 This map is enabled temporarily during
-`loophole-obtain-key-and-kmacro-by-recursive-edit',
+`loophole-obtain-kmacro-by-recursive-edit',
 and activity of this map is controled by
 `loophole-use-kmacro-by-recursive-edit-map'.")
 
@@ -161,8 +161,7 @@ or enabled earliest used one."
           "  (interactive \"P\")\n"
           "  (#))")
   "Format for writing lambda form buffer.
-This is used by
-`loophole-obtain-key-and-command-by-lambda-form'.
+This is used by `loophole-obtain-command-by-lambda-form'.
 Character sequence (#) indicates where cursor will be
 placed, and it will be removed when the format is inserted
 in the buffer."
@@ -173,8 +172,7 @@ in the buffer."
 (defcustom loophole-kmacro-by-read-key-finish-key (where-is-internal
                                                    'keyboard-quit nil t)
   "Key sequence to finish definition of keyboard macro.
-This is used by
-`loophole-obtain-key-and-kmacro-by-read-key'."
+This is used by `loophole-obtain-kmacro-by-read-key'."
   :group 'loophole
   :type 'key-sequence)
 
@@ -192,101 +190,94 @@ This is used by
 (defcustom loophole-array-by-read-key-finish-key (where-is-internal
                                                   'keyboard-quit nil t)
   "Key sequence to finish inputting key sequence.
-This is used by
-`loophole-obtain-key-and-array-by-read-key'."
+This is used by `loophole-obtain-array-by-read-key'."
   :group 'loophole
   :type 'key-sequence)
 
 (defcustom loophole-bind-command-order
-  '(loophole-obtain-key-and-command-by-read-command
-    loophole-obtain-key-and-command-by-key-sequence
-    loophole-obtain-key-and-command-by-lambda-form
-    loophole-obtain-key-and-object)
-  "The priority list of methods to obtain key and command for binding.
+  '(loophole-obtain-command-by-read-command
+    loophole-obtain-command-by-key-sequence
+    loophole-obtain-command-by-lambda-form
+    loophole-obtain-object)
+  "The priority list of methods to obtain command for binding.
 `loophole-bind-command' refers this variable to select
 obtaining method.  First element gets first priority.
-
-Each element should return a list looks like (key command).
-Optionally, return value can contain keymap to bind; in this
-case, the list looks like (key command keymap)."
+Each element should be a function which takes one argument
+the key to be bound and returns a command for binding entry."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
 
 (defcustom loophole-bind-kmacro-order
-  '(loophole-obtain-key-and-kmacro-by-recursive-edit
-    loophole-obtain-key-and-kmacro-by-read-key
-    loophole-obtain-key-and-kmacro-by-recall-record
-    loophole-obtain-key-and-object)
-  "The priority list of methods to obtain key and kmacro for binding.
+  '(loophole-obtain-kmacro-by-recursive-edit
+    loophole-obtain-kmacro-by-read-key
+    loophole-obtain-kmacro-by-recall-record
+    loophole-obtain-object)
+  "The priority list of methods to obtain kmacro for binding.
 `loophole-bind-kmacro' refers this variable to select
 obtaining method.  First element gets first priority.
-
-Each element should return a list looks like (key kmacro).
-Optionally, return value can contain keymap to bind; in this
-case, the list looks like (key kmacro keymap)."
+Each element should be a function which takes one argument
+the key to be bound and returns a kmacro object for binding
+entry."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
 
 (defcustom loophole-bind-array-order
-  '(loophole-obtain-key-and-array-by-read-key
-    loophole-obtain-key-and-array-by-read-string
-    loophole-obtain-key-and-object)
-  "The priority list of methods to obtain key and array for binding.
+  '(loophole-obtain-array-by-read-key
+    loophole-obtain-array-by-read-string
+    loophole-obtain-object)
+  "The priority list of methods to obtain array for binding.
 `loophole-bind-array' refers this variable to select
 obtaining method.  First element gets first priority.
-
-Each element should return a list looks like (key array).
-Optionally, return value can contain keymap to bind; in this
-case, the list looks like (key array keymap)."
+Each element should be a function which takes one argument
+the key to be bound and returns a array for binding entry."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
 
 (defcustom loophole-bind-keymap-order
-  '(loophole-obtain-key-and-keymap-by-read-keymap-variable
-    loophole-obtain-key-and-keymap-by-read-keymap-function
-    loophole-obtain-key-and-object)
-  "The priority list of methods to obtain key and keymap for binding.
+  '(loophole-obtain-keymap-by-read-keymap-variable
+    loophole-obtain-keymap-by-read-keymap-function
+    loophole-obtain-object)
+  "The priority list of methods to obtain keymap for binding.
 `loophole-bind-keymap' refers this variable to select
 obtaining method.  First element gets first priority.
-
-Each element should return a list looks like (key keymap).
-Optionally, return value can contain keymap to bind; in this
-case, the list looks like (key keymap keymap)."
+Each element should be a function which takes one argument
+the key to be bound and returns a keymap object for binding
+entry."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
 
 (defcustom loophole-bind-symbol-order
-  '(loophole-obtain-key-and-symbol-by-read-keymap-function
-    loophole-obtain-key-and-symbol-by-read-command
-    loophole-obtain-key-and-symbol-by-read-array-function
-    loophole-obtain-key-and-object)
-  "The priority list of methods to obtain key and symbol for binding.
+  '(loophole-obtain-symbol-by-read-keymap-function
+    loophole-obtain-symbol-by-read-command
+    loophole-obtain-symbol-by-read-array-function
+    loophole-obtain-object)
+  "The priority list of methods to obtain symbol for binding.
 `loophole-bind-symbol' refers this variable to select
 obtaining method.  First element gets first priority.
-
-Each element should return a list looks like (key symbol).
-Optionally, return value can contain keymap to bind; in this
-case, the list looks like (key symbol keymap)."
+Each element should be a function which takes one argument
+the key to be bound and returns a symbol for binding entry."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
 
 (defcustom loophole-set-key-order
-  '(loophole-obtain-key-and-command-by-read-command
-    loophole-obtain-key-and-kmacro-by-recursive-edit
-    loophole-obtain-key-and-command-by-key-sequence
-    loophole-obtain-key-and-kmacro-by-read-key
-    loophole-obtain-key-and-command-by-lambda-form
-    loophole-obtain-key-and-kmacro-by-recall-record
-    loophole-obtain-key-and-object)
-  "The priority list of methods to obtain key and object for binding.
+  '(loophole-obtain-command-by-read-command
+    loophole-obtain-kmacro-by-recursive-edit
+    loophole-obtain-command-by-key-sequence
+    loophole-obtain-kmacro-by-read-key
+    loophole-obtain-command-by-lambda-form
+    loophole-obtain-kmacro-by-recall-record
+    loophole-obtain-object)
+  "The priority list of methods to obtain object for binding.
 `loophole-set-key' refers this to select obtaining method.
 First element gets first priority.
-Each element should return a list looks like (key object)."
+Each element should be a function which takes one argument
+the key to be bound and returns any Lisp object for binding
+entry"
   :risky t
   :group 'loophole
   :type '(repeat symbol))
@@ -1634,78 +1625,74 @@ Likewise, rank n means \\[universal-argument] * n or C-[n]."
 
 ;;; Obtaining methods
 
-(defun loophole-obtain-key-and-object ()
-  "Return set of key and any Lisp object.
-Object is obtained as return value of `eval-minibuffer'."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (list key (eval-minibuffer (format "Set key %s to entry: "
-                                       (key-description key))))))
+(defun loophole-obtain-object (key)
+  "Return any Lisp object.
+Object is obtained as return value of `eval-minibuffer'.
+Read minibuffer with prompt in which KEY is embedded."
+  (eval-minibuffer (format "Set key %s to entry: " (key-description key))))
 
-(defun loophole-obtain-key-and-command-by-read-command ()
-  "Return set of key and command obtained by reading command symbol."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (list key (read-command (format "Set key %s to command: "
-                                    (key-description key))))))
+(defun loophole-obtain-command-by-read-command (key)
+  "Return command obtained by reading command symbol.
+Read command with prompt in which KEY is embedded."
+  (read-command (format "Set key %s to command: " (key-description key))))
 
-(defun loophole-obtain-key-and-command-by-key-sequence ()
-  "Return set of key and command obtained by key sequence lookup."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (list key (let ((binding
-                     (key-binding (loophole-read-key
-                                   (format
-                                    "Set key %s to command bound for: "
-                                    (key-description key))))))
-                (message "%s" binding)
-                binding))))
+(defun loophole-obtain-command-by-key-sequence (key)
+  "Return command obtained by key sequence lookup with prompt .
+Read key sequence with prompt in which KEY is embedded."
+  (let ((binding (key-binding (loophole-read-key
+                               (format
+                                "Set key %s to command bound for: "
+                                (key-description key))))))
+    (message "%s" binding)
+    binding))
 
-(defun loophole-obtain-key-and-command-by-lambda-form ()
-  "Return set of key and command obtained by writing lambda form.
+(defun loophole-obtain-command-by-lambda-form (_key)
+  "Return command obtained by writing lambda form.
 This function provides work space for writing lambda form as
 a temporary buffer.
 Actually, any Lisp forms can be written in a temporary
 buffer, and if return value of evaluating first form is
 valid lambda command, this function return it."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (let ((buffer (current-buffer))
-          (window (selected-window))
-          (frame (selected-frame))
-          (configuration-list (mapcar #'current-window-configuration
+  (let ((buffer (current-buffer))
+        (window (selected-window))
+        (frame (selected-frame))
+        (configuration-list (mapcar #'current-window-configuration
                                       (frame-list))))
-      (unwind-protect
-          (let ((workspace (get-buffer-create "*Loophole*")))
-            (switch-to-buffer-other-window workspace t)
-            (erase-buffer)
-            (insert ";; For obtaining lambda form.\n\n")
-            (insert loophole-command-by-lambda-form-format)
-            (let ((found (search-backward "(#)" nil t)))
-              (if found (delete-region (point) (+ (point) 3))))
-            (loophole-write-lisp-mode)
-            (with-current-buffer workspace (goto-char 1))
-            (let ((lambda-form (eval (read workspace))))
-              (if (and (commandp lambda-form)
-                       (not (symbolp lambda-form))
-                       (not (vectorp lambda-form))
-                       (not (stringp lambda-form)))
-                  (list key lambda-form)
-                (user-error
-                 "Obtained Lisp object is not valid lambda command: %s"
-                 lambda-form))))
-        (let ((configuration
-               (seq-find (lambda (c)
-                           (eq (selected-frame) (window-configuration-frame c)))
-                         configuration-list)))
-          (if configuration
-              (set-window-configuration configuration)
-            (delete-frame)))
-        (if (frame-live-p frame) (select-frame-set-input-focus frame t))
-        (if (window-live-p window) (select-window window t))
-        (if (buffer-live-p buffer) (switch-to-buffer buffer t t))))))
+    (unwind-protect
+        (let ((workspace (get-buffer-create "*Loophole*")))
+          (switch-to-buffer-other-window workspace t)
+          (erase-buffer)
+          (insert ";; For obtaining lambda form.\n\n")
+          (insert loophole-command-by-lambda-form-format)
+          (let ((found (search-backward "(#)" nil t)))
+            (if found (delete-region (point) (+ (point) 3))))
+          (loophole-write-lisp-mode)
+          (with-current-buffer workspace (goto-char 1))
+          (let ((lambda-form (eval (read workspace))))
+            (if (and (commandp lambda-form)
+                     (not (symbolp lambda-form))
+                     (not (vectorp lambda-form))
+                     (not (stringp lambda-form)))
+                lambda-form
+              (user-error
+               "Obtained Lisp object is not valid lambda command: %s"
+               lambda-form))))
+      (let ((configuration
+             (seq-find (lambda (c)
+                         (eq (selected-frame) (window-configuration-frame c)))
+                       configuration-list)))
+        (if configuration
+            (set-window-configuration configuration)
+          (delete-frame)))
+      (if (frame-live-p frame) (select-frame-set-input-focus frame t))
+      (if (window-live-p window) (select-window window t))
+      (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
 
-(defun loophole-obtain-key-and-kmacro-by-read-key ()
-  "Return set of key and kmacro obtained by reading key.
-This function `read-key' recursively.
-When you finish keyboard macro,
-type `loophole-kmacro-by-read-key-finish-key'.
+(defun loophole-obtain-kmacro-by-read-key (key)
+  "Return kmacro obtained by reading key.
+This function `read-key' recursively with prompt in which
+KEY is embedded.  When you finish keyboard macro, type
+`loophole-kmacro-by-read-key-finish-key'.
 By default, `loophole-kmacro-by-read-key-finish-key' is \\[keyboard-quit]
 the key bound to `keyboard-quit'.  In this situation, you
 cannot use \\[keyboard-quit] for quitting.
@@ -1719,8 +1706,7 @@ you can finish definition of kmacro by new finish key, and
         (vectorp quit)
         (stringp quit)
         (user-error "Neither finishing key nor quitting key is invalid"))
-    (let ((menu-prompting nil)
-          (key (loophole-read-key "Set key temporarily: ")))
+    (let ((menu-prompting nil))
       (letrec
           ((read-arbitrary-key-sequence
             (lambda (v)
@@ -1746,10 +1732,10 @@ you can finish definition of kmacro by new finish key, and
           (kmacro-start-macro nil)
           (end-kbd-macro nil #'kmacro-loop-setup-function)
           (setq last-kbd-macro macro)
-          (list key (kmacro-lambda-form (kmacro-ring-head))))))))
+          (kmacro-lambda-form (kmacro-ring-head)))))))
 
-(defun loophole-obtain-key-and-kmacro-by-recursive-edit ()
-  "Return set of key and kmacro obtained by recursive edit.
+(defun loophole-obtain-kmacro-by-recursive-edit (_key)
+  "Return kmacro obtained by recursive edit.
 \\<loophole-mode-map>
 This function starts recursive edit in order to offer
 keyboard macro defining work space.  Definition can be
@@ -1757,51 +1743,48 @@ finished by calling `loophole-end-kmacro' which is bound to
 \\[loophole-end-kmacro].
 Besides, Definition can be aborted by calling
 `loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro]."
-  (list (loophole-read-key "Set key temporarily: ")
-        (progn
-          (loophole-register 'loophole-kmacro-by-recursive-edit-map
-                             'loophole-use-kmacro-by-recursive-edit-map
-                             loophole-kmacro-by-recursive-edit-map-tag
-                             t)
-          (unwind-protect
-              (loophole-start-kmacro)
-            (loophole-unregister 'loophole-kmacro-by-recursive-edit-map))
-          (kmacro-lambda-form (kmacro-ring-head)))))
+  (loophole-register 'loophole-kmacro-by-recursive-edit-map
+                      'loophole-use-kmacro-by-recursive-edit-map
+                      loophole-kmacro-by-recursive-edit-map-tag
+                      t)
+  (unwind-protect
+      (loophole-start-kmacro)
+    (loophole-unregister 'loophole-kmacro-by-recursive-edit-map))
+  (kmacro-lambda-form (kmacro-ring-head)))
 
-(defun loophole-obtain-key-and-kmacro-by-recall-record ()
-  "Return set of key and kmacro obtained by recalling record."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (letrec
-        ((make-label-kmacro-alist
-          (lambda (ring counter)
-            (let* ((raw-label (key-description (car (car ring))))
-                   (entry (assoc raw-label counter))
-                   (number (if entry (1+ (cdr entry)) 1))
-                   (label (if entry
-                              (format "%s <%d>" raw-label number)
-                            raw-label)))
-              (cond ((null ring) ring)
-                    (t (cons
-                        `(,label . ,(car ring))
-                        (funcall make-label-kmacro-alist
-                                 (cdr ring)
-                                 (cons `(,raw-label . ,number) counter)))))))))
-      (let* ((head (kmacro-ring-head))
-             (alist (funcall make-label-kmacro-alist
-                             (if head
-                                 (cons head kmacro-ring)
-                               kmacro-ring)
-                             nil))
-             (read (completing-read (format "Set key %s to kmacro: "
-                                            (key-description key))
-                                    alist nil t))
-             (kmacro (kmacro-lambda-form (cdr (assoc read alist)))))
-        (list key kmacro)))))
+(defun loophole-obtain-kmacro-by-recall-record (key)
+  "Return kmacro obtained by recalling record.
+Completing read record with prompt in which KEY is embedded."
+  (letrec
+      ((make-label-kmacro-alist
+        (lambda (ring counter)
+          (let* ((raw-label (key-description (car (car ring))))
+                 (entry (assoc raw-label counter))
+                 (number (if entry (1+ (cdr entry)) 1))
+                 (label (if entry
+                            (format "%s <%d>" raw-label number)
+                          raw-label)))
+            (cond ((null ring) ring)
+                  (t (cons
+                      `(,label . ,(car ring))
+                      (funcall make-label-kmacro-alist
+                               (cdr ring)
+                               (cons `(,raw-label . ,number) counter)))))))))
+    (let* ((head (kmacro-ring-head))
+           (alist (funcall make-label-kmacro-alist
+                           (if head
+                               (cons head kmacro-ring)
+                             kmacro-ring)
+                           nil))
+           (read (completing-read (format "Set key %s to kmacro: "
+                                          (key-description key))
+                                  alist nil t)))
+      (kmacro-lambda-form (cdr (assoc read alist))))))
 
-(defun loophole-obtain-key-and-array-by-read-key ()
-  "Return set of key and array obtained by reading key.
-This function `read-key' recursively.  When you finish
-inputting key sequence,
+(defun loophole-obtain-array-by-read-key (key)
+  "Return array obtained by reading key.
+This function `read-key' recursively with prompt in which
+KEY is embedded.  When you finish inputting key sequence,
 type `loophole-array-by-read-key-finish-key'.
 By default, `loophole-array-by-read-key-finish-key' is \\[keyboard-quit]
 the key bound to `keyboard-quit'.  In this situation, you
@@ -1816,8 +1799,7 @@ takes effect as quit."
         (vectorp quit)
         (stringp quit)
         (user-error "Neither finishing key nor quitting key is invalid"))
-    (let ((menu-prompting nil)
-          (key (loophole-read-key "Set key temporarily: ")))
+    (let ((menu-prompting nil))
       (letrec
           ((read-arbitrary-key-sequence
             (lambda (v)
@@ -1839,96 +1821,93 @@ takes effect as quit."
                                            quit)
                        (keyboard-quit))
                       (t (funcall read-arbitrary-key-sequence k-v)))))))
-        (let ((array (funcall read-arbitrary-key-sequence [])))
-          (list key array))))))
+        (funcall read-arbitrary-key-sequence [])))))
 
-(defun loophole-obtain-key-and-array-by-read-string ()
-  "Return set of key and array obtained by `read-string'."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (list key (read-string (format "Set key %s to array: "
-                                   (key-description key))))))
+(defun loophole-obtain-array-by-read-string (key)
+  "Return array obtained by `read-string'.
+Read string with prompt in which KEY is embedded ."
+  (read-string (format "Set key %s to array: " (key-description key))))
 
-(defun loophole-obtain-key-and-keymap-by-read-keymap-variable ()
-  "Return set of key and keymap obtained by reading keymap variable."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (list key (symbol-value
-               (intern
-                (completing-read
-                 (format "Set key %s to keymap bound to symbol: "
-                         (key-description key))
-                 obarray
-                 (lambda (s)
-                   (and (boundp s)
-                        (not (keywordp s))
-                        (keymapp (symbol-value s))))))))))
+(defun loophole-obtain-keymap-by-read-keymap-variable (key)
+  "Return keymap obtained by reading keymap variable.
+Read keymap variable with prompt in which KEY is embedded."
+  (symbol-value
+   (intern
+    (completing-read
+     (format "Set key %s to keymap bound to symbol: " (key-description key))
+     obarray
+     (lambda (s)
+       (and (boundp s)
+            (not (keywordp s))
+            (keymapp (symbol-value s))))))))
 
-(defun loophole-obtain-key-and-keymap-by-read-keymap-function ()
-  "Return set of key and keymap obtained by reading keymap function.
+(defun loophole-obtain-keymap-by-read-keymap-function (key)
+  "Return keymap obtained by reading keymap function.
+Read keymap function with prompt in which KEY is embedded.
 Keymap function is a symbol whose function cell is a keymap
 or a symbol whose function cell is ultimately a keymap."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (letrec ((symbol-function-recursively
-              (lambda (s)
-                (let ((f (symbol-function s)))
-                  (cond ((eq f s) f)
-                        ((not (symbolp f)) f)
-                        (t (funcall symbol-function-recursively f)))))))
-      (list key (funcall symbol-function-recursively
-                         (intern
-                          (completing-read
-                           (format "Set key %s to keymap fbound to symbol: "
-                                   (key-description key))
-                           obarray
-                           (lambda (s)
-                             (let ((f (funcall symbol-function-recursively s)))
-                               (keymapp f))))))))))
+  (letrec ((symbol-function-recursively
+            (lambda (s)
+              (let ((f (symbol-function s)))
+                (cond ((eq f s) f)
+                      ((not (symbolp f)) f)
+                      (t (funcall symbol-function-recursively f)))))))
+    (funcall symbol-function-recursively
+             (intern
+              (completing-read
+               (format "Set key %s to keymap fbound to symbol: "
+                       (key-description key))
+               obarray
+               (lambda (s)
+                 (let ((f (funcall symbol-function-recursively s)))
+                   (keymapp f))))))))
 
-(defun loophole-obtain-key-and-symbol-by-read-keymap-function ()
-  "Return set of key and symbol obtained by reading keymap function.
+(defun loophole-obtain-symbol-by-read-keymap-function (key)
+  "Return symbol obtained by reading keymap function.
+Read keymap function with prompt in which KEY is embedded.
 Keymap function is a symbol whose function cell is a keymap
 or a symbol whose function cell is ultimately a keymap."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (letrec ((symbol-function-recursively
-              (lambda (s)
-                (let ((f (symbol-function s)))
-                  (cond ((eq f s) f)
-                        ((not (symbolp f)) f)
-                        (t (funcall symbol-function-recursively f)))))))
-      (list key (intern
-                 (completing-read
-                  (format "Set key %s to symbol whose function cell is keymap: "
-                          (key-description key))
-                  obarray
-                  (lambda (s)
-                    (let ((f (funcall symbol-function-recursively s)))
-                      (keymapp f)))))))))
+  (letrec ((symbol-function-recursively
+            (lambda (s)
+              (let ((f (symbol-function s)))
+                (cond ((eq f s) f)
+                      ((not (symbolp f)) f)
+                      (t (funcall symbol-function-recursively f)))))))
+    (intern
+     (completing-read
+      (format "Set key %s to symbol whose function cell is keymap: "
+              (key-description key))
+      obarray
+      (lambda (s)
+        (let ((f (funcall symbol-function-recursively s)))
+          (keymapp f)))))))
 
-(defun loophole-obtain-key-and-symbol-by-read-command ()
-  "Return set of key and symbol obtained by reading command symbol."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (list key (read-command
-               (format "Set key %s to symbol whose function cell is command: "
-                       (key-description key))))))
+(defun loophole-obtain-symbol-by-read-command (key)
+  "Return symbol obtained by reading command symbol.
+Read command with prompt in which KEY is embedded."
+  (read-command
+   (format "Set key %s to symbol whose function cell is command: "
+           (key-description key))))
 
-(defun loophole-obtain-key-and-symbol-by-read-array-function ()
-  "Return set of key and symbol obtained by reading array function.
+(defun loophole-obtain-symbol-by-read-array-function (key)
+  "Return symbol obtained by reading array function.
+Read array function with prompt in which KEY is embedded.
 Array function is a symbol whose function cell is an array
 or a symbol whose function cell is ultimately an array."
-  (let ((key (loophole-read-key "Set key temporarily: ")))
-    (letrec ((symbol-function-recursively
-              (lambda (s)
-                (let ((f (symbol-function s)))
-                  (cond ((eq f s) f)
-                        ((not (symbolp f)) f)
-                        (t (funcall symbol-function-recursively f)))))))
-      (list key (intern
-                 (completing-read
-                  (format "Set key %s to symbol whose function cell is array: "
-                          (key-description key))
-                  obarray
-                  (lambda (s)
-                    (let ((f (funcall symbol-function-recursively s)))
-                      (or (vectorp f) (stringp f))))))))))
+  (letrec ((symbol-function-recursively
+            (lambda (s)
+              (let ((f (symbol-function s)))
+                (cond ((eq f s) f)
+                      ((not (symbolp f)) f)
+                      (t (funcall symbol-function-recursively f)))))))
+    (intern
+     (completing-read
+      (format "Set key %s to symbol whose function cell is array: "
+              (key-description key))
+      obarray
+      (lambda (s)
+        (let ((f (funcall symbol-function-recursively s)))
+          (or (vectorp f) (stringp f))))))))
 
 ;;; Binding commands
 
@@ -1942,7 +1921,10 @@ general keymap entry.
 By default, KEY is bound in the currently editing keymap or
 generated new one.  If optional argument KEYMAP is non-nil,
 and it is registered to loophole, KEYMAP is used instead."
-  (interactive (loophole-obtain-key-and-object))
+  (interactive
+   (let* ((arg-key (loophole-read-key "Set key temporarily: "))
+          (arg-entry (loophole-obtain-object arg-key)))
+     (list arg-key arg-entry)))
   (define-key
     (if keymap
         (let ((map-variable (loophole-map-variable-for-keymap keymap)))
@@ -1966,7 +1948,7 @@ arguments KEYMAP are same as `loophole-bind-entry'.
 See docstring of `loophole-bind-entry'for more details.
 
 When called interactively, this function determines
-obtaining method for KEY and COMMAND according to
+obtaining method for COMMAND according to
 `loophole-bind-command-order'.
 When this function called without prefix argument,
 the first element of `loophole-bind-command-order' is
@@ -1975,11 +1957,12 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
-   (let* ((n (loophole-prefix-rank-value current-prefix-arg))
-          (obtaining-method (elt loophole-bind-command-order n)))
-     (if (null obtaining-method)
+   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
+     (if (< (1- (length loophole-bind-command-order)) n)
          (user-error "Undefined prefix argument"))
-     (funcall obtaining-method)))
+     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
+            (arg-command (funcall (elt loophole-bind-command-order n) arg-key)))
+       (list arg-key arg-command))))
   (if (commandp command)
       (loophole-bind-entry key command keymap)
     (user-error "Invalid command: %s" command)))
@@ -1995,7 +1978,7 @@ arguments KEYMAP are same as `loophole-bind-entry'.
 See docstring of `loophole-bind-entry' for more details.
 
 When called interactively, this function determines
-obtaining method for KEY and KMACRO according to
+obtaining method for KMACRO according to
 `loophole-bind-kmacro-order'.
 When this function is called without prefix argument,
 the first element of `loophole-bind-kmacro-order' is
@@ -2004,11 +1987,12 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
-   (let* ((n (loophole-prefix-rank-value current-prefix-arg))
-          (obtaining-method (elt loophole-bind-kmacro-order n)))
-     (if (null obtaining-method)
+   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
+     (if (< (1- (length loophole-bind-kmacro-order)) n)
          (user-error "Undefined prefix argument"))
-     (funcall obtaining-method)))
+     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
+            (arg-kmacro (funcall (elt loophole-bind-kmacro-order n) arg-key)))
+       (list arg-key arg-kmacro))))
   (if (kmacro-p kmacro)
       (loophole-bind-entry key kmacro keymap)
     (user-error "Invalid kmacro: %s" kmacro)))
@@ -2033,7 +2017,7 @@ arguments KEYMAP are same as `loophole-bind-entry'.
 See docstring of `loophole-bind-entry'for more details.
 
 When called interactively, this function determines
-obtaining method for KEY and ARRAY according to
+obtaining method for ARRAY according to
 `loophole-bind-array-order'.
 When this function called without prefix argument,
 the first element of `loophole-bind-array-order' is
@@ -2042,11 +2026,12 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
-   (let* ((n (loophole-prefix-rank-value current-prefix-arg))
-          (obtaining-method (elt loophole-bind-array-order n)))
-     (if (null obtaining-method)
+   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
+     (if (< (1- (length loophole-bind-array-order)) n)
          (user-error "Undefined prefix argument"))
-     (funcall obtaining-method)))
+     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
+            (arg-array (funcall (elt loophole-bind-array-order n) arg-key)))
+       (list arg-key arg-array))))
   (if (or (vectorp array) (stringp array))
       (loophole-bind-entry key array keymap)
     (user-error "Invalid array : %s" array)))
@@ -2065,7 +2050,7 @@ argument KEYMAP of `loophole-bind-entry'.
 See docstring of `loophole-bind-entry' for more details.
 
 When called interactively, this function determines
-obtaining method for KEY and KEYMAP according to
+obtaining method for KEYMAP according to
 `loophole-bind-keymap-order'.
 When this function called without prefix argument,
 the first element of `loophole-bind-keymap-order' is
@@ -2074,11 +2059,12 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
-   (let* ((n (loophole-prefix-rank-value current-prefix-arg))
-          (obtaining-method (elt loophole-bind-keymap-order n)))
-     (if (null obtaining-method)
+   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
+     (if (< (1- (length loophole-bind-keymap-order)) n)
          (user-error "Undefined prefix argument"))
-     (funcall obtaining-method)))
+     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
+            (arg-keymap (funcall (elt loophole-bind-keymap-order n) arg-key)))
+       (list arg-key arg-keymap))))
   (if (keymapp keymap)
       (loophole-bind-entry key keymap another-keymap)
     (user-error "Invalid keymap : %s" keymap)))
@@ -2096,7 +2082,7 @@ arguments KEYMAP are same as `loophole-bind-entry'.
 See docstring of `loophole-bind-entry'for more details.
 
 When called interactively, this function determines
-obtaining method for KEY and SYMBOL according to
+obtaining method for SYMBOL according to
 `loophole-bind-symbol-order'.
 When this function called without prefix argument,
 the first element of `loophole-bind-symbol-order' is
@@ -2105,11 +2091,12 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
-   (let* ((n (loophole-prefix-rank-value current-prefix-arg))
-          (obtaining-method (elt loophole-bind-symbol-order n)))
-     (if (null obtaining-method)
+   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
+     (if (< (1- (length loophole-bind-symbol-order)) n)
          (user-error "Undefined prefix argument"))
-     (funcall obtaining-method)))
+     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
+            (arg-symbol (funcall (elt loophole-bind-symbol-order n) arg-key)))
+       (list arg-key arg-symbol))))
   (letrec ((inspect-function-cell
             (lambda (symbol)
               (let ((function-cell (symbol-function symbol)))
@@ -2136,7 +2123,7 @@ ENTRY, although only few types make sense.  Meaningful types
 of ENTRY is completely same as general keymap entry.
 
 When called interactively, this function determines
-obtaining method for KEY and ENTRY according to
+obtaining method for ENTRY according to
 `loophole-set-key-order'.
 When this function is called without prefix argument,
 the first element of `loophole-set-key-order' is
@@ -2145,11 +2132,12 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element."
   (interactive
-   (let* ((n (loophole-prefix-rank-value current-prefix-arg))
-          (obtaining-method (elt loophole-set-key-order n)))
-     (if (null obtaining-method)
+   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
+     (if (< (1- (length loophole-set-key-order)) n)
          (user-error "Undefined prefix argument"))
-     (funcall obtaining-method)))
+     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
+            (arg-entry (funcall (elt loophole-set-key-order n) arg-key)))
+       (list arg-key arg-entry))))
   (loophole-bind-entry key entry))
 
 (defun loophole-unset-key (key)
@@ -2169,8 +2157,7 @@ If KEYMAP is nil, lookup all active loophole maps.
 
 This function print bound lambda form to temporary buffer,
 and read it back when modifying is finished.
-In contrast with
-`loophole-obtain-key-and-command-by-lambda-form',
+In contrast with `loophole-obtain-command-by-lambda-form',
 this function does not evaluate the form but just read it.
 If temporary buffer contains multiple form when finished,
 the first one will be read."
