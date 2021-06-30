@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.6.2
+;; Version: 0.6.3
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -125,13 +125,29 @@ or enabled earliest used one."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-determine-obtaining-method-after-read-key t
-  "Flag if binding commands determine obtaining method after read key.
-If this value is non-nil, binding commands with
-`negative-argument' ask user obtaining method after reading
-key by using default `loophole-read-key'.
-In this case, :key option in the user options for order like
-`loophole-set-key-order' will be omitted."
+(defcustom loophole-determine-obtaining-method-after-read-key 'negative-argument
+  "Option for the timing of determining obtaining method.
+
+If this value is t, binding commands always determine
+obtaining method after reading key.
+
+If this value is negative-argument, binding commands
+determine obtaining method after reading key only when
+called with `negative-argument'.
+
+Otherwise, binding commands always determine obtaining
+method before reading key.
+
+The timing of determination affect to binding commands
+called with `negative-argument'.
+Binding commands with `negative-argument' ask user which
+obtaining method to use.
+The prompt for asking obtaining method arises after the
+prompt for reading key if determination is after read key.
+
+Besides, if determination is after read key, optional
+:key property for obtaining method defined by other user
+options like `loophole-set-key-order' will be omitted."
   :group 'loophole
   :type 'boolean)
 
@@ -223,8 +239,11 @@ OBTAIN-KEYMAP is a function which takes two arguments the
 key and entry to be bound, and returns keymap object on
 which key and entry are bound; this overrides
 `loophole--editing'.
+
 If `loophole-determine-obtaining-method-after-read-key' is
-non-nil, :key property will be omitted and default
+t, or while it is negative-argument and
+`loophole-bind-entry' is called with `negative-argument',
+:key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
@@ -251,8 +270,11 @@ OBTAIN-KEYMAP is a function which takes two arguments the
 key and command to be bound, and returns keymap object on
 which key and command are bound; this overrides
 `loophole--editing'.
+
 If `loophole-determine-obtaining-method-after-read-key' is
-non-nil, :key property will be omitted and default
+t, or while it is negative-argument and
+`loophole-bind-command' is called with `negative-argument',
+:key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
@@ -281,8 +303,11 @@ OBTAIN-KEYMAP is a function which takes two arguments the
 key and kmacro to be bound, and returns keymap object on
 which key and kmacro are bound; this overrides
 `loophole--editing'.
+
 If `loophole-determine-obtaining-method-after-read-key' is
-non-nil, :key property will be omitted and default
+t, or while it is negative-argument and
+`loophole-bind-kmacro' is called with `negative-argument',
+:key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
@@ -309,8 +334,11 @@ OBTAIN-KEYMAP is a function which takes two arguments the
 key and array to be bound, and returns keymap object on
 which key and array are bound; this overrides
 `loophole--editing'.
+
 If `loophole-determine-obtaining-method-after-read-key' is
-non-nil, :key property will be omitted and default
+t, or while it is negative-argument and
+`loophole-bind-array' is called with `negative-argument',
+:key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
@@ -337,8 +365,11 @@ OBTAIN-ANOTHER-KEYMAP is a function which takes two
 arguments the key and keymap to be bound, and returns
 another-keymap object on which key and keymap are bound;
 this overrides `loophole--editing'.
+
 If `loophole-determine-obtaining-method-after-read-key' is
-non-nil, :key property will be omitted and default
+t, or while it is negative-argument and
+`loophole-bind-keymap' is called with `negative-argument',
+:key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
@@ -365,8 +396,11 @@ OBTAIN-KEYMAP is a function which takes two arguments the
 key and symbol to be bound, and returns keymap object on
 which key and symbol are bound; this overrides
 `loophole--editing'.
+
 If `loophole-determine-obtaining-method-after-read-key' is
-non-nil, :key property will be omitted and default
+t, or while it is negative-argument and
+`loophole-bind-symbol' is called with `negative-argument',
+:key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
@@ -394,8 +428,11 @@ a property :key.  It looks like
 \(OBTAIN-ENTRY :key READ-KEY).
 READ-KEY is a function which takes no arguments and returns
 key sequence to be bound.
+
 If `loophole-determine-obtaining-method-after-read-key' is
-non-nil, :key property will be omitted and default
+t, or while it is negative-argument and
+`loophole-bind-symbol' is called with `negative-argument',
+:key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
@@ -1799,7 +1836,10 @@ key and binding only."
           read-key-function
           obtain-entry-function
           obtain-keymap-function)
-      (unless loophole-determine-obtaining-method-after-read-key
+      (unless (or (eq loophole-determine-obtaining-method-after-read-key t)
+                  (and (eq loophole-determine-obtaining-method-after-read-key
+                           'negative-argument)
+                       (< n 0)))
         (setq obtaining-method-spec (funcall determine-obtaining-method n))
         (setq read-key-function
               (funcall get-read-key-function obtaining-method-spec))
@@ -1812,7 +1852,10 @@ key and binding only."
              (if read-key-function
                  (funcall read-key-function)
                (loophole-read-key "Set key temporarily: "))))
-        (when loophole-determine-obtaining-method-after-read-key
+        (when (or (eq loophole-determine-obtaining-method-after-read-key t)
+                  (and (eq loophole-determine-obtaining-method-after-read-key
+                           'negative-argument)
+                       (< n 0)))
           (setq obtaining-method-spec (funcall determine-obtaining-method n))
           (setq obtain-entry-function
                 (funcall get-obtain-entry-function obtaining-method-spec))

@@ -271,8 +271,10 @@ a property :key.  It looks like
 READ-KEY is a function which takes no arguments and returns
 key sequence to be bound.
 However, if `loophole-determine-obtaining-method-after-read-key` is
-non-nil, :key property will be omitted and default
-`loophole-read-key' will be used.
+t, or while it is negative-argument and
+binding commands are called with `negative-argument`,
+:key property will be omitted and default
+`loophole-read-key` will be used.
 
 Default value of `loophole-set-key-order` is
 
@@ -305,13 +307,21 @@ Furthermore, if you prefer builtin `read-key-sequence` to read key for
 use the following lines.
 
 ``` emacs-lisp
-(setq loophole-determine-obtaining-method-after-read-key nil
-      loophole-set-key-order
+(setq loophole-set-key-order
       '((loophole-obtain-command-by-key-sequence :key read-key-sequence)
         (loophole-obtain-kmacro-by-read-key
          :key loophole-read-key-for-array-by-read-key)
         loophole-obtain-command-by-read-command
         loophole-obtain-kmacro-by-recall-record))
+```
+
+To force using the setting above even while binding commands are called with
+`negative-argument`, add the following line to your init file.
+However, be carefull that this setting change order of prompt when
+binding commands are called with `negative-argument`.
+
+``` emacs-lisp
+(setq loophole-determine-obtaining-method-after-read-key nil)
 ```
 
 Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
@@ -321,6 +331,7 @@ Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
 `loophole-bind-kmacro-order`, `loophole-bind-array-order`,
 `loophole-bind-keymap-order`,`loophole-bind-symbol-order`).
 It also can be customized by the same way.
+
 Elements of these variable can contain :keymap property in addition to :key
 property.
 It looks like (OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
