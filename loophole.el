@@ -260,7 +260,8 @@ non-nil, :key property will be omitted and default
 
 (defcustom loophole-bind-kmacro-order
   '(loophole-obtain-kmacro-by-recursive-edit
-    loophole-obtain-kmacro-by-read-key
+    (loophole-obtain-kmacro-by-read-key
+     :key loophole-read-key-for-kmacro-by-read-key)
     loophole-obtain-kmacro-by-recall-record
     loophole-obtain-object)
   "The priority list of methods to obtain kmacro for binding.
@@ -288,7 +289,8 @@ non-nil, :key property will be omitted and default
   :type '(repeat symbol))
 
 (defcustom loophole-bind-array-order
-  '(loophole-obtain-array-by-read-key
+  '((loophole-obtain-array-by-read-key
+     :key loophole-read-key-for-array-by-read-key)
     loophole-obtain-array-by-read-string
     loophole-obtain-object)
   "The priority list of methods to obtain array for binding.
@@ -374,7 +376,8 @@ non-nil, :key property will be omitted and default
   '(loophole-obtain-command-by-read-command
     loophole-obtain-kmacro-by-recursive-edit
     loophole-obtain-command-by-key-sequence
-    loophole-obtain-kmacro-by-read-key
+    (loophole-obtain-kmacro-by-read-key
+     :key loophole-read-key-for-array-by-read-key)
     loophole-obtain-command-by-lambda-form
     loophole-obtain-kmacro-by-recall-record
     loophole-obtain-object)
@@ -1725,6 +1728,24 @@ Definition can be finished by calling `loophole-end-kmacro'."
   (interactive)
   (unless (zerop (recursion-depth)) (abort-recursive-edit))
   (keyboard-quit))
+
+(defun loophole-read-key-for-kmacro-by-read-key ()
+  "`loophole-read-key' with checking finish and quit key."
+  (let ((finish (vconcat loophole-kmacro-by-read-key-finish-key))
+        (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
+    (or (not (zerop (length finish)))
+        (not (zerop (length quit)))
+        (user-error "Neither finishing key nor quitting key is invalid")))
+  (loophole-read-key "Set key temporarily: "))
+
+(defun loophole-read-key-for-array-by-read-key ()
+  "`loophole-read-key' with checking finish and quit key."
+  (let ((finish (vconcat loophole-array-by-read-key-finish-key))
+        (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
+    (or (not (zerop (length finish)))
+        (not (zerop (length quit)))
+        (user-error "Neither finishing key nor quitting key is invalid")))
+  (loophole-read-key "Set key temporarily: "))
 
 (defun loophole-prefix-arg-rank-value (arg)
   "Return rank value for raw prefix argument ARG.

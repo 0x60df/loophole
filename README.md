@@ -280,7 +280,8 @@ Default value of `loophole-set-key-order` is
 (loophole-obtain-command-by-read-command
  loophole-obtain-kmacro-by-recursive-edit
  loophole-obtain-command-by-key-sequence
- loophole-obtain-kmacro-by-read-key
+ (loophole-obtain-kmacro-by-read-key
+  :key loophole-read-key-for-array-by-read-key)
  loophole-obtain-command-by-lambda-form
  loophole-obtain-kmacro-by-recall-record
  loophole-obtain-object)
@@ -293,7 +294,8 @@ and you do not need some other obtaining method, use the following lines.
 ``` emacs-lisp
 (setq loophole-set-key-order
       '(loophole-obtain-command-by-key-sequence
-        loophole-obtain-kmacro-by-read-key
+        (loophole-obtain-kmacro-by-read-key
+         :key loophole-read-key-for-array-by-read-key)
         loophole-obtain-command-by-read-command
         loophole-obtain-kmacro-by-recall-record))
 ```
@@ -306,7 +308,8 @@ use the following lines.
 (setq loophole-determine-obtaining-method-after-read-key nil
       loophole-set-key-order
       '((loophole-obtain-command-by-key-sequence :key read-key-sequence)
-        loophole-obtain-kmacro-by-read-key
+        (loophole-obtain-kmacro-by-read-key
+         :key loophole-read-key-for-array-by-read-key)
         loophole-obtain-command-by-read-command
         loophole-obtain-kmacro-by-recall-record))
 ```
@@ -342,7 +345,8 @@ Entire customization codes may look like below.
         loophole-obtain-key-and-command-by-read-command
         loophole-obtain-key-and-kmacro-by-recursive-edit
         loophole-obtain-key-and-command-by-key-sequence
-        loophole-obtain-key-and-kmacro-by-read-key
+        (loophole-obtain-kmacro-by-read-key
+         :key loophole-read-key-for-array-by-read-key)
         loophole-obtain-key-and-command-by-lambda-form
         loophole-obtain-key-and-kmacro-by-recall-record
         loophole-obtain-key-and-object))
