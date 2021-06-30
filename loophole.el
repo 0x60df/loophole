@@ -125,6 +125,16 @@ or enabled earliest used one."
   :group 'loophole
   :type 'boolean)
 
+(defcustom loophole-determine-obtaining-method-after-read-key t
+  "Flag if binding commands determine obtaining method after read key.
+If this value is non-nil, binding commands with
+`negative-argument' ask user obtaining method after reading
+key by using default `loophole-read-key'.
+In this case, :key option in the user options for order like
+`loophole-set-key-order' will be omitted."
+  :group 'loophole
+  :type 'boolean)
+
 (defcustom loophole-force-make-variable-buffer-local t
   "Flag if `make-variable-buffer-local' is done without prompting."
   :group 'loophole
@@ -201,7 +211,21 @@ This is used by `loophole-obtain-array-by-read-key'."
 obtaining method.  First element gets first priority.
 Each element should be a function which takes one argument
 the key to be bound and returns any Lisp object for binding
-entry."
+entry.
+
+Each element optionally can be a list whose car is a
+function described above, and cdr is a plist whose property
+may be :key and/or :keymap.  It looks like
+\(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes no arguments and returns
+key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes two arguments the
+key and entry to be bound, and returns keymap object on
+which key and entry are bound; this overrides
+`loophole--editing'.
+If `loophole-determine-obtaining-method-after-read-key' is
+non-nil, :key property will be omitted and default
+`loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
@@ -215,7 +239,21 @@ entry."
 `loophole-bind-command' refers this variable to select
 obtaining method.  First element gets first priority.
 Each element should be a function which takes one argument
-the key to be bound and returns a command for binding entry."
+the key to be bound and returns a command for binding entry.
+
+Each element optionally can be a list whose car is a
+function described above, and cdr is a plist whose property
+may be :key and/or :keymap.  It looks like
+\(OBTAIN-COMMAND :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes no arguments and returns
+key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes two arguments the
+key and command to be bound, and returns keymap object on
+which key and command are bound; this overrides
+`loophole--editing'.
+If `loophole-determine-obtaining-method-after-read-key' is
+non-nil, :key property will be omitted and default
+`loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
@@ -230,7 +268,21 @@ the key to be bound and returns a command for binding entry."
 obtaining method.  First element gets first priority.
 Each element should be a function which takes one argument
 the key to be bound and returns a kmacro object for binding
-entry."
+entry.
+
+Each element optionally can be a list whose car is a
+function described above, and cdr is a plist whose property
+may be :key and/or :keymap.  It looks like
+\(OBTAIN-KMACRO :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes no arguments and returns
+key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes two arguments the
+key and kmacro to be bound, and returns keymap object on
+which key and kmacro are bound; this overrides
+`loophole--editing'.
+If `loophole-determine-obtaining-method-after-read-key' is
+non-nil, :key property will be omitted and default
+`loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
@@ -243,7 +295,21 @@ entry."
 `loophole-bind-array' refers this variable to select
 obtaining method.  First element gets first priority.
 Each element should be a function which takes one argument
-the key to be bound and returns a array for binding entry."
+the key to be bound and returns a array for binding entry.
+
+Each element optionally can be a list whose car is a
+function described above, and cdr is a plist whose property
+may be :key and/or :keymap.  It looks like
+\(OBTAIN-ARRAY :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes no arguments and returns
+key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes two arguments the
+key and array to be bound, and returns keymap object on
+which key and array are bound; this overrides
+`loophole--editing'.
+If `loophole-determine-obtaining-method-after-read-key' is
+non-nil, :key property will be omitted and default
+`loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
@@ -257,7 +323,21 @@ the key to be bound and returns a array for binding entry."
 obtaining method.  First element gets first priority.
 Each element should be a function which takes one argument
 the key to be bound and returns a keymap object for binding
-entry."
+entry.
+
+Each element optionally can be a list whose car is a
+function described above, and cdr is a plist whose property
+may be :key and/or :keymap.  It looks like
+\(OBTAIN-KEYMAP :key READ-KEY :keymap OBTAIN-ANOTHER-KEYMAP).
+READ-KEY is a function which takes no arguments and returns
+key sequence to be bound.
+OBTAIN-ANOTHER-KEYMAP is a function which takes two
+arguments the key and keymap to be bound, and returns
+another-keymap object on which key and keymap are bound;
+this overrides `loophole--editing'.
+If `loophole-determine-obtaining-method-after-read-key' is
+non-nil, :key property will be omitted and default
+`loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
@@ -271,7 +351,21 @@ entry."
 `loophole-bind-symbol' refers this variable to select
 obtaining method.  First element gets first priority.
 Each element should be a function which takes one argument
-the key to be bound and returns a symbol for binding entry."
+the key to be bound and returns a symbol for binding entry.
+
+Each element optionally can be a list whose car is a
+function described above, and cdr is a plist whose property
+may be :key and/or :keymap.  It looks like
+\(OBTAIN-SYMBOL :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes no arguments and returns
+key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes two arguments the
+key and symbol to be bound, and returns keymap object on
+which key and symbol are bound; this overrides
+`loophole--editing'.
+If `loophole-determine-obtaining-method-after-read-key' is
+non-nil, :key property will be omitted and default
+`loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
@@ -289,7 +383,17 @@ the key to be bound and returns a symbol for binding entry."
 First element gets first priority.
 Each element should be a function which takes one argument
 the key to be bound and returns any Lisp object for binding
-entry"
+entry
+
+Each element optionally can be a list whose car is a
+function described above, and cdr is a plist which has
+a property :key.  It looks like
+\(OBTAIN-ENTRY :key READ-KEY).
+READ-KEY is a function which takes no arguments and returns
+key sequence to be bound.
+If `loophole-determine-obtaining-method-after-read-key' is
+non-nil, :key property will be omitted and default
+`loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat symbol))
@@ -1622,7 +1726,7 @@ Definition can be finished by calling `loophole-end-kmacro'."
   (unless (zerop (recursion-depth)) (abort-recursive-edit))
   (keyboard-quit))
 
-(defun loophole-prefix-rank-value (arg)
+(defun loophole-prefix-arg-rank-value (arg)
   "Return rank value for raw prefix argument ARG.
 In the context of this function, rank of prefix argument is
 defined as follows.
@@ -1636,6 +1740,73 @@ For the `negative-argument', the rank is
         ((listp arg) (truncate (log (prefix-numeric-value arg) 4)))
         ((natnump arg) arg)
         (t (prefix-numeric-value arg))))
+
+(defun loophole--arg-list (order prefix-argument &optional without-keymap)
+  "Return list for arguments for binding commands.
+Read key, obtain Lisp object for binding, and optionaly
+obtain keymap object for key and binding based on ORDER and
+PREFIX-ARGUMENT .
+If optional argument WITHOUT-KEYMAP is non-nil, this
+function does not try to obtain keymap, and return list of
+key and binding only."
+  (let ((n (loophole-prefix-arg-rank-value prefix-argument)))
+    (if (< (1- (length order)) n)
+        (user-error "Undefined prefix argument"))
+    (let ((determine-obtaining-method
+           (lambda (m)
+             (if (< m 0)
+                 (let ((alist (mapcar (lambda (e) (cons (format "%s" e) e))
+                                      order)))
+                   (cdr (assoc
+                         (completing-read "Obtaining method: " alist nil t)
+                         alist)))
+               (elt order m))))
+          (get-read-key-function
+           (lambda (spec)
+             (if (consp spec)
+                 (plist-get (cdr spec) :key))))
+          (get-obtain-entry-function
+           (lambda (spec)
+             (cond ((functionp spec) spec)
+                   ((consp spec) (car spec))
+                   (t (error "Obtaining method %s is invalid" spec)))))
+          (get-obtain-keymap-function
+           (lambda (spec)
+             (if (consp spec)
+                 (plist-get (cdr spec) :keymap))))
+          obtaining-method-spec
+          read-key-function
+          obtain-entry-function
+          obtain-keymap-function)
+      (unless loophole-determine-obtaining-method-after-read-key
+        (setq obtaining-method-spec (funcall determine-obtaining-method n))
+        (setq read-key-function
+              (funcall get-read-key-function obtaining-method-spec))
+        (setq obtain-entry-function
+              (funcall get-obtain-entry-function obtaining-method-spec))
+        (setq obtain-keymap-function
+              (unless without-keymap
+                (funcall get-obtain-keymap-function obtaining-method-spec))))
+      (let ((arg-key
+             (if read-key-function
+                 (funcall read-key-function)
+               (loophole-read-key "Set key temporarily: "))))
+        (when loophole-determine-obtaining-method-after-read-key
+          (setq obtaining-method-spec (funcall determine-obtaining-method n))
+          (setq obtain-entry-function
+                (funcall get-obtain-entry-function obtaining-method-spec))
+          (setq obtain-keymap-function
+                (unless without-keymap
+                  (funcall get-obtain-keymap-function obtaining-method-spec))))
+        (let* ((arg-entry (funcall obtain-entry-function arg-key))
+               (arg-keymap (if (and (not without-keymap)
+                                    obtain-keymap-function)
+                               (funcall obtain-keymap-function
+                                        arg-key
+                                        arg-entry))))
+          (if without-keymap
+              (list arg-key arg-entry)
+            (list arg-key arg-entry arg-keymap)))))))
 
 ;;; Obtaining methods
 
@@ -1927,9 +2098,9 @@ or a symbol whose function cell is ultimately an array."
 
 ;;;###autoload
 (defun loophole-bind-entry (key entry &optional keymap)
-  "Bind KEY to ENTRY temporarily.
-Any Lisp object is acceptable for ENTRY, but only few types
-make sense.  Meaningful types of ENTRY is completely same as
+  "Bind KEY to COMMAND temporarily.
+Any Lisp object is acceptable for COMMAND, but only few types
+make sense.  Meaningful types of COMMAND is completely same as
 general keymap entry.
 
 By default, KEY is bound in the currently editing keymap or
@@ -1948,18 +2119,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method."
   (interactive
-   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
-     (if (< (1- (length loophole-bind-entry-order)) n)
-         (user-error "Undefined prefix argument"))
-     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-entry
-             (funcall (if (< n 0)
-                          (intern
-                           (completing-read "Obtaining method: "
-                                            loophole-bind-entry-order nil t))
-                        (elt loophole-bind-entry-order n))
-                      arg-key)))
-       (list arg-key arg-entry))))
+   (loophole--arg-list loophole-bind-entry-order current-prefix-arg))
   (define-key
     (if keymap
         (let ((map-variable (loophole-map-variable-for-keymap keymap)))
@@ -1994,18 +2154,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method."
   (interactive
-   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
-     (if (< (1- (length loophole-bind-command-order)) n)
-         (user-error "Undefined prefix argument"))
-     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-command
-             (funcall (if (< n 0)
-                          (intern
-                           (completing-read "Obtaining method: "
-                                            loophole-bind-command-order nil t))
-                        (elt loophole-bind-command-order n))
-                      arg-key)))
-       (list arg-key arg-command))))
+   (loophole--arg-list loophole-bind-command-order current-prefix-arg))
   (if (commandp command)
       (loophole-bind-entry key command keymap)
     (user-error "Invalid command: %s" command)))
@@ -2032,18 +2181,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method."
   (interactive
-   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
-     (if (< (1- (length loophole-bind-kmacro-order)) n)
-         (user-error "Undefined prefix argument"))
-     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-kmacro
-             (funcall (if (< n 0)
-                          (intern
-                           (completing-read "Obtaining method: "
-                                            loophole-bind-kmacro-order nil t))
-                        (elt loophole-bind-kmacro-order n))
-                      arg-key)))
-       (list arg-key arg-kmacro))))
+   (loophole--arg-list loophole-bind-kmacro-order current-prefix-arg))
   (if (kmacro-p kmacro)
       (loophole-bind-entry key kmacro keymap)
     (user-error "Invalid kmacro: %s" kmacro)))
@@ -2079,18 +2217,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method."
   (interactive
-   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
-     (if (< (1- (length loophole-bind-array-order)) n)
-         (user-error "Undefined prefix argument"))
-     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-array
-             (funcall (if (< n 0)
-                          (intern
-                           (completing-read "Obtaining method: "
-                                            loophole-bind-array-order nil t))
-                        (elt loophole-bind-array-order n))
-                      arg-key)))
-       (list arg-key arg-array))))
+   (loophole--arg-list loophole-bind-array-order current-prefix-arg))
   (if (or (vectorp array) (stringp array))
       (loophole-bind-entry key array keymap)
     (user-error "Invalid array : %s" array)))
@@ -2120,18 +2247,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method."
   (interactive
-   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
-     (if (< (1- (length loophole-bind-keymap-order)) n)
-         (user-error "Undefined prefix argument"))
-     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-keymap
-             (funcall (if (< n 0)
-                          (intern
-                           (completing-read "Obtaining method: "
-                                            loophole-bind-keymap-order nil t))
-                        (elt loophole-bind-keymap-order n))
-                      arg-key)))
-       (list arg-key arg-keymap))))
+   (loophole--arg-list loophole-bind-keymap-order current-prefix-arg))
   (if (keymapp keymap)
       (loophole-bind-entry key keymap another-keymap)
     (user-error "Invalid keymap : %s" keymap)))
@@ -2160,18 +2276,7 @@ Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method."
   (interactive
-   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
-     (if (< (1- (length loophole-bind-symbol-order)) n)
-         (user-error "Undefined prefix argument"))
-     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-symbol
-             (funcall (if (< n 0)
-                          (intern
-                           (completing-read "Obtaining method: "
-                                            loophole-bind-symbol-order nil t))
-                        (elt loophole-bind-symbol-order n))
-                      arg-key)))
-       (list arg-key arg-symbol))))
+   (loophole--arg-list loophole-bind-symbol-order current-prefix-arg))
   (letrec ((inspect-function-cell
             (lambda (symbol)
               (let ((function-cell (symbol-function symbol)))
@@ -2208,19 +2313,7 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method."
-  (interactive
-   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
-     (if (< (1- (length loophole-set-key-order)) n)
-         (user-error "Undefined prefix argument"))
-     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-            (arg-entry
-             (funcall (if (< n 0)
-                          (intern
-                           (completing-read "Obtaining method: "
-                                            loophole-set-key-order nil t))
-                        (elt loophole-set-key-order n))
-                      arg-key)))
-       (list arg-key arg-entry))))
+  (interactive (loophole--arg-list loophole-set-key-order current-prefix-arg t))
   (loophole-bind-entry key entry))
 
 (defun loophole-unset-key (key)

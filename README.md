@@ -264,6 +264,16 @@ The table is stored in `loophole-set-key-order`.
 Each element of `loophole-set-key-order` is a function which takes one argument 
 the key to be bound and returns any Lisp object suitable for key binding entry.
 
+Each element optionally can be a list whose car is a
+function described above, and cdr is a plist which has
+a property :key.  It looks like
+(OBTAIN-ENTRY :key READ-KEY).
+READ-KEY is a function which takes no arguments and returns
+key sequence to be bound.
+However, if `loophole-determine-obtaining-method-after-read-key` is
+non-nil, :key property will be omitted and default
+`loophole-read-key' will be used.
+
 Default value of `loophole-set-key-order` is
 
 ```emacs-lisp
@@ -288,6 +298,19 @@ and you do not need some other obtaining method, use the following lines.
         loophole-obtain-kmacro-by-recall-record))
 ```
 
+Furthermore, if you prefer builtin `read-key-sequence` to read key for
+`loophole-obtain-command-by-key-sequence`,
+use the following lines.
+
+``` emacs-lisp
+(setq loophole-determine-obtaining-method-after-read-key nil
+      loophole-set-key-order
+      '((loophole-obtain-command-by-key-sequence :key read-key-sequence)
+        loophole-obtain-kmacro-by-read-key
+        loophole-obtain-command-by-read-command
+        loophole-obtain-kmacro-by-recall-record))
+```
+
 Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
 `loophole-bind-kmacro`, `loophole-bind-array`, `loophole-bind-keymap`,
 `loophole-bind-symbol`) also use the prefix arguments table
@@ -295,6 +318,12 @@ Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
 `loophole-bind-kmacro-order`, `loophole-bind-array-order`,
 `loophole-bind-keymap-order`,`loophole-bind-symbol-order`).
 It also can be customized by the same way.
+Elements of these variable can contain :keymap property in addition to :key
+property.
+It looks like (OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+OBTAIN-KEYMAP is a function which takes two arguments the
+key and entry to be bound, and returns keymap object on
+which key and entry are bound; this overrides editing loophole-map.
 
 You can also define your specifying method for entry.
 The requirements for specifying method is that
