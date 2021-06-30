@@ -1644,7 +1644,8 @@ is non-nil."
                                            (loophole-stop-editing)
                                            (force-mode-line-update))))
                           (current-buffer))))
-  (message "Editing timer is started"))
+  (if (called-interactively-p 'interactive)
+      (message "Editing timer is started")))
 
 (defun loophole-stop-editing-timer ()
   "Cancel timer for editing state."
@@ -1653,7 +1654,8 @@ is non-nil."
              (not (timer--triggered loophole--editing-timer))
              (memq loophole--editing-timer timer-list))
     (cancel-timer loophole--editing-timer)
-    (message "Editing timer is stopped")))
+    (if (called-interactively-p 'interactive)
+        (message "Editing timer is stopped"))))
 
 (defun loophole-extend-editing-timer (time)
   "Extend time of editing timer by TIME in second.
