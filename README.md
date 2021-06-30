@@ -288,12 +288,12 @@ and you do not need some other obtaining method, use the following lines.
         loophole-obtain-kmacro-by-recall-record))
 ```
 
-Some other binding commands (`loophole-bind-command`, `loophole-bind-kmacro`,
-`loophole-bind-array`, `loophole-bind-keymap`, `loophole-bind-symbol`) also use
-the prefix arguments table
-(`loophole-bind-command-order`, `loophole-bind-kmacro-order`,
-`loophole-bind-array-order`, `loophole-bind-keymap-order`,
-`loophole-bind-symbol-order`).
+Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
+`loophole-bind-kmacro`, `loophole-bind-array`, `loophole-bind-keymap`,
+`loophole-bind-symbol`) also use the prefix arguments table
+(`loophole-bind-entry-order`, `loophole-bind-command-order`,
+`loophole-bind-kmacro-order`, `loophole-bind-array-order`,
+`loophole-bind-keymap-order`,`loophole-bind-symbol-order`).
 It also can be customized by the same way.
 
 You can also define your specifying method for entry.

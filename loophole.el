@@ -194,6 +194,18 @@ This is used by `loophole-obtain-array-by-read-key'."
   :group 'loophole
   :type 'key-sequence)
 
+(defcustom loophole-bind-entry-order
+  '(loophole-obtain-object)
+  "The priority list of methods to obtain any Lisp object for binding.
+`loophole-bind-entry' refers this variable to select
+obtaining method.  First element gets first priority.
+Each element should be a function which takes one argument
+the key to be bound and returns any Lisp object for binding
+entry."
+  :risky t
+  :group 'loophole
+  :type '(repeat symbol))
+
 (defcustom loophole-bind-command-order
   '(loophole-obtain-command-by-read-command
     loophole-obtain-command-by-key-sequence
@@ -1922,11 +1934,32 @@ general keymap entry.
 
 By default, KEY is bound in the currently editing keymap or
 generated new one.  If optional argument KEYMAP is non-nil,
-and it is registered to loophole, KEYMAP is used instead."
+and it is registered to loophole, KEYMAP is used instead.
+
+When called interactively, this function determines
+obtaining method for ENTRY according to
+`loophole-bind-entry-order'.
+When this function called without prefix argument,
+the first element of `loophole-bind-entry-order' is
+employed as obtaining method.
+\\[universal-argument] and C-1 invokes the second element,
+\\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
+Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
+If `negative-argument' is used, `completing-read' obtaining
+method."
   (interactive
-   (let* ((arg-key (loophole-read-key "Set key temporarily: "))
-          (arg-entry (loophole-obtain-object arg-key)))
-     (list arg-key arg-entry)))
+   (let ((n (loophole-prefix-rank-value current-prefix-arg)))
+     (if (< (1- (length loophole-bind-entry-order)) n)
+         (user-error "Undefined prefix argument"))
+     (let* ((arg-key (loophole-read-key "Set key temporarily: "))
+            (arg-entry
+             (funcall (if (< n 0)
+                          (intern
+                           (completing-read "Obtaining method: "
+                                            loophole-bind-entry-order nil t))
+                        (elt loophole-bind-entry-order n))
+                      arg-key)))
+       (list arg-key arg-entry))))
   (define-key
     (if keymap
         (let ((map-variable (loophole-map-variable-for-keymap keymap)))
