@@ -1886,10 +1886,8 @@ you can finish definition of kmacro by new finish key, and
 \\[keyboard-quit] takes effect as quit."
   (let ((finish (vconcat loophole-kmacro-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
-    (or (vectorp finish)
-        (stringp finish)
-        (vectorp quit)
-        (stringp quit)
+    (or (not (zerop (length finish)))
+        (not (zerop (length quit)))
         (user-error "Neither finishing key nor quitting key is invalid"))
     (let ((menu-prompting nil))
       (letrec
@@ -1897,20 +1895,27 @@ you can finish definition of kmacro by new finish key, and
             (lambda (v)
               (let* ((k (vector
                          (read-key
-                          (format "Set key %s to kmacro: (%s to finish) [%s]"
+                          (format "Set key %s to kmacro: (%s to %s) [%s]"
                                   (key-description key)
-                                  (key-description finish)
+                                  (if (zerop (length finish))
+                                      (key-description quit)
+                                    (key-description finish))
+                                  (if (zerop (length finish))
+                                      "quit"
+                                    "finish")
                                   (mapconcat (lambda (e)
                                                (key-description (vector e)))
                                              (reverse v)
                                              " ")))))
                      (k-v (vconcat k v)))
-                (cond ((loophole-key-equal (seq-take k-v (length finish))
-                                           finish)
+                (cond ((and (not (zerop (length finish)))
+                            (loophole-key-equal (seq-take k-v (length finish))
+                                                finish))
                        (seq-take (reverse k-v)
                                  (- (length k-v) (length finish))))
-                      ((loophole-key-equal (seq-take k-v (length quit))
-                                           quit)
+                      ((and (not (zerop (length quit)))
+                            (loophole-key-equal (seq-take k-v (length quit))
+                                                quit))
                        (keyboard-quit))
                       (t (funcall read-arbitrary-key-sequence k-v)))))))
         (let ((macro (funcall read-arbitrary-key-sequence [])))
@@ -1975,14 +1980,12 @@ By default, `loophole-array-by-read-key-finish-key' is \\[keyboard-quit]
 the key bound to `keyboard-quit'.  In this situation, you
 cannot use \\[keyboard-quit] for quitting.
 Once `loophole-array-by-read-key-finish-key' is changed, you
-can finish definition of kmacro by new finish key, and \\[keyboard-quit]
+can finish definition of array by new finish key, and \\[keyboard-quit]
 takes effect as quit."
   (let ((finish (vconcat loophole-array-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
-    (or (vectorp finish)
-        (stringp finish)
-        (vectorp quit)
-        (stringp quit)
+    (or (not (zerop (length finish)))
+        (not (zerop (length quit)))
         (user-error "Neither finishing key nor quitting key is invalid"))
     (let ((menu-prompting nil))
       (letrec
@@ -1990,20 +1993,27 @@ takes effect as quit."
             (lambda (v)
               (let* ((k (vector
                          (read-key
-                          (format "Set key %s to array: (%s to finish) [%s]"
+                          (format "Set key %s to array: (%s to %s) [%s]"
                                   (key-description key)
-                                  (key-description finish)
+                                  (if (zerop (length finish))
+                                      (key-description quit)
+                                    (key-description finish))
+                                  (if (zerop (length finish))
+                                      "quit"
+                                    "finish")
                                   (mapconcat (lambda (e)
                                                (key-description (vector e)))
                                              (reverse v)
                                              " ")))))
                      (k-v (vconcat k v)))
-                (cond ((loophole-key-equal (seq-take k-v (length finish))
-                                           finish)
+                (cond ((and (not (zerop (length finish)))
+                            (loophole-key-equal (seq-take k-v (length finish))
+                                                finish))
                        (seq-take (reverse k-v)
                                  (- (length k-v) (length finish))))
-                      ((loophole-key-equal (seq-take k-v (length quit))
-                                           quit)
+                      ((and (not (zerop (length quit)))
+                            (loophole-key-equal (seq-take k-v (length quit))
+                                                quit))
                        (keyboard-quit))
                       (t (funcall read-arbitrary-key-sequence k-v)))))))
         (funcall read-arbitrary-key-sequence [])))))
