@@ -806,12 +806,13 @@ is preserved."
   "Cancel and remove all local timers for globalizing MAP-VARIABLE."
   (mapc (lambda (buffer)
           (with-current-buffer buffer
-            (let ((timer (cdr (assq map-variable loophole--timer-alist))))
-              (if (timerp timer) (cancel-timer timer)))
-            (setq loophole--timer-alist
-                  (seq-filter (lambda (cell)
-                                (not (eq (car cell) map-variable)))
-                              loophole--timer-alist))))
+            (when (local-variable-p 'loophole--timer-alist)
+              (let ((timer (cdr (assq map-variable loophole--timer-alist))))
+                (if (timerp timer) (cancel-timer timer)))
+              (setq loophole--timer-alist
+                    (seq-filter (lambda (cell)
+                                  (not (eq (car cell) map-variable)))
+                                loophole--timer-alist)))))
         (if (listp loophole--buffer-list)
             loophole--buffer-list
           (buffer-list))))
