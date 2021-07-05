@@ -1657,12 +1657,15 @@ is non-nil."
 (defun loophole-stop-editing-timer ()
   "Cancel timer for editing state."
   (interactive)
-  (when (and (timerp loophole--editing-timer)
-             (not (timer--triggered loophole--editing-timer))
-             (memq loophole--editing-timer timer-list))
-    (cancel-timer loophole--editing-timer)
+  (if (and (timerp loophole--editing-timer)
+           (not (timer--triggered loophole--editing-timer))
+           (memq loophole--editing-timer timer-list))
+      (progn
+        (cancel-timer loophole--editing-timer)
+        (if (called-interactively-p 'interactive)
+            (message "Editing timer is stopped")))
     (if (called-interactively-p 'interactive)
-        (message "Editing timer is stopped"))))
+        (message "No active editing timer exist"))))
 
 (defun loophole-extend-editing-timer (time)
   "Extend time of editing timer by TIME in second.
