@@ -1682,7 +1682,7 @@ If TIME is negative, shorten timer."
         (if (or (timer--triggered loophole--editing-timer)
                 (not (memq loophole--editing-timer timer-list)))
             (timer-activate loophole--editing-timer)))
-    (user-error "Editing time does not exist")))
+    (message "Editing timer does not exist")))
 
 (defun loophole-describe (map-variable)
   "Display all key bindings in MAP-VARIABLE."
