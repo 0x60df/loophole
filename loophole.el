@@ -1623,7 +1623,7 @@ If TIME is negative, shorten timer."
           (if (or (timer--triggered timer)
                   (not (memq timer timer-list)))
               (timer-activate timer)))
-      (user-error "Time for keymap %s does not exist" map-variable))))
+      (message "Timer for keymap %s does not exist" map-variable))))
 
 (defun loophole-start-editing-timer (&optional time)
   "Setup or update timer for editing state.
