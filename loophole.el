@@ -1575,8 +1575,11 @@ is non-nil."
    (list (loophole-read-map-variable
           "Stop timer for keymap: "
           (lambda (map-variable)
-            (let ((timer (cdr (assq map-variable loophole--timer-alist))))
-              (and timer
+            (let ((timer (cdr (assq map-variable
+                                    (if (loophole-global-p map-variable)
+                                        (default-value 'loophole--timer-alist)
+                                      loophole--timer-alist)))))
+              (and (timerp timer)
                    (not (timer--triggered timer))
                    (memq timer timer-list)))))))
   (let ((timer (cdr (assq map-variable
