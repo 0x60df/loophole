@@ -103,7 +103,7 @@ Default value holds timers for global Loophole map.")
 This map is enabled temporarily during
 `loophole-obtain-kmacro-by-recursive-edit',
 and activity of this map is controled by
-`loophole-use-kmacro-by-recursive-edit-map'.")
+`loophole-kmacro-by-recursive-edit-map-flag'.")
 
 (defvar loophole-base-map (make-sparse-keymap)
   "Base keymap for all Loophole maps.
@@ -204,7 +204,7 @@ This is used by `loophole-obtain-kmacro-by-read-key'."
   :group 'loophole
   :type 'key-sequence)
 
-(defcustom loophole-use-kmacro-by-recursive-edit-map t
+(defcustom loophole-kmacro-by-recursive-edit-map-flag t
   "Flag if `loophole-kmacro-by-recursive-edit-map' is enabled."
   :group 'loophole
   :type 'boolean)
@@ -2012,7 +2012,7 @@ finished by calling `loophole-end-kmacro' which is bound to
 Besides, Definition can be aborted by calling
 `loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro]."
   (loophole-register 'loophole-kmacro-by-recursive-edit-map
-                      'loophole-use-kmacro-by-recursive-edit-map
+                     'loophole-kmacro-by-recursive-edit-map-flag
                       loophole-kmacro-by-recursive-edit-map-tag
                       t)
   (unwind-protect
