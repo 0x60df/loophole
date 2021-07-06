@@ -168,8 +168,8 @@ options like `loophole-set-key-order' will be omitted."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-register-force-read-tag t
-  "Flag if interactive `loophole-register' reads tag string."
+(defcustom loophole-make-register-always-read-tag t
+  "Flag if interactive `loophole-register' always reads tag string."
   :group 'loophole
   :type 'boolean)
 
@@ -954,7 +954,7 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                                     obarray
                                     (lambda (s)
                                       (and (boundp s) (not (keywordp s)))))))
-          (arg-tag (if (or loophole-register-force-read-tag
+          (arg-tag (if (or loophole-make-register-always-read-tag
                            current-prefix-arg)
                        (read-string
                         (format "Tag for keymap %s: " arg-map-variable))))
