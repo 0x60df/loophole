@@ -125,28 +125,30 @@ or enabled earliest used one."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-determine-obtaining-method-after-read-key 'negative-argument
-  "Option for the timing of determining obtaining method.
+(defcustom loophole-decide-obtaining-method-after-read-key 'negative-argument
+  "Option for the timing when obtaining method is decided.
 
-If this value is t, binding commands always determine
+If this value is t, binding commands always decide
 obtaining method after reading key.
 
 If this value is negative-argument, binding commands
-determine obtaining method after reading key only when
-called with `negative-argument'.
+decide obtaining method after reading key only when
+they are called with `negative-argument'.
 
-Otherwise, binding commands always determine obtaining
+Otherwise, binding commands always decide obtaining
 method before reading key.
 
-The timing of determination affect to binding commands
-called with `negative-argument'.
+The timing of decision affect to behavior of binding
+commands like `loophole-set-key', especially for the case
+they are called with `negative-argument'.
 Binding commands with `negative-argument' ask user which
 obtaining method to use.
-The prompt for asking obtaining method arises after the
-prompt for reading key if determination is after read key.
+If decision occurs after reading key, the prompt for
+asking obtaining method arises after the other prompt which
+is for reading key.
 
-Besides, if determination is after read key, optional
-:key property for obtaining method defined by other user
+Besides, if decision is after reading key, optional
+:key property of obtaining method defined at other user
 options like `loophole-set-key-order' will be omitted."
   :group 'loophole
   :type 'boolean)
@@ -240,7 +242,7 @@ key and entry to be bound, and returns keymap object on
 which key and entry are bound; this overrides
 `loophole--editing'.
 
-If `loophole-determine-obtaining-method-after-read-key' is
+If `loophole-decide-obtaining-method-after-read-key' is
 t, or while it is negative-argument and
 `loophole-bind-entry' is called with `negative-argument',
 :key property will be omitted and default
@@ -271,7 +273,7 @@ key and command to be bound, and returns keymap object on
 which key and command are bound; this overrides
 `loophole--editing'.
 
-If `loophole-determine-obtaining-method-after-read-key' is
+If `loophole-decide-obtaining-method-after-read-key' is
 t, or while it is negative-argument and
 `loophole-bind-command' is called with `negative-argument',
 :key property will be omitted and default
@@ -304,7 +306,7 @@ key and kmacro to be bound, and returns keymap object on
 which key and kmacro are bound; this overrides
 `loophole--editing'.
 
-If `loophole-determine-obtaining-method-after-read-key' is
+If `loophole-decide-obtaining-method-after-read-key' is
 t, or while it is negative-argument and
 `loophole-bind-kmacro' is called with `negative-argument',
 :key property will be omitted and default
@@ -335,7 +337,7 @@ key and array to be bound, and returns keymap object on
 which key and array are bound; this overrides
 `loophole--editing'.
 
-If `loophole-determine-obtaining-method-after-read-key' is
+If `loophole-decide-obtaining-method-after-read-key' is
 t, or while it is negative-argument and
 `loophole-bind-array' is called with `negative-argument',
 :key property will be omitted and default
@@ -366,7 +368,7 @@ arguments the key and keymap to be bound, and returns
 another-keymap object on which key and keymap are bound;
 this overrides `loophole--editing'.
 
-If `loophole-determine-obtaining-method-after-read-key' is
+If `loophole-decide-obtaining-method-after-read-key' is
 t, or while it is negative-argument and
 `loophole-bind-keymap' is called with `negative-argument',
 :key property will be omitted and default
@@ -397,7 +399,7 @@ key and symbol to be bound, and returns keymap object on
 which key and symbol are bound; this overrides
 `loophole--editing'.
 
-If `loophole-determine-obtaining-method-after-read-key' is
+If `loophole-decide-obtaining-method-after-read-key' is
 t, or while it is negative-argument and
 `loophole-bind-symbol' is called with `negative-argument',
 :key property will be omitted and default
@@ -429,7 +431,7 @@ a property :key.  It looks like
 READ-KEY is a function which takes no arguments and returns
 key sequence to be bound.
 
-If `loophole-determine-obtaining-method-after-read-key' is
+If `loophole-decide-obtaining-method-after-read-key' is
 t, or while it is negative-argument and
 `loophole-bind-symbol' is called with `negative-argument',
 :key property will be omitted and default
@@ -1848,8 +1850,8 @@ key and binding only."
           read-key-function
           obtain-entry-function
           obtain-keymap-function)
-      (unless (or (eq loophole-determine-obtaining-method-after-read-key t)
-                  (and (eq loophole-determine-obtaining-method-after-read-key
+      (unless (or (eq loophole-decide-obtaining-method-after-read-key t)
+                  (and (eq loophole-decide-obtaining-method-after-read-key
                            'negative-argument)
                        (< n 0)))
         (setq obtaining-method-spec (funcall determine-obtaining-method n))
@@ -1864,8 +1866,8 @@ key and binding only."
              (if read-key-function
                  (funcall read-key-function)
                (loophole-read-key "Set key temporarily: "))))
-        (when (or (eq loophole-determine-obtaining-method-after-read-key t)
-                  (and (eq loophole-determine-obtaining-method-after-read-key
+        (when (or (eq loophole-decide-obtaining-method-after-read-key t)
+                  (and (eq loophole-decide-obtaining-method-after-read-key
                            'negative-argument)
                        (< n 0)))
           (setq obtaining-method-spec (funcall determine-obtaining-method n))
