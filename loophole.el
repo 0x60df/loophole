@@ -796,30 +796,10 @@ Consequently, all loophole maps lose effect while its state
 is preserved."
   (not (memq 'loophole--map-alist emulation-mode-map-alists)))
 
-(defun loophole--erase-timers (map-variable)
-  "Cancel and remove all timers for unregistering MAP-VARIABLE."
-  (let ((timer (cdr (assq map-variable
-                          (default-value 'loophole--timer-alist)))))
-    (if (timerp timer) (cancel-timer timer)))
-  (setq-default loophole--timer-alist
-                (seq-filter (lambda (cell)
-                              (not (eq (car cell) map-variable)))
-                            (default-value 'loophole--timer-alist)))
-  (mapc (lambda (buffer)
-          (with-current-buffer buffer
-            (when (local-variable-p 'loophole--timer-alist)
-              (let ((timer (cdr (assq map-variable loophole--timer-alist))))
-                (if (timerp timer) (cancel-timer timer)))
-              (setq loophole--timer-alist
-                    (seq-filter (lambda (cell)
-                                  (not (eq (car cell) map-variable)))
-                                loophole--timer-alist)))))
-        (if (listp loophole--buffer-list)
-            loophole--buffer-list
-          (buffer-list))))
-
 (defun loophole--erase-local-timers (map-variable)
-  "Cancel and remove all local timers for globalizing MAP-VARIABLE."
+  "Cancel and remove all local timers for globalizing MAP-VARIABLE.
+This function is intended to be used in `loophole-globalize'
+and `loophole-unregister'."
   (mapc (lambda (buffer)
           (with-current-buffer buffer
             (when (local-variable-p 'loophole--timer-alist)
@@ -834,7 +814,9 @@ is preserved."
           (buffer-list))))
 
 (defun loophole--erase-global-timer (map-variable)
-  "Cancel and remove global timer for localizing MAP-VARIABLE."
+  "Cancel and remove global timer for localizing MAP-VARIABLE.
+This function is intended to be used in `loophole-localize'
+and `loophole-unregister'."
   (let ((timer
          (cdr (assq map-variable (default-value 'loophole--timer-alist)))))
     (if (timerp timer) (cancel-timer timer)))
@@ -846,7 +828,8 @@ is preserved."
 (defun loophole--replace-map-variable-of-timer (map-variable new-map-variable)
   "Update `loophole--timer-alist' and timer when naming MAP-VARIABLE.
 Updated ones refer to NEW-MAP-VARIABLE.
-All buffer local alists and timers are updated."
+All buffer local alists and timers are updated.
+This function is intended to be used in `loophole-name'."
   (if (loophole-global-p new-map-variable)
       (let ((cell (assq map-variable (default-value 'loophole--timer-alist))))
         (when cell
@@ -1061,6 +1044,9 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (interactive (list (loophole-read-map-variable "Unregister keymap:")))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
+  (if (loophole-global-p map-variable)
+      (loophole--erase-global-timer map-variable)
+    (loophole--erase-local-timers map-variable))
   (mapc (lambda (buffer)
           (with-current-buffer buffer
             (if (and (local-variable-p 'loophole--editing)
@@ -1101,7 +1087,6 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
     (put map-variable :loophole-tag nil)
     (put state-variable :loophole-map-variable nil)
     (put map-variable :loophole-state-variable nil))
-  (loophole--erase-timers map-variable)
   (run-hook-with-args 'loophole-unregister-functions map-variable))
 
 (defun loophole-prioritize (map-variable)
