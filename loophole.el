@@ -2405,12 +2405,13 @@ method."
 
 (defun loophole-unset-key (key)
   "Unset the temporary biding of KEY."
-  (interactive (list (loophole-read-key "Unset temporarily set key: ")))
+  (interactive (if loophole--editing
+                   (list (loophole-read-key "Unset temporarily set key: "))
+                 (user-error "There is no editing map")))
   (if loophole--editing
       (let ((map (symbol-value loophole--editing)))
         (if (lookup-key map key)
-            (loophole-bind-entry key nil map)
-          (message "No entry found in editing keymap: %s" loophole--editing)))))
+            (loophole-bind-entry key nil map)))))
 
 ;;; Entry modifiers
 
