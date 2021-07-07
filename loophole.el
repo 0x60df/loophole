@@ -461,6 +461,20 @@ argument, prioritized map variable."
   :group 'loophole
   :type 'hook)
 
+(defcustom loophole-globalize-functions nil
+  "Hook for `loophole-globalize'.
+Functions added to this user option are called with one
+argument, globalized map variable."
+  :group 'loophole
+  :type 'hook)
+
+(defcustom loophole-localize-functions nil
+  "Hook for `loophole-localize'.
+Functions added to this user option are called with one
+argument, localized map variable."
+  :group 'loophole
+  :type 'hook)
+
 (defcustom loophole-enable-functions nil
   "Hook for `loophole-enable'.
 Functions added to this user option are called with one
@@ -1269,8 +1283,9 @@ generate new one, prepare it, and return it."
                        (delq buffer loophole--buffer-list))))))
        (if (listp loophole--buffer-list)
            loophole--buffer-list
-         (buffer-list)))
-      (loophole--erase-local-timers map-variable))))
+         (buffer-list))))
+    (loophole--erase-local-timers map-variable)
+    (run-hook-with-args 'loophole-globalize-functions map-variable)))
 
 (defun loophole-localize (map-variable)
   "Make MAP-VARIABLE local."
@@ -1291,11 +1306,12 @@ generate new one, prepare it, and return it."
                 (add-variable-watcher state-variable
                                       #'loophole--follow-adding-local-variable))
             (set state-variable state)
-            (force-mode-line-update t)
-            (loophole--erase-global-timer map-variable))
+            (force-mode-line-update t))
         (user-error (concat "Abort localize."
                             "  Gloabl variable cannot be used"
-                            " for local state-variable"))))))
+                            " for local state-variable")))
+      (loophole--erase-global-timer map-variable)
+      (run-hook-with-args 'loophole-localize-functions map-variable))))
 
 (defun loophole-enable (map-variable)
   "Enable the keymap stored in MAP-VARIABLE."
@@ -2836,40 +2852,28 @@ Instead of using this function, user can pick some hooks and
 advice for optimized customization."
   (add-hook 'loophole-enable-functions #'loophole-start-timer)
   (add-hook 'loophole-disable-functions #'loophole-stop-timer)
-  (advice-add 'loophole-globalize
-              :after (lambda (map-variable)
-                       "Call `loophole-start-timer'
-  if MAP-VARIABLE is enabled."
-                       (if (symbol-value
-                            (get map-variable :loophole-state-variable))
-                           (loophole-start-timer map-variable))))
-  (advice-add 'loophole-localize
-              :after (lambda (map-variable)
-                       "Call `loophole-start-timer'
-  if MAP-VARIABLE is enabled."
-                       (if (symbol-value
-                            (get map-variable :loophole-state-variable))
-                           (loophole-start-timer map-variable)))))
+  (add-hook 'loophole-globalize-functions
+             (lambda (map-variable)
+               (if (symbol-value (get map-variable :loophole-state-variable))
+                   (loophole-start-timer map-variable))))
+  (add-hook 'loophole-localize-functions
+             (lambda (map-variable)
+               (if (symbol-value (get map-variable :loophole-state-variable))
+                   (loophole-start-timer map-variable)))))
 
 (defun loophole-turn-off-auto-timer ()
   "Turn off auto timer as user customization.
 Remove hooks and advice added by `loophole-turn-on-auto-timer'."
   (remove-hook 'loophole-enable-functions #'loophole-start-timer)
   (remove-hook 'loophole-disable-functions #'loophole-stop-timer)
-  (advice-remove 'loophole-globalize
-                 (lambda (map-variable)
-                   "Call `loophole-start-timer'
-  if MAP-VARIABLE is enabled."
-                   (if (symbol-value
-                        (get map-variable :loophole-state-variable))
-                       (loophole-start-timer map-variable))))
-  (advice-remove 'loophole-localize
-                 (lambda (map-variable)
-                   "Call `loophole-start-timer'
-  if MAP-VARIABLE is enabled."
-                   (if (symbol-value
-                        (get map-variable :loophole-state-variable))
-                       (loophole-start-timer map-variable)))))
+  (remove-hook 'loophole-globalize-functions
+                (lambda (map-variable)
+                  (if (symbol-value (get map-variable :loophole-state-variable))
+                      (loophole-start-timer map-variable))))
+  (remove-hook 'loophole-localize-functions
+                (lambda (map-variable)
+                  (if (symbol-value (get map-variable :loophole-state-variable))
+                      (loophole-start-timer map-variable)))))
 
 (defun loophole-turn-on-auto-editing-timer ()
   "Turn on auto eiditing timer as user customization.
