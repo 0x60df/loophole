@@ -131,7 +131,7 @@ or enabled earliest used one."
 If this value is t, binding commands always decide
 obtaining method after reading key.
 
-If this value is negative-argument, binding commands
+If this value is 'negative-argument, binding commands
 decide obtaining method after reading key only when
 they are called with `negative-argument'.
 
@@ -205,7 +205,7 @@ This is used by `loophole-obtain-kmacro-by-read-key'."
   :type 'key-sequence)
 
 (defcustom loophole-kmacro-by-recursive-edit-map-flag t
-  "Flag if `loophole-kmacro-by-recursive-edit-map' is enabled."
+  "Non-nil means `loophole-kmacro-by-recursive-edit-map' is enabled."
   :group 'loophole
   :type 'boolean)
 
@@ -242,9 +242,9 @@ key and entry to be bound, and returns keymap object on
 which key and entry are bound; this overrides
 `loophole--editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is
-t, or while it is negative-argument and
-`loophole-bind-entry' is called with `negative-argument',
+If `loophole-decide-obtaining-method-after-read-key' is t,
+or while it is 'negative-argument and `loophole-bind-entry'
+is called with `negative-argument',
 :key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
@@ -273,8 +273,8 @@ key and command to be bound, and returns keymap object on
 which key and command are bound; this overrides
 `loophole--editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is
-t, or while it is negative-argument and
+If `loophole-decide-obtaining-method-after-read-key' is t,
+or while it is 'negative-argument and
 `loophole-bind-command' is called with `negative-argument',
 :key property will be omitted and default
 `loophole-read-key' will be used for reading key."
@@ -306,9 +306,9 @@ key and kmacro to be bound, and returns keymap object on
 which key and kmacro are bound; this overrides
 `loophole--editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is
-t, or while it is negative-argument and
-`loophole-bind-kmacro' is called with `negative-argument',
+If `loophole-decide-obtaining-method-after-read-key' is t,
+or while it is 'negative-argument and `loophole-bind-kmacro'
+is called with `negative-argument',
 :key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
@@ -337,9 +337,9 @@ key and array to be bound, and returns keymap object on
 which key and array are bound; this overrides
 `loophole--editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is
-t, or while it is negative-argument and
-`loophole-bind-array' is called with `negative-argument',
+If `loophole-decide-obtaining-method-after-read-key' is t,
+or while it is 'negative-argument and `loophole-bind-array'
+is called with `negative-argument',
 :key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
@@ -368,9 +368,9 @@ arguments the key and keymap to be bound, and returns
 another-keymap object on which key and keymap are bound;
 this overrides `loophole--editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is
-t, or while it is negative-argument and
-`loophole-bind-keymap' is called with `negative-argument',
+If `loophole-decide-obtaining-method-after-read-key' is t,
+or while it is 'negative-argument and `loophole-bind-keymap'
+is called with `negative-argument',
 :key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
@@ -399,9 +399,9 @@ key and symbol to be bound, and returns keymap object on
 which key and symbol are bound; this overrides
 `loophole--editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is
-t, or while it is negative-argument and
-`loophole-bind-symbol' is called with `negative-argument',
+If `loophole-decide-obtaining-method-after-read-key' is t,
+or while it is 'negative-argument and `loophole-bind-symbol'
+is called with `negative-argument',
 :key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
@@ -431,9 +431,9 @@ a property :key.  It looks like
 READ-KEY is a function which takes no arguments and returns
 key sequence to be bound.
 
-If `loophole-decide-obtaining-method-after-read-key' is
-t, or while it is negative-argument and
-`loophole-bind-symbol' is called with `negative-argument',
+If `loophole-decide-obtaining-method-after-read-key' is t,
+or while it is 'negative-argument and `loophole-set-key' is
+called with `negative-argument',
 :key property will be omitted and default
 `loophole-read-key' will be used for reading key."
   :risky t
