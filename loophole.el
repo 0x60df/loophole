@@ -1799,7 +1799,7 @@ Definition can be finished by calling `loophole-end-kmacro'."
         (user-error "Neither finishing key nor quitting key is invalid")))
   (loophole-read-key "Set key temporarily: "))
 
-(defun loophole-prefix-arg-rank-value (arg)
+(defun loophole-prefix-arg-rank (arg)
   "Return rank value for raw prefix argument ARG.
 In the context of this function, rank of prefix argument is
 defined as follows.
@@ -1822,7 +1822,7 @@ PREFIX-ARGUMENT .
 If optional argument WITHOUT-KEYMAP is non-nil, this
 function does not try to obtain keymap, and return list of
 key and binding only."
-  (let ((n (loophole-prefix-arg-rank-value prefix-argument)))
+  (let ((n (loophole-prefix-arg-rank prefix-argument)))
     (if (< (1- (length order)) n)
         (user-error "Undefined prefix argument"))
     (let ((determine-obtaining-method
