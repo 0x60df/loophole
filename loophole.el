@@ -1825,7 +1825,7 @@ key and binding only."
   (let ((n (loophole-prefix-arg-rank prefix-argument)))
     (if (< (1- (length order)) n)
         (user-error "Undefined prefix argument"))
-    (let ((determine-obtaining-method
+    (let ((decide-obtaining-method
            (lambda (m)
              (if (< m 0)
                  (let ((alist (mapcar (lambda (e) (cons (format "%s" e) e))
@@ -1855,7 +1855,7 @@ key and binding only."
                   (and (eq loophole-decide-obtaining-method-after-read-key
                            'negative-argument)
                        (< n 0)))
-        (setq obtaining-method-spec (funcall determine-obtaining-method n))
+        (setq obtaining-method-spec (funcall decide-obtaining-method n))
         (setq read-key-function
               (funcall get-read-key-function obtaining-method-spec))
         (setq obtain-entry-function
@@ -1871,7 +1871,7 @@ key and binding only."
                   (and (eq loophole-decide-obtaining-method-after-read-key
                            'negative-argument)
                        (< n 0)))
-          (setq obtaining-method-spec (funcall determine-obtaining-method n))
+          (setq obtaining-method-spec (funcall decide-obtaining-method n))
           (setq obtain-entry-function
                 (funcall get-obtain-entry-function obtaining-method-spec))
           (setq obtain-keymap-function
