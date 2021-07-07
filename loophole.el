@@ -2371,8 +2371,6 @@ method."
               (let ((function-cell (symbol-function symbol)))
                 (or (keymapp function-cell)
                     (commandp function-cell)
-                    (vectorp function-cell)
-                    (stringp function-cell)
                     (if (and function-cell (symbolp function-cell))
                         (funcall inspect-function-cell function-cell)))))))
     (if (and (symbolp symbol)
