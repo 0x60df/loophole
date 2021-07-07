@@ -1934,9 +1934,8 @@ valid lambda command, this function return it."
           (with-current-buffer workspace (goto-char 1))
           (let ((lambda-form (eval (read workspace))))
             (if (and (commandp lambda-form)
-                     (not (symbolp lambda-form))
-                     (not (vectorp lambda-form))
-                     (not (stringp lambda-form)))
+                     (listp lambda-form)
+                     (eq (car lambda-form) 'lambda))
                 lambda-form
               (user-error
                "Obtained Lisp object is not valid lambda command: %s"
@@ -2444,9 +2443,8 @@ the first one will be read."
     (cond ((null entry)
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (and (commandp entry)
-                     (not (symbolp entry))
-                     (not (vectorp entry))
-                     (not (stringp entry))))
+                     (listp entry)
+                     (eq (car entry) 'lambda)))
            (user-error "Bound entry is not lambda form: %s" entry)))
     (unwind-protect
         (let ((workspace (get-buffer-create "*Loophole*")))
@@ -2458,9 +2456,8 @@ the first one will be read."
           (with-current-buffer workspace (goto-char 1))
           (let ((lambda-form (read workspace)))
             (if (and (commandp lambda-form)
-                     (not (symbolp lambda-form))
-                     (not (vectorp lambda-form))
-                     (not (stringp lambda-form)))
+                     (listp lambda-form)
+                     (eq (car lambda-form) 'lambda))
                 (loophole-bind-entry key lambda-form
                                      (symbol-value map-variable))
               (user-error
