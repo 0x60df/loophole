@@ -1049,9 +1049,10 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
     (loophole--erase-local-timers map-variable))
   (mapc (lambda (buffer)
           (with-current-buffer buffer
-            (if (and (local-variable-p 'loophole--editing)
-                     (eq loophole--editing map-variable))
-                (loophole-stop-editing))))
+            (when (and (local-variable-p 'loophole--editing)
+                       (eq loophole--editing map-variable))
+              (loophole-stop-editing-timer)
+              (loophole-stop-editing))))
         (if (listp loophole--buffer-list)
             loophole--buffer-list
           (buffer-list)))
