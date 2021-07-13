@@ -57,38 +57,38 @@ Then, your keymap environment stays clean.
 Loophole uses three layers of keymaps.
 
 First one is keymaps for temporary key bindings.
-I call them as "loophole-map".
+I call them as "Loophole-map".
 They are mainly generated automatically,
 and listed in `loophole--map-alist`.
 They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
 
-Second one is `loophole-base-map` which will be inherited to most loophole-maps.
+Second one is `loophole-base-map` which will be inherited to most Loophole-maps.
 This keymap offers the place for binding which can be used commonly when
-any of loophole-map is activated.
+any of Loophole-map is activated.
 For example, binding `C-q` to `loophole-disable-latest-map` reduces the number
 of typing, and `C-q` recovers the original binding `quoted-insert` immediately
-after all loophole-map are disabled.
+after all Loophole-map are disabled.
 
-Third one is the keymap for manipulating loophole itself,
-named `loophole-mode-map` which holds some loophole commands.
+Third one is the keymap for manipulating Loophole itself,
+named `loophole-mode-map` which holds some Loophole commands.
 This is, as the name suggests, activated when `loophole-mode` is enabled.
 
 #### Buffer local behavior
 
-All loophole-maps are shared globally but their activating states are buffer
+All Loophole-maps are shared globally but their activating states are buffer
 local by default.
-If you want to use loophole-map globally, use `loophole-globalize`.
-`loophole-localize` can make globalized loophole-map back to buffer local.
+If you want to use Loophole-map globally, use `loophole-globalize`.
+`loophole-localize` can make globalized Loophole-map back to buffer local.
 
-Order of loophole-maps and editing map are also buffer local.
+Order of Loophole-maps and editing map are also buffer local.
 You can control these conditions for each buffer.
 
-#### Naming loophole-map
+#### Naming Loophole-map
 
-If you like some loophole-map, naming them may help.
+If you like some Loophole-map, naming them may help.
 Loophole-maps are initially named as `loophole-n-map`.
 They can be renamed by `loophole-name`.
-Once loophole-map gets name other than `loophole-n-map`,
+Once Loophole-map gets name other than `loophole-n-map`,
 it goes out of range of automatic keymap generation and is never overwritten.
 
 #### Loophole mode
@@ -98,19 +98,19 @@ it goes out of range of automatic keymap generation and is never overwritten.
 When `loophole-mode` is enabled,
 `loophole--map-alist` is added to the head of `emulation-mode-map-alists`,
 and thus temporary key bindings are activated.
-Furthermore, you can use `loophole-mode-map` for binding loophole commands.
+Furthermore, you can use `loophole-mode-map` for binding Loophole commands.
 
 Even while `loophole-mode` is activated, whole temporary key bindings can be
 disabled temporarily by calling `loophole-suspend`,
-which keeps state of each loophole-map.
+which keeps state of each Loophole-map.
 `loophole-resume` restores suspended temporary key bindings.
 These functions realize suspension by removing and adding `loophole--map-alist`
 in `emulation-mode-map-alists`.
 
 Note that disabling `loophole-mode` also calls `loophole-suspend` and keeps
-state of each loophole-map.
-If you want to completely disable loophole, use `loophole-quit`.
-It disables all loophole-maps and `loophole-mode`.
+state of each Loophole-map.
+If you want to completely disable Loophole, use `loophole-quit`.
+It disables all Loophole-maps and `loophole-mode`.
 
 #### Key binding entry
 
@@ -203,7 +203,7 @@ and can abort by the key sequence bound to `keyboard-quit`.
 ##### kmacro by recall record
 
 `competing-read` the `kmacro-ring`.
-Therefore, the keyboard macro which defined in outside of loophole
+Therefore, the keyboard macro which defined in outside of Loophole
 also can be bound.
 
 ##### object
@@ -218,13 +218,13 @@ Keymap which is been edited is displayed in mode line with
 `loophole-mode-lighter-editing-sign`.
 Details of mode line format is described in customization section.
 
-#### Describe loophole-map
+#### Describe Loophole-map
 
-`loophole-describe` describes loophole-map.
+`loophole-describe` describes Loophole-map.
 As well as `M-x` `loophole-describe`,
-`help-char` in minibuffer for some commands which reads loophole-map
+`help-char` in minibuffer for some commands which reads Loophole-map
 ike `loophole-enable`, `loophole-name`, ... also invokes `loophole-describe`.
-Multiple input of `help-char` in minibuffer cycles loophole-map description
+Multiple input of `help-char` in minibuffer cycles Loophole-map description
 among completion candidates.
 
 #### Alternative binding commands
@@ -243,10 +243,10 @@ the commands prefixed by `loophole-bind-` may be convenient.
 ### Automation and timer
 
 Loophole offers some customization functions for automation and timer.
-Functions for automation setup some sequential call of loophole function like
+Functions for automation setup some sequential call of Loophole function like
 `loophole-stop-editing` after some events.
 Functions for timer setup some facilities to manage `timer`s of Emacs to
-disable loophole-map or stop editing keymap.
+disable Loophole-map or stop editing keymap.
 
 These functions are prefixed by `loophole-turn-` on or off.
 Adding them in your init file setup automation and timers.
@@ -370,9 +370,9 @@ Entire customization codes may look like below.
         loophole-obtain-key-and-object))
 ```
 
-### Key bindings for loophole commands
+### Key bindings for Loophole commands
 
-By default, loophole uses some key sequences for loophole commands.
+By default, Loophole uses some key sequences for Loophole commands.
 They are defined in `loophole-mode-map`, `loophole-write-lisp-mode-map`,
 `loophole-kmacro-by-recursive-edit-map`.
 They are all customizable.
@@ -390,11 +390,11 @@ To clear them out, use the following line.
 
 Loophole shows its status on mode-line dynamically.
 By default, it shows `loophole-mode-lighter-base`,
-`loophole-mode-lighter-suspending-sign` when suspending loophole,
+`loophole-mode-lighter-suspending-sign` when suspending Loophole,
 `loophole-mode-lighter-editing-sign` with tag of the map being edited when
-editing loophole-map,
-and concatenated tags of enabled loophole-maps.
-Here, tag is short string which represents loophole-map.
+editing Loophole-map,
+and concatenated tags of enabled Loophole-maps.
+Here, tag is short string which represents Loophole-map.
 
 You can change this style by user option `loophole-mode-lighter` and
 `loohpole-mode-lighter-preset-alist`.
@@ -440,20 +440,20 @@ Default value of this user option is `8`.
 
 #### loophole-allow-keyboard-quit
 
-The flag if loophole allows `keyboard-quit` during reading key for binding.
+The flag if Loophole allows `keyboard-quit` during reading key for binding.
 When `keyboard-quit` is allowed,
-loophole cannot set key bindings for the key sequence of `keyboard-quit`,
+Loophole cannot set key bindings for the key sequence of `keyboard-quit`,
 which may be `C-g`.
 
 Default value of this user option is `t`.
 
 ### Defining Loophole map
 
-You can use existing or your own keymap and state variable on loophole.
+You can use existing or your own keymap and state variable on Loophole.
 To register them, use `loophole-register`.
 
-Although loophole main focus is interactive interface,
-you can setup your loophole-map during initialization by putting the following
+Although Loophole main focus is interactive interface,
+you can setup your Loophole-map during initialization by putting the following
 forms in your init file.
 
 ```emacs-lisp
@@ -502,6 +502,6 @@ In such cases, defining minor-mode is a canonical way.
     map))
 ```
 
-However, loophole offers some utilities for managing keymaps.
-If your keymap is small, developing or with which loophole utilities work well,
-please try loophole.
+However, Loophole offers some utilities for managing keymaps.
+If your keymap is small, developing or with which Loophole utilities work well,
+please try Loophole.
