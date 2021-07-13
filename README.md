@@ -218,13 +218,22 @@ Keymap which is been edited is displayed in mode line with
 `loophole-mode-lighter-editing-sign`.
 Details of mode line format is described in customization section.
 
-#### Describe Loophole-map
+#### Timers
 
-`loophole-describe` describes Loophole-map.
+Timers for disabling Loophole map and stopping editing session can be started
+by `loophole-start-timer` and `loophole-start-editing-timer`.
+Started timer can be controlled by `loophole-start-timer`,
+`loophole-start-editing-timer` again, and `loophole-stop-timer`,
+`loophole-stop-editing-timer`, `loophole-extend-timer` and
+loophole-extend-editing-timer`.
+
+#### Describe Loophole map
+
+`loophole-describe` describes Loophole map.
 As well as `M-x` `loophole-describe`,
-`help-char` in minibuffer for some commands which reads Loophole-map
+`help-char` in minibuffer for some commands which reads Loophole map
 ike `loophole-enable`, `loophole-name`, ... also invokes `loophole-describe`.
-Multiple input of `help-char` in minibuffer cycles Loophole-map description
+Multiple input of `help-char` in minibuffer cycles Loophole map description
 among completion candidates.
 
 #### Alternative binding commands
@@ -240,22 +249,17 @@ the commands prefixed by `loophole-bind-` may be convenient.
 
 ## Customization
 
-### Automation and timer
+### Automation
 
-Loophole offers some customization functions for automation and timer.
-Functions for automation setup some sequential call of Loophole function like
+Loophole offers some customization functions for automation.
+These functions setup some sequential call of Loophole function like
 `loophole-stop-editing` after some events.
-Functions for timer setup some facilities to manage `timer`s of Emacs to
-disable Loophole-map or stop editing keymap.
 
 These functions are prefixed by `loophole-turn-` on or off.
-Adding them in your init file setup automation and timers.
+Adding them in your init file setup automation.
 
 They are also setter for custom variables like `loophole-use-auto-stop-editing`.
 Hence, they can be called via `custom-set-variables`.
-Default value of these custom variables are `t` for automation, and `nil` for
-timer.
-
 Note that `setq` for these variables does not work.
 
 
