@@ -57,17 +57,17 @@ Then, your keymap environment stays clean.
 Loophole uses three layers of keymaps.
 
 First one is keymaps for temporary key bindings.
-I call them as "Loophole-map".
+I call them as "Loophole map".
 They are mainly generated automatically,
 and listed in `loophole--map-alist`.
 They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
 
-Second one is `loophole-base-map` which will be inherited to most Loophole-maps.
+Second one is `loophole-base-map` which will be inherited to most Loophole maps.
 This keymap offers the place for binding which can be used commonly when
-any of Loophole-map is activated.
+any of Loophole map is activated.
 For example, binding `C-q` to `loophole-disable-latest-map` reduces the number
 of typing, and `C-q` recovers the original binding `quoted-insert` immediately
-after all Loophole-map are disabled.
+after all Loophole map are disabled.
 
 Third one is the keymap for manipulating Loophole itself,
 named `loophole-mode-map` which holds some Loophole commands.
@@ -75,20 +75,20 @@ This is, as the name suggests, activated when `loophole-mode` is enabled.
 
 #### Buffer local behavior
 
-All Loophole-maps are shared globally but their activating states are buffer
+All Loophole maps are shared globally but their activating states are buffer
 local by default.
-If you want to use Loophole-map globally, use `loophole-globalize`.
-`loophole-localize` can make globalized Loophole-map back to buffer local.
+If you want to use Loophole map globally, use `loophole-globalize`.
+`loophole-localize` can make globalized Loophole map back to buffer local.
 
-Order of Loophole-maps and editing map are also buffer local.
+Order of Loophole maps and editing map are also buffer local.
 You can control these conditions for each buffer.
 
-#### Naming Loophole-map
+#### Naming Loophole map
 
-If you like some Loophole-map, naming them may help.
-Loophole-maps are initially named as `loophole-n-map`.
+If you like some Loophole map, naming them may help.
+Loophole maps are initially named as `loophole-n-map`.
 They can be renamed by `loophole-name`.
-Once Loophole-map gets name other than `loophole-n-map`,
+Once Loophole map gets name other than `loophole-n-map`,
 it goes out of range of automatic keymap generation and is never overwritten.
 
 #### Loophole mode
@@ -102,15 +102,15 @@ Furthermore, you can use `loophole-mode-map` for binding Loophole commands.
 
 Even while `loophole-mode` is activated, whole temporary key bindings can be
 disabled temporarily by calling `loophole-suspend`,
-which keeps state of each Loophole-map.
+which keeps state of each Loophole map.
 `loophole-resume` restores suspended temporary key bindings.
 These functions realize suspension by removing and adding `loophole--map-alist`
 in `emulation-mode-map-alists`.
 
 Note that disabling `loophole-mode` also calls `loophole-suspend` and keeps
-state of each Loophole-map.
+state of each Loophole map.
 If you want to completely disable Loophole, use `loophole-quit`.
-It disables all Loophole-maps and `loophole-mode`.
+It disables all Loophole maps and `loophole-mode`.
 
 #### Key binding entry
 
@@ -393,9 +393,9 @@ Loophole shows its status on mode-line dynamically.
 By default, it shows `loophole-mode-lighter-base`,
 `loophole-mode-lighter-suspending-sign` when suspending Loophole,
 `loophole-mode-lighter-editing-sign` with tag of the map being edited when
-editing Loophole-map,
-and concatenated tags of enabled Loophole-maps.
-Here, tag is short string which represents Loophole-map.
+editing Loophole map,
+and concatenated tags of enabled Loophole maps.
+Here, tag is short string which represents Loophole map.
 
 You can change this style by user option `loophole-mode-lighter` and
 `loohpole-mode-lighter-preset-alist`.
@@ -454,7 +454,7 @@ You can use existing or your own keymap and state variable on Loophole.
 To register them, use `loophole-register`.
 
 Although Loophole main focus is interactive interface,
-you can setup your Loophole-map during initialization by putting the following
+you can setup your Loophole map during initialization by putting the following
 forms in your init file.
 
 ```emacs-lisp
