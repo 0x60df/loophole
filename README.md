@@ -269,26 +269,16 @@ argument the key to be bound and returns any Lisp object suitable for key
 binding entry.
 
 Each element optionally can be a list whose car is a
-function described above, and cdr is a plist which optionally has
-a property :key and/or :keymap.  It looks like the following.
-
-```emacs-lisp
-(OBTAINING-ENTRY-FUNCTION
- :key READING-KEY-FUNCTION
- :keymap OBTAINING-KEYMAP-FUNCTION)
-```
-
-READING-KEY-FUNCTION is a function which takes no arguments and returns
+function described above, and cdr is a plist which has
+a property :key.  It looks like
+(OBTAIN-ENTRY :key READ-KEY).
+READ-KEY is a function which takes no arguments and returns
 key sequence to be bound.
 However, if `loophole-decide-obtaining-method-after-read-key` is
 t, or while it is the symbol `negative-argument` and
 binding commands are called with `negative-argument`,
 :key property will be omitted and default
 `loophole-read-key` will be used.
-
-OBTAINING-KEYMAP-FUNCTION is a function which takes two arguments the
-key and entry to be bound, and returns keymap object on
-which key and entry are bound; this overrides `loophole--editing` map.
 
 Default value of `loophole-set-key-order` is
 
@@ -345,6 +335,13 @@ Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
 `loophole-bind-kmacro-order`, `loophole-bind-array-order`,
 `loophole-bind-keymap-order`,`loophole-bind-symbol-order`).
 It also can be customized by the same way.
+
+Elements of these variable can contain :keymap property in addition to :key
+property.
+It looks like (OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+OBTAIN-KEYMAP is a function which takes two arguments the
+key and entry to be bound, and returns keymap object on
+which key and entry are bound; this overrides editing loophole map.
 
 You can also define your obtaining method for entry.
 The requirements for obtaining method is that
