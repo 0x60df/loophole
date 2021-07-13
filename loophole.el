@@ -71,7 +71,7 @@ To see true state of suspension, use
 `loophole-suspending-p' instead of this variable.")
 
 (defvar-local loophole--timer-alist nil
-  "Alist of timer for disabling loophole map.
+  "Alist of timer for disabling Loophole map.
 Each element looks like (MAP-VARIABLE . TIMER).
 MAP-VARIABLE is a symbol which holds keymap.
 TIMER is a timer for MAP-VARIABLE on current buffer.
@@ -121,7 +121,9 @@ or enabled earliest used one."
   :type 'integer)
 
 (defcustom loophole-allow-keyboard-quit t
-  "If non-nil, binding commands can be quit even while reading keys."
+  "If non-nil, binding commands can be quit even while reading keys.
+If binidng commands use reading key function other than
+`loohpole-read-key', this variable takes no effect."
   :group 'loophole
   :type 'boolean)
 
@@ -164,7 +166,10 @@ options like `loophole-set-key-order' will be omitted."
   :type 'boolean)
 
 (defcustom loophole-force-overwrite-parent-map nil
-  "Flag if `set-keymap-parent' is done without prompting."
+  "Flag if `set-keymap-parent' is done without prompting.
+If parent of the keymap which is about to be
+`set-keymap-parent' is nil, parent is set without prompt
+regardless of the value of this user option."
   :group 'loophole
   :type 'boolean)
 
@@ -519,7 +524,7 @@ this hook is run with all of them."
   :type 'hook)
 
 (defcustom loophole-tag-sign "#"
-  "String indicating tag string of loophole-map."
+  "String indicating tag string of Loophole map."
   :group 'loophole
   :type 'string)
 
@@ -652,12 +657,12 @@ format."
 
 (defface loophole-using
   '((t :inherit error))
-  "Face used for section of lighter showing active loophole-map."
+  "Face used for section of lighter showing active Loophole map."
   :group 'loophole)
 
 (defface loophole-editing
   '((t))
-  "Face used for section of lighter showing editing loophole-map."
+  "Face used for section of lighter showing editing Loophole map."
   :group 'loophole)
 
 (defface loophole-suspending
@@ -675,7 +680,7 @@ Elements are ordered according to `loophole--map-alist'."
           loophole--map-alist))
 
 (defun loophole-state-variable-list ()
-  "Return list of all keymap variables for loophole.
+  "Return list of all state variables for loophole.
 Elements are ordered according to `loophole--map-alist'."
   (mapcar #'car loophole--map-alist))
 
@@ -686,7 +691,7 @@ key, and compare them by `equal'."
   (equal (key-description k1) (key-description k2)))
 
 (defun loophole-local-variable-if-set-list ()
-  "Return list of symbols which is local variable if set."
+  "Return list of symbols which is Loophole local variable if set."
   `(loophole--map-alist
     loophole--editing
     loophole--timer-alist
@@ -792,12 +797,12 @@ If there are no candidates after PREDICATE is applied to
   "Non-nil during suspending Loophole.
 During suspension, `loophole--map-alist' is removed from
 `emulation-mode-map-alists'.
-Consequently, all loophole maps lose effect while its state
+Consequently, all Loophole maps lose effect while its state
 is preserved."
   (not (memq 'loophole--map-alist emulation-mode-map-alists)))
 
 (defun loophole--erase-local-timers (map-variable)
-  "Cancel and remove all local timers for globalizing MAP-VARIABLE.
+  "Cancel and remove all local timers for MAP-VARIABLE .
 This function is intended to be used in `loophole-globalize'
 and `loophole-unregister'."
   (mapc (lambda (buffer)
@@ -814,7 +819,7 @@ and `loophole-unregister'."
           (buffer-list))))
 
 (defun loophole--erase-global-timer (map-variable)
-  "Cancel and remove global timer for localizing MAP-VARIABLE.
+  "Cancel and remove global timer for MAP-VARIABLE.
 This function is intended to be used in `loophole-localize'
 and `loophole-unregister'."
   (let ((timer
@@ -909,7 +914,7 @@ registered, and they are associated."
 ;;;###autoload
 (defun loophole-register (map-variable state-variable &optional tag
                                        global without-base-map)
-  "Register the set of MAP-VARIABLE and STATE-VARIABLE to loophole.
+  "Register the set of MAP-VARIABLE and STATE-VARIABLE to Loophole.
 Optional argument TAG is a tag string which may be shown in
 mode line.  TAG should not contain `loophole-tag-sign',
 because tag may be prefixed by `loophole-tag-sign' on the
@@ -935,6 +940,10 @@ These query can be skipped with yes by setting t to
 
 Unless WITHOUT-BASE-MAP is non-nil, `loophole-base-map' is
 set as parent keymap for MAP-VARIABLE.
+ if parent of keymap of MAP-VARIABLE is non-nil When setting
+parent keymap, this function ask user if it is overwritten.
+This query also can be skipped with yes by setting t to
+`loophole-force-overwrite-parent-map'.
 
 If called interactively, read MAP-VARIABLE, STATE-VARIABLE.
 When called with prefix argument, read TAG and ask user if
@@ -1231,7 +1240,7 @@ the front."
     (loophole-disable map-variable)))
 
 (defun loophole-name (map-variable map-name &optional tag)
-  "Name Loophole map MAP-VARIABLE as MAP-NAME.
+  "Name MAP-VARIABLE as MAP-NAME.
 If optional argument TAG is non-nil, tag string for the map
 is set as TAG; otherwise, initial character of MAP-NAME is
 used as tag string.
@@ -1388,7 +1397,7 @@ which had been already unbound." named-map-variable state-variable))
   (force-mode-line-update t))
 
 (defun loophole-start-editing (map-variable)
-  "Start keymap edit session with MAP-VARIABLE."
+  "Start keymap editing session with MAP-VARIABLE."
   (interactive (list (loophole-read-map-variable "Start editing keymap: ")))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
@@ -1396,7 +1405,7 @@ which had been already unbound." named-map-variable state-variable))
   (run-hook-with-args 'loophole-start-editing-functions map-variable))
 
 (defun loophole-stop-editing ()
-  "Stop keymap edit session."
+  "Stop keymap editing session."
   (interactive)
   (let ((map-variable loophole--editing))
     (setq loophole--editing nil)
@@ -1630,7 +1639,7 @@ If TIME is negative, shorten timer."
       (message "Timer for keymap %s does not exist" map-variable))))
 
 (defun loophole-start-editing-timer (&optional time)
-  "Setup or update timer for editing state.
+  "Setup or update timer for stopping editing session.
 If optional argument TIME is integer describing time in
 second, use it for timer; otherwise use
 `loophole-editing-timer-default-time'.
@@ -1659,7 +1668,7 @@ is non-nil."
       (message "Editing timer is started")))
 
 (defun loophole-stop-editing-timer ()
-  "Cancel timer for editing state."
+  "Cancel timer for stopping editing session."
   (interactive)
   (if (and (timerp loophole--editing-timer)
            (not (timer--triggered loophole--editing-timer))
@@ -1711,7 +1720,7 @@ If TIME is negative, shorten timer."
 
 (define-derived-mode loophole-write-lisp-mode emacs-lisp-mode
   "Loophole Write Lisp"
-  "Auxiliary major mode for writing Lisp form in loophole.
+  "Auxiliary major mode for writing Lisp form in Loophole.
 Calling this major mode in Lisp program offers
 `emacs-lisp-mode' like environment with few key bindings and
 recursive edit.
@@ -1816,7 +1825,7 @@ For the `negative-argument', the rank is
         (t (prefix-numeric-value arg))))
 
 (defun loophole--arg-list (order prefix-argument &optional without-keymap)
-  "Return list for arguments for binding commands.
+  "Return list of arguments for binding commands.
 Read key, obtain Lisp object for binding, and optionaly
 obtain keymap object for key and binding based on ORDER and
 PREFIX-ARGUMENT .
@@ -1902,7 +1911,7 @@ Read command with prompt in which KEY is embedded."
   (read-command (format "Set key %s to command: " (key-description key))))
 
 (defun loophole-obtain-command-by-key-sequence (key)
-  "Return command obtained by key sequence lookup with prompt .
+  "Return command obtained by key sequence lookup.
 Read key sequence with prompt in which KEY is embedded."
   (let ((binding (key-binding (loophole-read-key
                                (format
@@ -2011,7 +2020,16 @@ keyboard macro defining work space.  Definition can be
 finished by calling `loophole-end-kmacro' which is bound to
 \\[loophole-end-kmacro].
 Besides, Definition can be aborted by calling
-`loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro]."
+`loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro].
+\\<loophole-kmacro-by-recursive-edit-map>
+If `loophole-kmacro-by-recursive-edit-map-flag' is non-nil,
+special keymap `loophole-kmacro-by-recursive-edit-map' is
+enabled only during recursive edit.
+Actually, `loophole-kmacro-by-recursive-edit-map' is
+registered to Loophole as a gloabl map, and unregistered
+after recursive edit is ended.
+In this case, `loophole-end-kmacro' is bound to \\[loophole-end-kmacro].
+and `loophole-abort-kmacro' is bound to \\[loophole-abort-kmacro]."
   (loophole-register 'loophole-kmacro-by-recursive-edit-map
                      'loophole-kmacro-by-recursive-edit-map-flag
                       loophole-kmacro-by-recursive-edit-map-tag
@@ -2187,18 +2205,19 @@ or a symbol whose function cell is ultimately an array."
 
 ;;;###autoload
 (defun loophole-bind-entry (key entry &optional keymap)
-  "Bind KEY to COMMAND temporarily.
-Any Lisp object is acceptable for COMMAND, but only few types
-make sense.  Meaningful types of COMMAND is completely same as
+  "Bind KEY to ENTRY temporarily.
+Any Lisp object is acceptable for ENTRY, but only few types
+make sense.  Meaningful types of ENTRY is completely same as
 general keymap entry.
 
 By default, KEY is bound in the currently editing keymap or
 generated new one.  If optional argument KEYMAP is non-nil,
-and it is registered to loophole, KEYMAP is used instead.
+and it is registered to Loophole, KEYMAP is used instead.
 
-When called interactively, this function determines
+When called interactively, this function decides
 obtaining method for ENTRY according to
-`loophole-bind-entry-order'.
+`loophole-bind-entry-order', prefix argument and
+`loophole-decide-obtaining-method-after-read-key'.
 When this function called without prefix argument,
 the first element of `loophole-bind-entry-order' is
 employed as obtaining method.
@@ -2206,7 +2225,8 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
-method."
+method.  `loophole-decide-obtaining-method-after-read-key'
+affects the timing of this `completing-read'."
   (interactive
    (loophole--arg-list loophole-bind-entry-order current-prefix-arg))
   (define-key
@@ -2231,9 +2251,10 @@ the keymap used for binding and the meaning of optional
 arguments KEYMAP are same as `loophole-bind-entry'.
 See docstring of `loophole-bind-entry'for more details.
 
-When called interactively, this function determines
+When called interactively, this function decides
 obtaining method for COMMAND according to
-`loophole-bind-command-order'.
+`loophole-bind-command-order', prefix argument and
+`loophole-decide-obtaining-method-after-read-key'.
 When this function called without prefix argument,
 the first element of `loophole-bind-command-order' is
 employed as obtaining method.
@@ -2241,7 +2262,8 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
-method."
+method.  `loophole-decide-obtaining-method-after-read-key'
+affects the timing of this `completing-read'."
   (interactive
    (loophole--arg-list loophole-bind-command-order current-prefix-arg))
   (if (commandp command)
@@ -2258,9 +2280,10 @@ the keymap used for binding and the meaning of optional
 arguments KEYMAP are same as `loophole-bind-entry'.
 See docstring of `loophole-bind-entry' for more details.
 
-When called interactively, this function determines
+When called interactively, this function decides
 obtaining method for KMACRO according to
-`loophole-bind-kmacro-order'.
+`loophole-bind-kmacro-order', prefix argument and
+`loophole-decide-obtaining-method-after-read-key'.
 When this function is called without prefix argument,
 the first element of `loophole-bind-kmacro-order' is
 employed as obtaining method.
@@ -2268,7 +2291,8 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
-method."
+method.  `loophole-decide-obtaining-method-after-read-key'
+affects the timing of this `completing-read'."
   (interactive
    (loophole--arg-list loophole-bind-kmacro-order current-prefix-arg))
   (if (kmacro-p kmacro)
@@ -2294,9 +2318,10 @@ the keymap used for binding and the meaning of optional
 arguments KEYMAP are same as `loophole-bind-entry'.
 See docstring of `loophole-bind-entry'for more details.
 
-When called interactively, this function determines
+When called interactively, this function decides
 obtaining method for ARRAY according to
-`loophole-bind-array-order'.
+`loophole-bind-array-order', prefix argument and
+`loophole-decide-obtaining-method-after-read-key'.
 When this function called without prefix argument,
 the first element of `loophole-bind-array-order' is
 employed as obtaining method.
@@ -2304,7 +2329,8 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
-method."
+method.  `loophole-decide-obtaining-method-after-read-key'
+affects the timing of this `completing-read'."
   (interactive
    (loophole--arg-list loophole-bind-array-order current-prefix-arg))
   (if (or (vectorp array) (stringp array))
@@ -2324,9 +2350,10 @@ Optional argument ANOTHER-KEYMAP has same meaning with the
 argument KEYMAP of `loophole-bind-entry'.
 See docstring of `loophole-bind-entry' for more details.
 
-When called interactively, this function determines
+When called interactively, this function decides
 obtaining method for KEYMAP according to
-`loophole-bind-keymap-order'.
+`loophole-bind-keymap-order', prefix argument and
+`loophole-decide-obtaining-method-after-read-key'.
 When this function called without prefix argument,
 the first element of `loophole-bind-keymap-order' is
 employed as obtaining method.
@@ -2334,7 +2361,8 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
-method."
+method.  `loophole-decide-obtaining-method-after-read-key'
+affects the timing of this `completing-read'."
   (interactive
    (loophole--arg-list loophole-bind-keymap-order current-prefix-arg))
   (if (keymapp keymap)
@@ -2353,9 +2381,10 @@ the keymap used for binding and the meaning of optional
 arguments KEYMAP are same as `loophole-bind-entry'.
 See docstring of `loophole-bind-entry'for more details.
 
-When called interactively, this function determines
+When called interactively, this function decides
 obtaining method for SYMBOL according to
-`loophole-bind-symbol-order'.
+`loophole-bind-symbol-order', prefix argument and
+`loophole-decide-obtaining-method-after-read-key'.
 When this function called without prefix argument,
 the first element of `loophole-bind-symbol-order' is
 employed as obtaining method.
@@ -2363,7 +2392,8 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
-method."
+method.  `loophole-decide-obtaining-method-after-read-key'
+affects the timing of this `completing-read'."
   (interactive
    (loophole--arg-list loophole-bind-symbol-order current-prefix-arg))
   (letrec ((inspect-function-cell
@@ -2389,9 +2419,10 @@ generated new one is used.  ENTRY is also same as
 ENTRY, although only few types make sense.  Meaningful types
 of ENTRY is completely same as general keymap entry.
 
-When called interactively, this function determines
+When called interactively, this function decides
 obtaining method for ENTRY according to
-`loophole-set-key-order'.
+`loophole-set-key-order', prefix argument and
+`loophole-decide-obtaining-method-after-read-key'.
 When this function is called without prefix argument,
 the first element of `loophole-set-key-order' is
 employed as obtaining method.
@@ -2399,12 +2430,13 @@ employed as obtaining method.
 \\[universal-argument] \\[universal-argument] and C-2 invokes the third one.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
-method."
+method.  `loophole-decide-obtaining-method-after-read-key'
+affects the timing of this `completing-read'."
   (interactive (loophole--arg-list loophole-set-key-order current-prefix-arg t))
   (loophole-bind-entry key entry))
 
 (defun loophole-unset-key (key)
-  "Unset the temporary biding of KEY."
+  "Unset the temporary biding of KEY of `loophole--editing'."
   (interactive (if loophole--editing
                    (list (loophole-read-key "Unset temporarily set key: "))
                  (user-error "There is no editing map")))
@@ -2417,7 +2449,7 @@ method."
 
 (defun loophole-modify-lambda-form (key &optional map-variable)
   "Modify lambda form bound to KEY in MAP-VARIABLE.
-If KEYMAP is nil, lookup all active loophole maps.
+If MAP-VARIABLE is nil, lookup all active loophole maps.
 
 This function print bound lambda form to temporary buffer,
 and read it back when modifying is finished.
@@ -2477,7 +2509,7 @@ the first one will be read."
 
 (defun loophole-modify-kmacro (key &optional map-variable)
   "Modify kmacro bound to KEY in MAP-VARIABLE.
-If KEYMAP is nil, lookup all active loophole maps.
+If MAP-VARIABLE is nil, lookup all active loophole maps.
 
 This function print bound kmacro to temporary buffer, and
 read it back when modifying is finished.
@@ -2533,7 +2565,7 @@ the first one will be read."
 
 (defun loophole-modify-array (key &optional map-variable)
   "Modify array bound to KEY in MAP-VARIABLE.
-If KEYMAP is nil, lookup all active loophole maps.
+If MAP-VARIABLE is nil, lookup all active loophole maps.
 
 This function print bound array to temporary buffer, and
 read it back when modifying is finished.
@@ -2598,7 +2630,7 @@ To suspend Loophole, this function delete
 
 (defun loophole-resume ()
   "Resume Loophole.
-To resume Loophole, this functions push
+To resume Loophole, this functions add
 `loophole--map-alist' to `emulation-mode-map-alists'
 unless `loophole--map-alist' is a member of
 `emulation-mode-map-alists'."
@@ -2607,7 +2639,7 @@ unless `loophole--map-alist' is a member of
   (setq loophole--suspended nil))
 
 (defun loophole-quit ()
-  "Quit loophole completely.
+  "Quit Loophole completely.
 Disable the all keymaps, stop editing, and turn off
 `loophole-mode'."
   (interactive)
@@ -2979,7 +3011,7 @@ Remove hooks added by `loophole-turn-on-auto-editing-timer'."
                (lambda (_) (loophole-stop-editing-timer))))
 
 (defcustom loophole-use-auto-prioritize t
-  "Flag if prioritize loophole map automatically.
+  "Flag if prioritize Loophole map automatically.
 
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
@@ -3036,7 +3068,7 @@ For more detailed customization, see documentation string of
            (loophole-turn-off-auto-resume))))
 
 (defcustom loophole-use-auto-timer nil
-  "Flag if start timer for disabling loophole map automatically.
+  "Flag if start timer for disabling Loophole map automatically.
 
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
@@ -3085,7 +3117,7 @@ Define map variable and state variable, and register them.
 Define map variable by MAP, SPEC and DOCSTRING.
 If SPEC is evaluated as keymap, use it as init value of
 MAP.  If SPEC is evaluated as list, this macro expect it as
-alist of which element looks like (KEY . ENTRY).
+an alist of which element looks like (KEY . ENTRY).
 If SPEC is evaluated as nil, make sparse keymap.
 Otherwise, emit error signal.
 DOCSTRING is passed to `defvar'.
