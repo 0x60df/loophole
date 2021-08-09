@@ -55,8 +55,8 @@ must be unique for each element of this variable.")
 
 (defvar loophole--buffer-list nil
   "List of buffers on which Loophole variables have local value.
-`loophole-mode' maintains this variable as up to date.
-When `loophole-mode' is disabled, this variable is set as t
+Loophole mode maintains this variable as up to date.
+When Loophole mode is disabled, this variable is set as t
 in order to tell that this variable is not maintained.")
 
 (defvar-local loophole--editing nil
@@ -639,12 +639,12 @@ static: display lighter-base with no suffix.")
 
 (defcustom loophole-mode-lighter
   (cdr (assq 'tag loophole-mode-lighter-preset-alist))
-  "Lighter for `loophole-mode'.
+  "Lighter for Loophole mode.
 Any mode-line construct is vaild for this variable.
 `loophole-mode-lighter-preset-alist' offers preset for this.
 
 Although many user options and constant prefixed with
-loophole-mode-lighter- exist, `loophole-mode' only refers
+loophole-mode-lighter- exist, Loophole mode only refers
 this variable.  Other user options are materials for the
 presets described above.
 When you use presets, you can tweak mode-line lighter by
@@ -872,7 +872,7 @@ This function is intended to be used in `loophole-name'."
 (defun loophole--follow-adding-local-variable (_symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
 This function is intented to be used for
-`add-variable-watcher'.  Only while `loophole-mode' is
+`add-variable-watcher'.  Only while Loophole mode is
 enabled, this function is added as variable watcher.
 When OPERATION is set and WHERE is non-nil, WHERE is added
 to `loophole--buffer-list'."
@@ -890,7 +890,7 @@ to `loophole--buffer-list'."
   "Update `loophole--buffer-list' for killing local variable.
 This function is intended to be added to
 `change-major-mode-hook' and `kill-buffer-hook'.
-Only while `loophole-mode' is enabled, this functions is
+Only while Loophole mode is enabled, this functions is
 added to the hooks above."
   (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))
   (remove-hook 'change-major-mode-hook
@@ -2641,7 +2641,7 @@ unless `loophole--map-alist' is a member of
 (defun loophole-quit ()
   "Quit Loophole completely.
 Disable the all keymaps, stop editing, and turn off
-`loophole-mode'."
+Loophole mode."
   (interactive)
   (mapc (lambda (buffer)
           (with-current-buffer buffer
