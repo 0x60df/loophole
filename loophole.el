@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.6.3
+;; Version: 0.6.4
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -2616,7 +2616,7 @@ the first one will be read."
       (if (window-live-p window) (select-window window t))
       (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
 
-;;; Main control
+;;; Base control
 
 ;;;###autoload
 (defun loophole-suspend ()
