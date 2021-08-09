@@ -20,7 +20,8 @@ and add the following lines to you init file like `.emacs`.
 
 Call `loophole-set-key` to set the temporary key bindings.
 
-The key binding is set in the disposable keymap generated automatically.
+The key binding is set in the disposable keymap which is generated
+automatically.
 Once keymap is generated, `loophole-set-key` edit it for a while,
 i.e. bindings will be set in it.
 `loophole-stop-editing` stops editing, and then next `loophole-set-key`
@@ -28,7 +29,7 @@ generates another keymap.
 You can see editing status on the mode-line as
 `loophole-mode-lighter-editing-sign` (is "+" by default).
 
-If you done your operation with temporary key bindings,
+When you are done your operation with temporary key bindings,
 call `loophole-disable-latest-map` to abandon that one.
 Note that even after disabling the keymap,
 it is stored in `loophole-n-map` for a while. (`n` is something integer.)
@@ -37,7 +38,7 @@ and can use multiple temporary keymaps at the same time.
 
 ### Example
 
-When you encountered the case you just read the buffer temporarily,
+When you encounter the case you just read the buffer temporarily,
 the following key inputs provide simple navigating interface
 which save your left little finger.
 
@@ -65,7 +66,7 @@ They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
 Second one is `loophole-base-map` which will be inherited to most Loophole maps.
 This keymap offers the place for binding which can be used commonly when
 any of Loophole map is activated.
-For example, binding `C-q` to `loophole-disable-latest-map` reduces the number
+For example, binding `C-q` to `loophole-base-map` reduces the number
 of typing, and `C-q` recovers the original binding `quoted-insert` immediately
 after all Loophole map are disabled.
 
@@ -88,7 +89,7 @@ You can control these conditions for each buffer.
 If you like some Loophole map, naming them may help.
 Loophole maps are initially named as `loophole-n-map`.
 They can be renamed by `loophole-name`.
-Once Loophole map gets name other than `loophole-n-map`,
+Once Loophole map gets a name other than `loophole-n-map`,
 it goes out of range of automatic keymap generation and is never overwritten.
 
 #### Loophole mode
@@ -100,8 +101,8 @@ When `loophole-mode` is enabled,
 and thus temporary key bindings are activated.
 Furthermore, you can use `loophole-mode-map` for binding Loophole commands.
 
-Even while `loophole-mode` is activated, whole temporary key bindings can be
-disabled temporarily by calling `loophole-suspend`,
+Even while `loophole-mode` is enabled, whole temporary key bindings can be
+deactivated temporarily by calling `loophole-suspend`,
 which keeps state of each Loophole map.
 `loophole-resume` restores suspended temporary key bindings.
 These functions realize suspension by removing and adding `loophole--map-alist`
@@ -128,15 +129,15 @@ which key binding entry and its obtaining method is employed.
 By default, `loophole-set-key` uses the following table, which is customizable.
 Details of customization is described in the customization section below.
 
-| Prefix arguments    | Entry   | Obtaining method  |
-| ------------------- | ------- | ----------------- |
-| No prefix arguments | command | read command      |
-| `C-u`, `C-1`        | kmacro  | recursive edit    |
-| `C-u` `C-u`, `C-2`  | command | key sequence      |
-| `C-u`\*3, `C-3`     | kmacro  | read key          |
-| `C-u`\*4, `C-4`     | command | lambda form       |
-| `C-u`\*5, `C-5`     | kmacro  | recall record     |
-| `C-u`\*6, `C-6`     | object  | eval minibuffer   |
+| Prefix arguments           | Entry   | Obtaining method |
+|----------------------------|---------|------------------|
+| No prefix arguments, `C-0` | command | read command     |
+| `C-u`, `C-1`               | kmacro  | recursive edit   |
+| `C-u` `C-u`, `C-2`         | command | key sequence     |
+| `C-u`\*3, `C-3`            | kmacro  | read key         |
+| `C-u`\*4, `C-4`            | command | lambda form      |
+| `C-u`\*5, `C-5`            | kmacro  | recall record    |
+| `C-u`\*6, `C-6`            | object  | eval minibuffer  |
 
 If prefix argument is negative, `loophole-set-key` ask you the obtaining method
 by using `completing-read`.
@@ -168,7 +169,7 @@ Note that while you are in recursive edit, it looks like top-level of Emacs
 and you may feel that the control is returned to you,
 but actually you are still in the command.
 For that reason, it is recommended to call either
-`loophole-complete-writing-lisp` or `loophole-abort-writing-lisp` which can
+`loophole-complete-writing-lisp` or `loophole-abort-writing-lisp`, which can
 properly end recursive edit.
 
 ##### kmacro by recursive edit
@@ -216,7 +217,7 @@ Fallback method.
 Old keymap can be edited afterwards by calling `loophole-start-editing`.
 Keymap which is been edited is displayed in mode line with
 `loophole-mode-lighter-editing-sign`.
-Details of mode line format is described in customization section.
+Details of mode line format is described in customization section below.
 
 #### Timers
 
@@ -225,14 +226,14 @@ by `loophole-start-timer` and `loophole-start-editing-timer`.
 Started timer can be controlled by `loophole-start-timer`,
 `loophole-start-editing-timer` again, and `loophole-stop-timer`,
 `loophole-stop-editing-timer`, `loophole-extend-timer` and
-loophole-extend-editing-timer`.
+``loophole-extend-editing-timer`.
 
 #### Describe Loophole map
 
 `loophole-describe` describes Loophole map.
 As well as `M-x` `loophole-describe`,
 `help-char` in minibuffer for some commands which reads Loophole map
-ike `loophole-enable`, `loophole-name`, ... also invokes `loophole-describe`.
+like `loophole-enable`, `loophole-name`, ... also invokes `loophole-describe`.
 Multiple input of `help-char` in minibuffer cycles Loophole map description
 among completion candidates.
 
@@ -264,6 +265,8 @@ Note that `setq` for these variables does not work.
 
 
 ### Prefix arguments table of key binding commands
+
+#### Basics
 
 As mentioned above, `loophole-set-key` refers prefix arguments table
 to decide how to obtain the entry of key bindings.
@@ -310,48 +313,8 @@ and you do not need some other obtaining method, use the following lines.
         loophole-obtain-kmacro-by-recall-record))
 ```
 
-Furthermore, if you prefer builtin `read-key-sequence` to read key for
-`loophole-obtain-command-by-read-command`,
-use the following lines.
-
-``` emacs-lisp
-(setq loophole-set-key-order
-      '(loophole-obtain-command-by-key-sequence
-        (loophole-obtain-kmacro-by-read-key
-         :key loophole-read-key-for-kmacro-by-read-key)
-        (loophole-obtain-command-by-read-command :key read-key-sequence)
-        loophole-obtain-kmacro-by-recall-record))
-```
-
-To force using the setting above even while binding commands are called with
-`negative-argument`, add the following line to your init file.
-However, be carefull that this setting change order of prompt when
-binding commands are called with `negative-argument`.
-
-``` emacs-lisp
-(setq loophole-decide-obtaining-method-after-read-key nil)
-```
-
-Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
-`loophole-bind-kmacro`, `loophole-bind-array`, `loophole-bind-keymap`,
-`loophole-bind-symbol`) also use their own prefix arguments table
-(`loophole-bind-entry-order`, `loophole-bind-command-order`,
-`loophole-bind-kmacro-order`, `loophole-bind-array-order`,
-`loophole-bind-keymap-order`,`loophole-bind-symbol-order`).
-It also can be customized by the same way.
-
-Elements of these variable can contain :keymap property in addition to :key
-property.
-It looks like (OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
-OBTAIN-KEYMAP is a function which takes two arguments the
-key and entry to be bound, and returns keymap object on
-which key and entry are bound; this overrides editing loophole map.
-
-You can also define your obtaining method for entry.
-The requirements for obtaining method is that
-it takes one argument the key to be bound and returns
-any Lisp object suitable for key binding entry.
-Entire customization codes may look like below.
+Alternatively, if you prefer your own obtaining method with default
+`loophole-set-key-order`, use the following lines.
 
 ``` emacs-lisp
 (defun your-obtaining-method (key)
@@ -370,6 +333,47 @@ Entire customization codes may look like below.
         loophole-obtain-key-and-kmacro-by-recall-record
         loophole-obtain-key-and-object))
 ```
+
+Furthermore, if you prefer builtin `read-key-sequence` to read key for
+`loophole-obtain-command-by-read-command`, use the following lines.
+
+``` emacs-lisp
+(setq loophole-set-key-order
+      '((loophole-obtain-command-by-read-command :key read-key-sequence)
+        loophole-obtain-key-and-kmacro-by-recursive-edit
+        loophole-obtain-key-and-command-by-key-sequence
+        (loophole-obtain-kmacro-by-read-key
+         :key loophole-read-key-for-array-by-read-key)
+        loophole-obtain-key-and-command-by-lambda-form
+        loophole-obtain-key-and-kmacro-by-recall-record
+        loophole-obtain-key-and-object))
+```
+
+To force using the setting for :key property even while binding commands are
+called with `negative-argument`, add the following line to your init file.
+However, be carefull that this setting change order of prompt when
+binding commands are called with `negative-argument`.
+
+``` emacs-lisp
+(setq loophole-decide-obtaining-method-after-read-key nil)
+```
+
+#### Table for alternative binding commands
+
+Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
+`loophole-bind-kmacro`, `loophole-bind-array`, `loophole-bind-keymap`,
+`loophole-bind-symbol`) also use their own prefix arguments table
+(`loophole-bind-entry-order`, `loophole-bind-command-order`,
+`loophole-bind-kmacro-order`, `loophole-bind-array-order`,
+`loophole-bind-keymap-order`,`loophole-bind-symbol-order`).
+It also can be customized by the same way.
+
+Elements of these `loophole-bind-*-order` can contain :keymap property in
+addition to :key property.
+It looks like (OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+OBTAIN-KEYMAP is a function which takes two arguments the
+key and entry to be bound, and returns keymap object on
+which key and entry are bound; this overrides editing loophole map.
 
 ### Key bindings for Loophole commands
 
@@ -450,7 +454,8 @@ Default value of this user option is `t`.
 
 ### Defining Loophole map
 
-You can use existing or your own keymap and state variable on Loophole.
+You can use existing or your own keymap as Loophole map, with a variable which
+represents activation state of the map.
 To register them, use `loophole-register`.
 
 Although Loophole main focus is interactive interface,
