@@ -254,7 +254,7 @@ is called with `negative-argument',
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
-  :type '(repeat symbol))
+  :type '(repeat sexp))
 
 (defcustom loophole-bind-command-order
   '(loophole-obtain-command-by-read-command
@@ -285,7 +285,7 @@ or while it is 'negative-argument and
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
-  :type '(repeat symbol))
+  :type '(repeat sexp))
 
 (defcustom loophole-bind-kmacro-order
   '(loophole-obtain-kmacro-by-recursive-edit
@@ -318,7 +318,7 @@ is called with `negative-argument',
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
-  :type '(repeat symbol))
+  :type '(repeat sexp))
 
 (defcustom loophole-bind-array-order
   '((loophole-obtain-array-by-read-key
@@ -349,7 +349,7 @@ is called with `negative-argument',
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
-  :type '(repeat symbol))
+  :type '(repeat sexp))
 
 (defcustom loophole-bind-keymap-order
   '(loophole-obtain-keymap-by-read-keymap-variable
@@ -380,7 +380,7 @@ is called with `negative-argument',
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
-  :type '(repeat symbol))
+  :type '(repeat sexp))
 
 (defcustom loophole-bind-symbol-order
   '(loophole-obtain-symbol-by-read-keymap-function
@@ -411,7 +411,7 @@ is called with `negative-argument',
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
-  :type '(repeat symbol))
+  :type '(repeat sexp))
 
 (defcustom loophole-set-key-order
   '(loophole-obtain-command-by-read-command
@@ -443,7 +443,7 @@ called with `negative-argument',
 `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
-  :type '(repeat symbol))
+  :type '(repeat sexp))
 
 (defcustom loophole-register-functions nil
   "Hook for `loophole-register'.
