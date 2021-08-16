@@ -226,7 +226,7 @@ by `loophole-start-timer` and `loophole-start-editing-timer`.
 Started timer can be controlled by `loophole-start-timer`,
 `loophole-start-editing-timer` again, and `loophole-stop-timer`,
 `loophole-stop-editing-timer`, `loophole-extend-timer` and
-``loophole-extend-editing-timer`.
+`loophole-extend-editing-timer`.
 
 #### Describe Loophole map
 
