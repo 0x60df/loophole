@@ -66,9 +66,10 @@ They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
 Second one is `loophole-base-map` which will be inherited to most Loophole maps.
 This keymap offers the place for binding which can be used commonly when
 any of Loophole map is activated.
-For example, binding `C-q` to `loophole-base-map` reduces the number
-of typing, and `C-q` recovers the original binding `quoted-insert` immediately
-after all Loophole map are disabled.
+For example, binding `C-q` to `loophole-disable-latest-map` on
+`loophole-base-map` reduces keystroke against `C-c \`.
+After all Loophole maps are disabled,
+original binding of `C-q` to `quoted-insert` is recoverd.
 
 Third one is the keymap for manipulating Loophole itself,
 named `loophole-mode-map` which holds some Loophole commands.
@@ -399,7 +400,7 @@ By default, it shows `loophole-mode-lighter-base`,
 `loophole-mode-lighter-editing-sign` with tag of the map being edited when
 editing Loophole map,
 and concatenated tags of enabled Loophole maps.
-Here, tag is short string which represents Loophole map.
+Here, tag is a short string which represents Loophole map.
 
 You can change this style by user option `loophole-mode-lighter` and
 `loohpole-mode-lighter-preset-alist`.
