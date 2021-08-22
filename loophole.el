@@ -86,25 +86,6 @@ Default value holds timers for global Loophole map.")
 
 ;;; User options
 
-(defvar loophole-write-lisp-mode-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map emacs-lisp-mode-map)
-    (define-key map (kbd "C-c C-c") #'loophole-finish-writing-lisp)
-    (define-key map (kbd "C-c C-k") #'loophole-abort-writing-lisp)
-    map)
-  "Keymap for `loophole-write-lisp-mode'.")
-
-(defvar loophole-kmacro-by-recursive-edit-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c [") #'loophole-end-kmacro)
-    (define-key map (kbd "C-c \\") #'loophole-abort-kmacro)
-    map)
-  "Keymap for `loophole-obtain-kmacro-by-recursive-edit'.
-This map is enabled temporarily during
-`loophole-obtain-kmacro-by-recursive-edit',
-and activity of this map is controled by
-`loophole-kmacro-by-recursive-edit-map-flag'.")
-
 (defvar loophole-base-map (make-sparse-keymap)
   "Base keymap for all Loophole maps.
 This keymap will be inherited to all Loophole maps,
@@ -188,6 +169,14 @@ regardless of the value of this user option."
   :group 'loophole
   :type 'number)
 
+(defvar loophole-write-lisp-mode-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map emacs-lisp-mode-map)
+    (define-key map (kbd "C-c C-c") #'loophole-finish-writing-lisp)
+    (define-key map (kbd "C-c C-k") #'loophole-abort-writing-lisp)
+    map)
+  "Keymap for `loophole-write-lisp-mode'.")
+
 (defcustom loophole-command-by-lambda-form-format
   (concat "(lambda (&optional arg)\n"
           "  \"Temporary command on `loophole'.\"\n"
@@ -208,6 +197,17 @@ in the buffer."
 This is used by `loophole-obtain-kmacro-by-read-key'."
   :group 'loophole
   :type 'key-sequence)
+
+(defvar loophole-kmacro-by-recursive-edit-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c [") #'loophole-end-kmacro)
+    (define-key map (kbd "C-c \\") #'loophole-abort-kmacro)
+    map)
+  "Keymap for `loophole-obtain-kmacro-by-recursive-edit'.
+This map is enabled temporarily during
+`loophole-obtain-kmacro-by-recursive-edit',
+and activity of this map is controled by
+`loophole-kmacro-by-recursive-edit-map-flag'.")
 
 (defcustom loophole-kmacro-by-recursive-edit-map-flag t
   "Non-nil means `loophole-kmacro-by-recursive-edit-map' is enabled."
