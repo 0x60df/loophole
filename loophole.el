@@ -3168,14 +3168,14 @@ TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
 
 ;;; Aliases for main interfaces
 
-(defalias 'loophole-dig 'loophole-set-key)
-(defalias 'loophole-bury 'loophole-unset-key)
-(defalias 'loophole-cover 'loophole-disable)
-(defalias 'loophole-cover-latest 'loophole-disable-latest)
-(defalias 'loophole-cover-all 'loophole-disable-all)
-(defalias 'loophole-reveal 'loophole-enable)
-(defalias 'loophole-edit 'loophole-start-editing)
-(defalias 'loophole-break 'loophole-stop-editing)
+(defalias 'loophole-dig #'loophole-set-key)
+(defalias 'loophole-bury #'loophole-unset-key)
+(defalias 'loophole-cover #'loophole-disable)
+(defalias 'loophole-cover-latest #'loophole-disable-latest)
+(defalias 'loophole-cover-all #'loophole-disable-all)
+(defalias 'loophole-reveal #'loophole-enable)
+(defalias 'loophole-edit #'loophole-start-editing)
+(defalias 'loophole-break #'loophole-stop-editing)
 
 (provide 'loophole)
 
