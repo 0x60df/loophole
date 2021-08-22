@@ -1,5 +1,7 @@
 # Loophole
 
+[![MELPA](https://melpa.org/packages/loophole-badge.svg)](https://melpa.org/#/loophole)
+
 Loophole provides temporary key bindings management feature for Emacs.
 Keys can be set by interactive interface in disposable keymaps
 which are automatically generated for temporary use.
