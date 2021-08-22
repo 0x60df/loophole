@@ -6,8 +6,20 @@ which are automatically generated for temporary use.
 
 ## Installation
 
+### MELPA
+
+Loophole is [available on MELPA](https://melpa.org/#/loophole).
+Use `package.el` to install,
+and add the following line to you init file like `init.el` or `.emacs`.
+
+``` emacs-lisp
+(loophole-mode)
+```
+
+### Manual
+
 Download and save loophole.el to your `load-path`,
-and add the following lines to you init file like `.emacs`.
+and add the following lines to you init file.
 
 ``` emacs-lisp
 (require 'loophole)
