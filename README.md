@@ -12,7 +12,7 @@ which are automatically generated for temporary use.
 
 Loophole is [available on MELPA](https://melpa.org/#/loophole).
 Use `package.el` to install,
-and add the following line to you init file like `init.el` or `.emacs`.
+and add the following line to your init file like `init.el` or `.emacs`.
 
 ``` emacs-lisp
 (loophole-mode)
@@ -21,7 +21,7 @@ and add the following line to you init file like `init.el` or `.emacs`.
 ### Manual
 
 Download and save loophole.el to your `load-path`,
-and add the following lines to you init file.
+and add the following lines to your init file.
 
 ``` emacs-lisp
 (require 'loophole)
@@ -32,7 +32,7 @@ and add the following lines to you init file.
 
 ### Basics
 
-Call `loophole-set-key` to set the temporary key bindings.
+Call `loophole-set-key` to set a temporary key binding.
 
 The key binding is set in the disposable keymap which is generated
 automatically.
@@ -268,15 +268,31 @@ the commands prefixed by `loophole-bind-` may be convenient.
 ### Automation
 
 Loophole offers some customization functions for automation.
-These functions setup some sequential call of Loophole function like
-`loophole-stop-editing` after some events.
+These functions setup some sequential call of Loophole function
+after some events.
+For example,  `loophole-stop-editing` after `loophole-disable`.
+Actually, these functions are the collections of `add-hook` forms.
 
 These functions are prefixed by `loophole-turn-` on or off.
 Adding them in your init file setup automation.
 
 They are also setter for custom variables like `loophole-use-auto-stop-editing`.
 Hence, they can be called via `custom-set-variables`.
-Note that `setq` for these variables does not work.
+Note that because some of initial values of these custom variables are `t`,
+some of `loophole-turn-on-*` are called when loading loophole.el.
+If you want to prevent these calls, modify your init file as follows.
+
+``` emacs-lisp
+
+(custom-set-variables
+ '(loophole-use-auto-prioritize nil)
+ '(loophole-use-auto-stop-editing nil)
+ '(loophole-use-auto-resume nil))
+
+;; Before loading loophole.el
+
+(loophole-mode)
+```
 
 
 ### Prefix arguments table of key binding commands
@@ -292,14 +308,13 @@ binding entry.
 
 Each element optionally can be a list whose car is a
 function described above, and cdr is a plist which has
-a property :key.  It looks like
-(OBTAIN-ENTRY :key READ-KEY).
-READ-KEY is a function which takes no arguments and returns
+a property `:key`.  It looks like `(OBTAIN-ENTRY :key READ-KEY)`.
+`READ-KEY` is a function which takes no arguments and returns
 key sequence to be bound.
 However, if `loophole-decide-obtaining-method-after-read-key` is
 t, or while it is the symbol `negative-argument` and
 binding commands are called with `negative-argument`,
-:key property will be omitted and default
+`:key` property will be omitted and default
 `loophole-read-key` will be used.
 
 Default value of `loophole-set-key-order` is
@@ -343,7 +358,7 @@ Alternatively, if you prefer your own obtaining method with default
         loophole-obtain-key-and-kmacro-by-recursive-edit
         loophole-obtain-key-and-command-by-key-sequence
         (loophole-obtain-kmacro-by-read-key
-         :key loophole-read-key-for-array-by-read-key)
+         :key loophole-read-key-for-kmacro-by-read-key)
         loophole-obtain-key-and-command-by-lambda-form
         loophole-obtain-key-and-kmacro-by-recall-record
         loophole-obtain-key-and-object))
@@ -358,13 +373,13 @@ Furthermore, if you prefer builtin `read-key-sequence` to read key for
         loophole-obtain-key-and-kmacro-by-recursive-edit
         loophole-obtain-key-and-command-by-key-sequence
         (loophole-obtain-kmacro-by-read-key
-         :key loophole-read-key-for-array-by-read-key)
+         :key loophole-read-key-for-kmacro-by-read-key)
         loophole-obtain-key-and-command-by-lambda-form
         loophole-obtain-key-and-kmacro-by-recall-record
         loophole-obtain-key-and-object))
 ```
 
-To force using the setting for :key property even while binding commands are
+To force using the setting for `:key` property even while binding commands are
 called with `negative-argument`, add the following line to your init file.
 However, be carefull that this setting change order of prompt when
 binding commands are called with `negative-argument`.
@@ -383,10 +398,10 @@ Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
 `loophole-bind-keymap-order`,`loophole-bind-symbol-order`).
 It also can be customized by the same way.
 
-Elements of these `loophole-bind-*-order` can contain :keymap property in
-addition to :key property.
-It looks like (OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
-OBTAIN-KEYMAP is a function which takes two arguments the
+Elements of these `loophole-bind-*-order` may contain `:keymap` property in
+addition to `:key` property.
+It looks like `(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP)`.
+`OBTAIN-KEYMAP` is a function which takes two arguments the
 key and entry to be bound, and returns keymap object on
 which key and entry are bound; this overrides editing loophole map.
 
@@ -417,7 +432,7 @@ and concatenated tags of enabled Loophole maps.
 Here, tag is a short string which represents Loophole map.
 
 You can change this style by user option `loophole-mode-lighter` and
-`loohpole-mode-lighter-preset-alist`.
+constant `loohpole-mode-lighter-preset-alist`.
 If the dynamic lighter is annoying, use the static style as follows.
 Then, lighter shows `loophole-mode-lighter-base` only.
 This might improve performance.
@@ -429,7 +444,7 @@ This might improve performance.
 
 If you want to use your own format,
 it can be set directly to `loophole-mode-lighter`.
-Any mode line construct is valid.
+Any mode-line construct is valid.
 
 ### Finish key for defining keyboard macro and array
 
