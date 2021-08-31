@@ -312,7 +312,7 @@ a property `:key`.  It looks like `(OBTAIN-ENTRY :key READ-KEY)`.
 `READ-KEY` is a function which takes no arguments and returns
 key sequence to be bound.
 However, if `loophole-decide-obtaining-method-after-read-key` is
-t, or while it is the symbol `negative-argument` and
+`t`, or while it is the symbol `negative-argument` and
 binding commands are called with `negative-argument`,
 `:key` property will be omitted and default
 `loophole-read-key` will be used.
@@ -489,8 +489,8 @@ represents activation state of the map.
 To register them, use `loophole-register`.
 
 Although Loophole main focus is interactive interface,
-you can setup your Loophole map during initialization by putting the following
-forms in your init file.
+you can setup your Loophole map during initialization by putting forms like
+the following in your init file.
 
 ```emacs-lisp
 (defvar loophole-navigation-map
