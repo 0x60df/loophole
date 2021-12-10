@@ -36,6 +36,9 @@
 
 ;;; Code:
 
+(if (version< emacs-version "28")
+    (declare-function describe-keymap nil))
+
 (require 'kmacro)
 
 (defgroup loophole nil
@@ -156,6 +159,12 @@ regardless of the value of this user option."
 
 (defcustom loophole-make-register-always-read-tag t
   "Flag if interactive `loophole-register' always reads tag string."
+  :group 'loophole
+  :type 'boolean)
+
+(defcustom loophole-make-describe-use-builtin nil
+  "Flag if `loophole-describe' uses builtin `describe-keymap'.
+This option takes effect with Emacs 28 or later."
   :group 'loophole
   :type 'boolean)
 
@@ -1702,19 +1711,21 @@ If TIME is negative, shorten timer."
   (interactive (list (loophole-read-map-variable "Describe keymap: ")))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
-  (help-setup-xref `(loophole-describe ,map-variable)
-                   (called-interactively-p 'interactive))
-  (with-help-window (help-buffer)
-    (princ (format "`%s' %sLoophole Map Bindings:\n"
-                   map-variable (if (loophole-global-p map-variable)
-                                    "Globalized "
-                                  "")))
-    (princ (substitute-command-keys
-            (format "\\{%s}" map-variable)))
-    (with-current-buffer standard-output
-      (save-excursion
-        (re-search-backward "`\\([^`']+\\)'" nil t)
-        (help-xref-button 1 'help-variable map-variable)))))
+  (if (and (version<= "28" emacs-version) loophole-make-describe-use-builtin)
+      (describe-keymap map-variable)
+    (help-setup-xref `(loophole-describe ,map-variable)
+                     (called-interactively-p 'interactive))
+    (with-help-window (help-buffer)
+      (princ (format "`%s' %sLoophole Map Bindings:\n"
+                     map-variable (if (loophole-global-p map-variable)
+                                      "Globalized "
+                                    "")))
+      (terpri)
+      (with-current-buffer standard-output
+        (save-excursion
+          (insert (substitute-command-keys (format "\\{%s}" map-variable)))
+          (re-search-backward "`\\([^`']+\\)'" nil t)
+          (help-xref-button 1 'help-variable map-variable))))))
 
 ;;; Binding utilities
 
