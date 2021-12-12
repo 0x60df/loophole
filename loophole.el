@@ -1240,7 +1240,7 @@ the front."
          (map-variable (get state-variable :loophole-map-variable)))
     (if map-variable
         (loophole-disable map-variable)
-      (user-error "There are no enabled loophole maps"))))
+      (message "There are no enabled loophole maps"))))
 
 (defun loophole-disable-all ()
   "Disable the all keymaps."
