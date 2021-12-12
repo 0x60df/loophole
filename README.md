@@ -128,6 +128,23 @@ state of each Loophole map.
 If you want to completely disable Loophole, use `loophole-quit`.
 It disables all Loophole maps and `loophole-mode`.
 
+#### State variable
+
+Each Loophole map has corresponding state variable.
+If a value of state variable is non-nil, corresponding Loophole map is
+activated.
+Relation between Loophole map variable and state variable is analogous to
+minor-mode-map variable and minor-mode variable.
+State variable of Loophole map is usualy named as `loophole-map-name-state`.
+For example, state variable of `loophole-1-map` is usualy
+`loophole-1-map-state`.
+
+You can set a state variable directly to turn on or off Loophole map,
+but in most cases, the functions `loophole-enable` or `loophole-disable` are
+useful.
+These functions set state variable and run hooks `loophole-enable-functions`
+or `loophole-disable-functions`, that may call some assisting functions.
+
 #### Key binding entry
 
 `loophole-set-key` ask you the command symbol to be bound
