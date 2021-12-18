@@ -39,7 +39,10 @@
 (if (version< emacs-version "28")
     (declare-function describe-keymap nil))
 
-(require 'kmacro)
+(defvar kmacro-ring)
+(declare-function kmacro-loop-setup-function "kmacro")
+(declare-function kmacro-ring-head "kmacro")
+(declare-function kmacro-p "kmacro")
 
 (defgroup loophole nil
   "Manage temporary key bindings."
@@ -181,8 +184,8 @@ This option takes effect with Emacs 28 or later."
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map emacs-lisp-mode-map)
-    (define-key map (kbd "C-c C-c") #'loophole-finish-writing-lisp)
-    (define-key map (kbd "C-c C-k") #'loophole-abort-writing-lisp)
+    (define-key map "\C-c\C-c" #'loophole-finish-writing-lisp)
+    (define-key map "\C-c\C-k" #'loophole-abort-writing-lisp)
     map)
   "Keymap for `loophole-write-lisp-mode'.")
 
@@ -209,8 +212,8 @@ This is used by `loophole-obtain-kmacro-by-read-key'."
 
 (defvar loophole-kmacro-by-recursive-edit-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c [") #'loophole-end-kmacro)
-    (define-key map (kbd "C-c \\") #'loophole-abort-kmacro)
+    (define-key map "\C-c[" #'loophole-end-kmacro)
+    (define-key map "\C-c\\" #'loophole-abort-kmacro)
     map)
   "Keymap for `loophole-obtain-kmacro-by-recursive-edit'.
 This map is enabled temporarily during
@@ -2053,6 +2056,8 @@ and `loophole-abort-kmacro' is bound to \\[loophole-abort-kmacro]."
 (defun loophole-obtain-kmacro-by-recall-record (key)
   "Return kmacro obtained by recalling record.
 Completing read record with prompt in which KEY is embedded."
+  (unless (featurep 'kmacro)
+    (user-error "Record is void, kmacro has not been loaded"))
   (letrec
       ((make-label-kmacro-alist
         (lambda (ring counter)
@@ -2306,6 +2311,9 @@ method.  `loophole-decide-obtaining-method-after-read-key'
 affects the timing of this `completing-read'."
   (interactive
    (loophole--arg-list loophole-bind-kmacro-order current-prefix-arg))
+  (unless (featurep 'kmacro)
+    (user-error
+     "Specified object cannot be valid kmacro, feature has not been loaded"))
   (if (kmacro-p kmacro)
       (loophole-bind-entry key kmacro keymap)
     (user-error "Invalid kmacro: %s" kmacro)))
@@ -2316,6 +2324,8 @@ affects the timing of this `completing-read'."
 Currently editing keymap or generated new one is used for
 binding."
   (interactive (list (loophole-read-key "Set key temporarily: ")))
+  (unless (featurep 'kmacro)
+    (user-error "Last kmacro is void, kmacro has not been loaded"))
   (loophole-bind-kmacro key (kmacro-lambda-form (kmacro-ring-head))))
 
 ;;;###autoload
@@ -2546,6 +2556,8 @@ the first one will be read."
         (configuration-list (mapcar #'current-window-configuration
                                     (frame-list)))
         (entry (lookup-key (symbol-value map-variable) key)))
+    (unless (featurep 'kmacro)
+      (user-error "Bound entry cannot be kmacro, feature has not been loaded"))
     (cond ((null entry)
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (kmacro-p entry))
@@ -2688,52 +2700,52 @@ Followings are the key bindings for Loophole commands.
   :global t
   :lighter loophole-mode-lighter
   :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "C-c [") #'loophole-set-key)
-            (define-key map (kbd "C-c \\") #'loophole-disable-latest)
-            (define-key map (kbd "C-c ] {") #'loophole-register)
-            (define-key map (kbd "C-c ] }") #'loophole-unregister)
-            (define-key map (kbd "C-c ] ^") #'loophole-prioritize)
-            (define-key map (kbd "C-c ] >") #'loophole-globalize)
-            (define-key map (kbd "C-c ] <") #'loophole-localize)
-            (define-key map (kbd "C-c ] [") #'loophole-start-editing)
-            (define-key map (kbd "C-c ] ]") #'loophole-stop-editing)
-            (define-key map (kbd "C-c ] ;") #'loophole-name)
-            (define-key map (kbd "C-c ] #") #'loophole-tag)
-            (define-key map (kbd "C-c ] /") #'loophole-describe)
-            (define-key map (kbd "C-c ] ,") #'loophole-suspend)
-            (define-key map (kbd "C-c ] .") #'loophole-resume)
-            (define-key map (kbd "C-c ] q") #'loophole-quit)
-            (define-key map (kbd "C-c ] p") #'loophole-prioritize)
-            (define-key map (kbd "C-c ] n") #'loophole-name)
-            (define-key map (kbd "C-c ] h") #'loophole-describe)
-            (define-key map (kbd "C-c ] s") #'loophole-set-key)
-            (define-key map (kbd "C-c ] u") #'loophole-unset-key)
-            (define-key map (kbd "C-c ] e") #'loophole-enable)
-            (define-key map (kbd "C-c ] d") #'loophole-disable)
-            (define-key map (kbd "C-c ] D") #'loophole-disable-all)
-            (define-key map (kbd "C-c ] t [") #'loophole-start-timer)
-            (define-key map (kbd "C-c ] t ]") #'loophole-stop-timer)
-            (define-key map (kbd "C-c ] t +") #'loophole-extend-timer)
-            (define-key map (kbd "C-c ] t e [") #'loophole-start-editing-timer)
-            (define-key map (kbd "C-c ] t e ]") #'loophole-stop-editing-timer)
-            (define-key map (kbd "C-c ] t e +") #'loophole-extend-editing-timer)
-            (define-key map (kbd "C-c ] \\") #'loophole-disable-latest)
-            (define-key map (kbd "C-c ] (") #'loophole-start-kmacro)
-            (define-key map (kbd "C-c ] )") #'loophole-end-kmacro)
-            (define-key map (kbd "C-c ] k s") #'loophole-start-kmacro)
-            (define-key map (kbd "C-c ] k e") #'loophole-end-kmacro)
-            (define-key map (kbd "C-c ] k a") #'loophole-abort-kmacro)
-            (define-key map (kbd "C-c ] k b") #'loophole-bind-last-kmacro)
-            (define-key map (kbd "C-c ] b e") #'loophole-bind-entry)
-            (define-key map (kbd "C-c ] b c") #'loophole-bind-command)
-            (define-key map (kbd "C-c ] b k") #'loophole-bind-kmacro)
-            (define-key map (kbd "C-c ] b K") #'loophole-bind-last-kmacro)
-            (define-key map (kbd "C-c ] b a") #'loophole-bind-array)
-            (define-key map (kbd "C-c ] b m") #'loophole-bind-keymap)
-            (define-key map (kbd "C-c ] b s") #'loophole-bind-symbol)
-            (define-key map (kbd "C-c ] m l") #'loophole-modify-lambda-form)
-            (define-key map (kbd "C-c ] m k") #'loophole-modify-kmacro)
-            (define-key map (kbd "C-c ] m a") #'loophole-modify-array)
+            (define-key map "\C-c[" #'loophole-set-key)
+            (define-key map "\C-c\\" #'loophole-disable-latest)
+            (define-key map "\C-c]{" #'loophole-register)
+            (define-key map "\C-c]}" #'loophole-unregister)
+            (define-key map "\C-c]^" #'loophole-prioritize)
+            (define-key map "\C-c]>" #'loophole-globalize)
+            (define-key map "\C-c]<" #'loophole-localize)
+            (define-key map "\C-c][" #'loophole-start-editing)
+            (define-key map "\C-c]]" #'loophole-stop-editing)
+            (define-key map "\C-c];" #'loophole-name)
+            (define-key map "\C-c]#" #'loophole-tag)
+            (define-key map "\C-c]/" #'loophole-describe)
+            (define-key map "\C-c]," #'loophole-suspend)
+            (define-key map "\C-c]." #'loophole-resume)
+            (define-key map "\C-c]q" #'loophole-quit)
+            (define-key map "\C-c]p" #'loophole-prioritize)
+            (define-key map "\C-c]n" #'loophole-name)
+            (define-key map "\C-c]h" #'loophole-describe)
+            (define-key map "\C-c]s" #'loophole-set-key)
+            (define-key map "\C-c]u" #'loophole-unset-key)
+            (define-key map "\C-c]e" #'loophole-enable)
+            (define-key map "\C-c]d" #'loophole-disable)
+            (define-key map "\C-c]D" #'loophole-disable-all)
+            (define-key map "\C-c]t[" #'loophole-start-timer)
+            (define-key map "\C-c]t]" #'loophole-stop-timer)
+            (define-key map "\C-c]t+" #'loophole-extend-timer)
+            (define-key map "\C-c]te[" #'loophole-start-editing-timer)
+            (define-key map "\C-c]te]" #'loophole-stop-editing-timer)
+            (define-key map "\C-c]te+" #'loophole-extend-editing-timer)
+            (define-key map "\C-c]\\" #'loophole-disable-latest)
+            (define-key map "\C-c](" #'loophole-start-kmacro)
+            (define-key map "\C-c])" #'loophole-end-kmacro)
+            (define-key map "\C-c]ks" #'loophole-start-kmacro)
+            (define-key map "\C-c]ke" #'loophole-end-kmacro)
+            (define-key map "\C-c]ka" #'loophole-abort-kmacro)
+            (define-key map "\C-c]kb" #'loophole-bind-last-kmacro)
+            (define-key map "\C-c]be" #'loophole-bind-entry)
+            (define-key map "\C-c]bc" #'loophole-bind-command)
+            (define-key map "\C-c]bk" #'loophole-bind-kmacro)
+            (define-key map "\C-c]bK" #'loophole-bind-last-kmacro)
+            (define-key map "\C-c]ba" #'loophole-bind-array)
+            (define-key map "\C-c]bm" #'loophole-bind-keymap)
+            (define-key map "\C-c]bs" #'loophole-bind-symbol)
+            (define-key map "\C-c]ml" #'loophole-modify-lambda-form)
+            (define-key map "\C-c]mk" #'loophole-modify-kmacro)
+            (define-key map "\C-c]ma" #'loophole-modify-array)
             map)
   (if loophole-mode
       (progn
