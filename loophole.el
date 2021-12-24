@@ -1078,8 +1078,10 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
       (dolist (buffer loophole--buffer-list)
         (with-current-buffer buffer
           (if (and (local-variable-p state-variable)
-                   (not (seq-some #'local-variable-p
-                                  (loophole-local-variable-if-set-list))))
+                   (not (seq-some
+                         #'local-variable-p
+                         (remq state-variable
+                               (loophole-local-variable-if-set-list)))))
               (setq loophole--buffer-list
                     (delq buffer loophole--buffer-list))))))
     (if (eq (keymap-parent (symbol-value map-variable))
