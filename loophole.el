@@ -1051,8 +1051,9 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
              (not global))
     (dolist (buffer (buffer-list))
       (with-current-buffer buffer
-        (if (local-variable-p state-variable)
-            (add-to-list 'loophole--buffer-list buffer nil #'eq))))
+        (when (local-variable-p state-variable)
+          (add-to-list 'loophole--buffer-list buffer nil #'eq)
+          (force-mode-line-update))))
     (add-variable-watcher state-variable
                           #'loophole--follow-adding-local-variable))
   (run-hook-with-args 'loophole-register-functions map-variable))
