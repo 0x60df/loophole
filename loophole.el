@@ -3088,6 +3088,81 @@ For more detailed customization, see documentation string of
 
 ;;; A macro for defining keymap
 
+(defvar font-lock-beg)
+(defvar font-lock-end)
+
+(defconst loophole--define-map-font-lock-regexp
+  "(\\(loophole-define-map\\)\\_>[ 	]*\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)?"
+  "Regexp that matches with head of `loophole-define-map' form.")
+
+(defcustom loophole-font-lock-multiline t
+  "Flag if multiline font lock for Loophole forms is enabled.
+
+This user option must be set before loading this file.
+
+If the value of this option is non-nil,
+`jit-lock-contextually' should be non-nil on buffers
+containing Loophole forms like `loophole-define-map' to
+properly rehighlight forms."
+  :group 'loophole
+  :type 'boolean)
+
+(defun loophole--define-map-font-lock-extend-region ()
+  "Extending region of multiline font lock for `loophole-define-map'.
+If cursor is located in `loophole-define-map' form, extend
+region to the beginning and end of the form.
+Futhermore, if `loophole-define-map' follows cursor on the
+same line, multiline font lock region covers
+`loophole-define-map' form."
+  (save-excursion
+    (when (or (re-search-forward loophole--define-map-font-lock-regexp
+                                 (line-end-position) t)
+              (catch 'found
+                (while (ignore-errors (up-list nil t t) t)
+                  (let ((limit (point)))
+                    (backward-sexp)
+                    (let ((search (re-search-forward
+                                   loophole--define-map-font-lock-regexp
+                                   limit t)))
+                      (if search (throw 'found search)))))))
+      (if (< (match-beginning 0) font-lock-beg)
+          (setq font-lock-beg (match-beginning 0)))
+      (goto-char (match-beginning 0))
+      (forward-sexp)
+      (if (< font-lock-end (point)) (setq font-lock-end (point))))))
+
+(defun loophole--define-map-font-lock-function (limit)
+  "Font lock matcher for `loophole-define-map'.
+LIMIT is used for limiting search region."
+  (save-excursion
+    (if (re-search-forward loophole--define-map-font-lock-regexp limit t)
+        (let ((match-data (match-data)))
+          (when (< 4 (length match-data))
+            (when (and (ignore-errors (forward-sexp 2) t)
+                       (< (point) limit)
+                       (re-search-forward
+                        "[ 	\n]*\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)"
+                        limit t))
+              (setcar (cdr match-data) (cadddr (match-data)))
+              (setq match-data (append match-data (cddr (match-data))))
+              (when (ignore-errors (forward-sexp) t)
+                (skip-chars-forward "[ 	\n]")
+                (let ((beg (point-marker)))
+                  (if (and (looking-at "\"")
+                           (ignore-errors (forward-sexp) t)
+                           (< (point) limit))
+                      (let ((end (point-marker)))
+                        (setcar (cdr match-data) end)
+                        (setq match-data
+                              (append match-data (list beg end))))))))
+            (set-match-data match-data))
+          t))))
+
+(defun loophole--define-map-add-font-lock-extend-region-function ()
+  "Add `loophole--define-map-font-lock-extend-region' to hook."
+  (add-hook 'font-lock-extend-region-functions
+             #'loophole--define-map-font-lock-extend-region nil t))
+
 ;;;###autoload
 (defmacro loophole-define-map (map &optional spec docstring
                                    state state-init-value state-docstring
@@ -3140,11 +3215,19 @@ TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
      (loophole-register ',map ',state ,tag ,global ,without-base-map)))
 
 (dolist (mode '(emacs-lisp-mode lisp-interaction-mode))
+  (if loophole-font-lock-multiline
+      (add-hook (intern (concat (symbol-name mode) "-hook"))
+                #'loophole--define-map-add-font-lock-extend-region-function))
+
   (font-lock-add-keywords
    mode
-   '(("(\\(loophole-define-map\\)\\_>[ 	]*\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)?"
+   `((,(if loophole-font-lock-multiline
+           #'loophole--define-map-font-lock-function
+         loophole--define-map-font-lock-regexp)
       (1 font-lock-keyword-face)
-      (2 font-lock-variable-name-face nil t)))))
+      (2 font-lock-variable-name-face nil t)
+      (3 font-lock-variable-name-face nil t)
+      (4 font-lock-doc-face t t)))))
 
 ;;; Aliases for main interfaces
 
