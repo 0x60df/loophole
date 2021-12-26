@@ -2455,7 +2455,7 @@ This function print bound lambda form to temporary buffer,
 and read it back when modifying is finished.
 In contrast with `loophole-obtain-command-by-lambda-form',
 this function does not evaluate the form but just read it.
-If temporary buffer contains multiple form when finished,
+If temporary buffer contains multiple forms when finished,
 the first one will be read."
   (interactive (list (loophole-read-key "Modify lambda form for key: ")
                      (if current-prefix-arg
@@ -2494,11 +2494,12 @@ If MAP-VARIABLE is nil, lookup all active loophole maps.
 
 This function print bound kmacro to temporary buffer, and
 read it back when modifying is finished.
-Because kmacro object is actually a lambda form wrapping
-basic keyboard macro, a string or a vector,
-lambda form will be printed in temporary buffer.
+Although kmacro object is a lambda form when bound to key,
+extracted raw form will be printed.
+Raw form of kmacro consists of basic keyboard macro which is
+a string or a vector, counter integer, and counter format.
 
-If temporary buffer contains multiple form when finished,
+If temporary buffer contains multiple forms when finished,
 the first one will be read."
   (interactive (list (loophole-read-key "Modify kmacro for key: ")
                      (if current-prefix-arg
@@ -2535,7 +2536,7 @@ If MAP-VARIABLE is nil, lookup all active loophole maps.
 This function print bound array to temporary buffer, and
 read it back when modifying is finished.
 This function does not evaluate the form but just read it.
-If temporary buffer contains multiple form when finished,
+If temporary buffer contains multiple forms when finished,
 the first one will be read."
   (interactive (list (loophole-read-key "Modify array for key: ")
                      (if current-prefix-arg
