@@ -824,6 +824,38 @@ Otherwise, this macro does BODY on all existing buffers."
                         (buffer-list)))
        (with-current-buffer ,buffer ,@body))))
 
+(defmacro loophole--with-current-buffer-other-window (buffer-or-name &rest body)
+  "Execute BODY with BUFFER-OR-NAME displayed in other window.
+The buffer specified by BUFFER-OR-NAME is transiently
+displayed in other window, and immediately after body is
+executed, original window configuration is recovered."
+  (declare (indent 1))
+  (let ((buffer (make-symbol "buffer"))
+        (window (make-symbol "window"))
+        (frame (make-symbol "frame"))
+        (configuration-list (make-symbol "configuration-list"))
+        (workspace (make-symbol "workspace")))
+    `(let ((,buffer (current-buffer))
+           (,window (selected-window))
+           (,frame (selected-frame))
+           (,configuration-list (mapcar #'current-window-configuration
+                                          (frame-list))))
+       (unwind-protect
+           (let ((,workspace (get-buffer-create ,buffer-or-name)))
+             (switch-to-buffer-other-window ,workspace t)
+             ,@body)
+         (let ((configuration
+                (seq-find (lambda (c)
+                            (eq (selected-frame)
+                                (window-configuration-frame c)))
+                          ,configuration-list)))
+           (if configuration
+               (set-window-configuration configuration)
+             (delete-frame)))
+         (if (frame-live-p ,frame) (select-frame-set-input-focus ,frame t))
+         (if (window-live-p ,window) (select-window ,window t))
+         (if (buffer-live-p ,buffer) (switch-to-buffer ,buffer t t))))))
+
 (defun loophole--erase-local-timers (map-variable)
   "Cancel and remove all local timers for MAP-VARIABLE .
 This function is intended to be used in `loophole-globalize'
@@ -1906,39 +1938,20 @@ a temporary buffer.
 Actually, any Lisp forms can be written in a temporary
 buffer, and if return value of evaluating first form is
 valid lambda command, this function return it."
-  (let ((buffer (current-buffer))
-        (window (selected-window))
-        (frame (selected-frame))
-        (configuration-list (mapcar #'current-window-configuration
-                                      (frame-list))))
-    (unwind-protect
-        (let ((workspace (get-buffer-create "*Loophole*")))
-          (switch-to-buffer-other-window workspace t)
-          (erase-buffer)
-          (insert ";; For obtaining lambda form.\n\n")
-          (insert loophole-command-by-lambda-form-format)
-          (let ((found (search-backward "(#)" nil t)))
-            (if found (delete-region (point) (+ (point) 3))))
-          (loophole-write-lisp-mode)
-          (with-current-buffer workspace (goto-char 1))
-          (let ((lambda-form (eval (read workspace))))
-            (if (and (commandp lambda-form)
-                     (listp lambda-form)
-                     (eq (car lambda-form) 'lambda))
-                lambda-form
-              (user-error
-               "Obtained Lisp object is not valid lambda command: %s"
-               lambda-form))))
-      (let ((configuration
-             (seq-find (lambda (c)
-                         (eq (selected-frame) (window-configuration-frame c)))
-                       configuration-list)))
-        (if configuration
-            (set-window-configuration configuration)
-          (delete-frame)))
-      (if (frame-live-p frame) (select-frame-set-input-focus frame t))
-      (if (window-live-p window) (select-window window t))
-      (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
+  (loophole--with-current-buffer-other-window "*Loophole*"
+    (erase-buffer)
+    (insert ";; For obtaining lambda form.\n\n")
+    (insert loophole-command-by-lambda-form-format)
+    (if (search-backward "(#)" nil t) (delete-region (point) (+ (point) 3)))
+    (loophole-write-lisp-mode)
+    (goto-char 1)
+    (let ((lambda-form (eval (read (current-buffer)))))
+      (if (and (commandp lambda-form)
+               (listp lambda-form)
+               (eq (car lambda-form) 'lambda))
+          lambda-form
+        (user-error "Obtained Lisp object is not valid lambda command: %s"
+                    lambda-form)))))
 
 (defun loophole-obtain-kmacro-by-read-key (key)
   "Return kmacro obtained by reading key.
@@ -2453,45 +2466,26 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((buffer (current-buffer))
-        (window (selected-window))
-        (frame (selected-frame))
-        (configuration-list (mapcar #'current-window-configuration
-                                    (frame-list)))
-        (entry (lookup-key (symbol-value map-variable) key)))
+  (let ((entry (lookup-key (symbol-value map-variable) key)))
     (cond ((null entry)
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (and (commandp entry)
                      (listp entry)
                      (eq (car entry) 'lambda)))
            (user-error "Bound entry is not lambda form: %s" entry)))
-    (unwind-protect
-        (let ((workspace (get-buffer-create "*Loophole*")))
-          (switch-to-buffer-other-window workspace t)
-          (erase-buffer)
-          (insert ";; For modifying lambda form.\n\n")
-          (pp entry workspace)
-          (loophole-write-lisp-mode)
-          (with-current-buffer workspace (goto-char 1))
-          (let ((lambda-form (read workspace)))
-            (if (and (commandp lambda-form)
-                     (listp lambda-form)
-                     (eq (car lambda-form) 'lambda))
-                (loophole-bind-entry key lambda-form
-                                     (symbol-value map-variable))
-              (user-error
-               "Modified Lisp object is not valid lambda command: %s"
-               lambda-form))))
-      (let ((configuration
-             (seq-find (lambda (c)
-                         (eq (selected-frame) (window-configuration-frame c)))
-                       configuration-list)))
-        (if configuration
-            (set-window-configuration configuration)
-          (delete-frame)))
-      (if (frame-live-p frame) (select-frame-set-input-focus frame t))
-      (if (window-live-p window) (select-window window t))
-      (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
+    (loophole--with-current-buffer-other-window "*Loophole*"
+      (erase-buffer)
+      (insert ";; For modifying lambda form.\n\n")
+      (pp entry (current-buffer))
+      (loophole-write-lisp-mode)
+      (goto-char 1)
+      (let ((lambda-form (read (current-buffer))))
+        (if (and (commandp lambda-form)
+                 (listp lambda-form)
+                 (eq (car lambda-form) 'lambda))
+            (loophole-bind-entry key lambda-form (symbol-value map-variable))
+          (user-error "Modified Lisp object is not valid lambda command: %s"
+                      lambda-form))))))
 
 (defun loophole-modify-kmacro (key &optional map-variable)
   "Modify kmacro bound to KEY in MAP-VARIABLE.
@@ -2515,41 +2509,23 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((buffer (current-buffer))
-        (window (selected-window))
-        (frame (selected-frame))
-        (configuration-list (mapcar #'current-window-configuration
-                                    (frame-list)))
-        (entry (lookup-key (symbol-value map-variable) key)))
+  (let ((entry (lookup-key (symbol-value map-variable) key)))
     (unless (featurep 'kmacro)
       (user-error "Bound entry cannot be kmacro, feature has not been loaded"))
     (cond ((null entry)
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (kmacro-p entry))
            (user-error "Bound entry is not kmacro: %s" entry)))
-    (unwind-protect
-        (let ((workspace (get-buffer-create "*Loophole*")))
-          (switch-to-buffer-other-window workspace t)
-          (erase-buffer)
-          (insert ";; For modifying kmacro.\n\n")
-          (pp entry workspace)
-          (loophole-write-lisp-mode)
-          (with-current-buffer workspace (goto-char 1))
-          (let ((kmacro (read workspace)))
-            (if (kmacro-p kmacro)
-                (loophole-bind-entry key kmacro (symbol-value map-variable))
-              (user-error
-               "Modified Lisp object is not kmacro: %s" kmacro))))
-      (let ((configuration
-             (seq-find (lambda (c)
-                         (eq (selected-frame) (window-configuration-frame c)))
-                       configuration-list)))
-        (if configuration
-            (set-window-configuration configuration)
-          (delete-frame)))
-      (if (frame-live-p frame) (select-frame-set-input-focus frame t))
-      (if (window-live-p window) (select-window window t))
-      (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
+    (loophole--with-current-buffer-other-window "*Loophole*"
+      (erase-buffer)
+      (insert ";; For modifying kmacro.\n\n")
+      (pp entry (current-buffer))
+      (loophole-write-lisp-mode)
+      (goto-char 1)
+      (let ((kmacro (read (current-buffer))))
+        (if (kmacro-p kmacro)
+            (loophole-bind-entry key kmacro (symbol-value map-variable))
+          (user-error "Modified Lisp object is not kmacro: %s" kmacro))))))
 
 (defun loophole-modify-array (key &optional map-variable)
   "Modify array bound to KEY in MAP-VARIABLE.
@@ -2570,39 +2546,21 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((buffer (current-buffer))
-        (window (selected-window))
-        (frame (selected-frame))
-        (configuration-list (mapcar #'current-window-configuration
-                                    (frame-list)))
-        (entry (lookup-key (symbol-value map-variable) key)))
+  (let ((entry (lookup-key (symbol-value map-variable) key)))
     (cond ((null entry)
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (or (vectorp entry) (stringp entry)))
            (user-error "Bound entry is not array: %s" entry)))
-    (unwind-protect
-        (let ((workspace (get-buffer-create "*Loophole*")))
-          (switch-to-buffer-other-window workspace t)
-          (erase-buffer)
-          (insert ";; For modifying array.\n\n")
-          (pp entry workspace)
-          (loophole-write-lisp-mode)
-          (with-current-buffer workspace (goto-char 1))
-          (let ((array (read workspace)))
-            (if (or (vectorp array) (stringp array))
-                (loophole-bind-entry key array (symbol-value map-variable))
-              (user-error
-               "Modified Lisp object is not array: %s" array))))
-      (let ((configuration
-             (seq-find (lambda (c)
-                         (eq (selected-frame) (window-configuration-frame c)))
-                       configuration-list)))
-        (if configuration
-            (set-window-configuration configuration)
-          (delete-frame)))
-      (if (frame-live-p frame) (select-frame-set-input-focus frame t))
-      (if (window-live-p window) (select-window window t))
-      (if (buffer-live-p buffer) (switch-to-buffer buffer t t)))))
+    (loophole--with-current-buffer-other-window "*Loophole*"
+      (erase-buffer)
+      (insert ";; For modifying array.\n\n")
+      (pp entry (current-buffer))
+      (loophole-write-lisp-mode)
+      (goto-char 1)
+      (let ((array (read (current-buffer))))
+        (if (or (vectorp array) (stringp array))
+            (loophole-bind-entry key array (symbol-value map-variable))
+          (user-error "Modified Lisp object is not array: %s" array))))))
 
 ;;; Base control
 
