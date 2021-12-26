@@ -41,6 +41,7 @@
 
 (defvar kmacro-ring)
 (declare-function kmacro-loop-setup-function "kmacro")
+(declare-function kmacro-extract-lambda "kmacro")
 (declare-function kmacro-ring-head "kmacro")
 (declare-function kmacro-p "kmacro")
 
@@ -2519,10 +2520,10 @@ the first one will be read."
     (loophole--with-current-buffer-other-window "*Loophole*"
       (erase-buffer)
       (insert ";; For modifying kmacro.\n\n")
-      (pp entry (current-buffer))
+      (pp (kmacro-extract-lambda entry) (current-buffer))
       (loophole-write-lisp-mode)
       (goto-char 1)
-      (let ((kmacro (read (current-buffer))))
+      (let ((kmacro (kmacro-lambda-form (read (current-buffer)))))
         (if (kmacro-p kmacro)
             (loophole-bind-entry key kmacro (symbol-value map-variable))
           (user-error "Modified Lisp object is not kmacro: %s" kmacro))))))
