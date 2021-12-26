@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.6.4
+;; Version: 0.7.0
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -2521,7 +2521,9 @@ the first one will be read."
     (loophole--with-current-buffer-other-window "*Loophole*"
       (erase-buffer)
       (insert ";; For modifying kmacro.\n\n")
-      (pp (kmacro-extract-lambda entry) (current-buffer))
+      (let ((extracted (kmacro-extract-lambda entry)))
+        (insert ";; Key description: " (key-description (car extracted)) "\n")
+        (pp extracted (current-buffer)))
       (loophole-write-lisp-mode)
       (goto-char 1)
       (let ((kmacro (kmacro-lambda-form (read (current-buffer)))))
@@ -2556,6 +2558,7 @@ the first one will be read."
     (loophole--with-current-buffer-other-window "*Loophole*"
       (erase-buffer)
       (insert ";; For modifying array.\n\n")
+      (insert ";; Key description: " (key-description entry) "\n")
       (pp entry (current-buffer))
       (loophole-write-lisp-mode)
       (goto-char 1)
