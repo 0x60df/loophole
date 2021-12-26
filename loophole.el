@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.7.0
+;; Version: 0.7.1
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -1724,8 +1724,70 @@ If TIME is negative, shorten timer."
       (terpri)
       (with-current-buffer standard-output
         (save-excursion
-          (insert (substitute-command-keys (format "\\{%s}" map-variable)))
-          (re-search-backward "`\\([^`']+\\)'" nil t)
+          (insert
+           (let* ((line-list (split-string (substitute-command-keys
+                                            (format "\\{%s}" map-variable))
+                                           "\n"))
+                  (assoc-list (mapcar
+                               (lambda (line)
+                                 (cons line
+                                       (lookup-key
+                                        (symbol-value map-variable)
+                                        (kbd (car (split-string line))))))
+                               (reverse (cddr (reverse (cdddr line-list))))))
+                  (expanded-list
+                   (mapcar (lambda (assoc)
+                             (replace-regexp-in-string
+                              "\\(\\(\\?\\?\\)\\|\\(Keyboard Macro\\)\\)$"
+                              (let ((entry (cdr assoc)))
+                                (cond ((kmacro-p entry)
+                                       (let ((kmacro
+                                              (kmacro-extract-lambda entry)))
+                                         (format
+                                          "%s"
+                                          (cons
+                                           (format "[%s]" (key-description
+                                                           (car kmacro)))
+                                           (cdr kmacro)))))
+                                      ((byte-code-function-p entry)
+                                       "Byte Code")
+                                      ((and (listp entry)
+                                            (memq (car entry)
+                                                  '(lambda closure)))
+                                       (with-temp-buffer
+                                         (emacs-lisp-mode)
+                                         (pp entry (current-buffer))
+                                         (font-lock-ensure)
+                                         (let* ((begin (string-match
+                                                        "\\s-" (car assoc)))
+                                                (end (string-match
+                                                      "\\?" (car assoc)))
+                                                (prefix (concat
+                                                         (make-string
+                                                          begin ?\s)
+                                                         (substring
+                                                          (car assoc)
+                                                          begin end))))
+                                           (replace-regexp-in-string
+                                            "\n\\([^\n]\\)"
+                                            (format "\n%s\\1" prefix)
+                                            (replace-regexp-in-string
+                                             "\n$" "" (buffer-string))))))
+                                      ((stringp entry)
+                                       (format "\"%s\"" entry))
+                                      ((vectorp entry)
+                                       (format "[%s]"
+                                               (key-description entry)))
+                                      (t (format "%s" entry))))
+                              (car assoc) t t))
+                           assoc-list)))
+             (mapconcat #'identity
+                          `(,@(butlast line-list (- (length line-list) 3))
+                            ,@expanded-list
+                            ,@(last line-list 2))
+                          "\n")))
+          (goto-char 1)
+          (re-search-forward "`\\([^`']+\\)'" nil t)
           (help-xref-button 1 'help-variable map-variable))))))
 
 ;;; Binding utilities
