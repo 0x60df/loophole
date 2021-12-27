@@ -1740,7 +1740,8 @@ If TIME is negative, shorten timer."
                              (replace-regexp-in-string
                               "\\(\\(\\?\\?\\)\\|\\(Keyboard Macro\\)\\)$"
                               (let ((entry (cdr assoc)))
-                                (cond ((kmacro-p entry)
+                                (cond ((and (fboundp 'kmacro-p)
+                                            (kmacro-p entry))
                                        (let ((kmacro
                                               (kmacro-extract-lambda entry)))
                                          (format
@@ -1776,8 +1777,7 @@ If TIME is negative, shorten timer."
                                       ((stringp entry)
                                        (format "\"%s\"" entry))
                                       ((vectorp entry)
-                                       (format "[%s]"
-                                               (key-description entry)))
+                                       (format "[%s]" (key-description entry)))
                                       (t (format "%s" entry))))
                               (car assoc) t t))
                            assoc-list)))
