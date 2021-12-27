@@ -1789,6 +1789,84 @@ If TIME is negative, shorten timer."
           (goto-char 1)
           (re-search-forward "`\\([^`']+\\)'" nil t)
           (help-xref-button 1 'help-variable map-variable))))))
+
+(defun loophole-duplicate (map-variable &optional map-name tag)
+  "Duplicate MAP-VARIABLE.
+If optional argument MAP-NAME is given, use it for new map;
+otherwise, generate map by `loophole-generate'.
+Optional argument TAG specifies tag string for new map, but
+if MAP-NAME is nil, TAG will be omitted even with non-nil
+value.
+
+When interactive, MAP-NAME and TAG will be asked if called
+with any prefix argument."
+  (interactive
+   (let* ((arg-map-variable (loophole-read-map-variable "Duplicate keymap: "))
+          (arg-map-name
+           (if current-prefix-arg
+               (read-string (format "Name[%stag] for duplicated keymap %s: "
+                                    loophole-tag-sign
+                                    arg-map-variable))))
+          (arg-tag
+           (if (stringp arg-map-name)
+               (let ((match (string-match loophole-tag-sign arg-map-name)))
+                 (if match
+                     (prog1
+                         (substring arg-map-name
+                                    (1+ match)
+                                    (length arg-map-name))
+                       (setq arg-map-name (substring arg-map-name 0 match)))
+                   (read-string (format "Tag for duplicated keymap %s: "
+                                        arg-map-variable)))))))
+     (list arg-map-variable arg-map-name arg-tag)))
+  (unless (loophole-registered-p map-variable)
+    (user-error "Specified map-variable %s is not registered" map-variable))
+  (if (and (stringp map-name) (not (< 0 (length map-name))))
+    (user-error "Name cannot be empty string"))
+  (let (duplicated-map-variable)
+    (if map-name
+        (let* ((map-variable-name (format "loophole-%s-map" map-name))
+               (state-variable-name (concat map-variable-name "-state"))
+               (tag (or tag (substring map-name 0 1)))
+               (duplicated-state-variable (intern state-variable-name)))
+          (setq duplicated-map-variable (intern map-variable-name))
+          (let ((bound (seq-find #'boundp (list duplicated-map-variable
+                                                duplicated-state-variable))))
+            (if bound
+                (user-error "Specified name %s has already been bound" bound)))
+          (if (local-variable-if-set-p
+               (get map-variable :loophole-state-variable))
+              (unless (local-variable-if-set-p duplicated-state-variable)
+                (if (or loophole-force-make-variable-buffer-local
+                        (yes-or-no-p
+                         (format "%s is defined as global.  Make it local? "
+                                 duplicated-state-variable)))
+                    (make-variable-buffer-local duplicated-state-variable)
+                  (user-error (concat "Abort duplicating."
+                                      "  Gloabl variable cannot be used"
+                                      " for local state-variable"))))
+            (if (local-variable-if-set-p duplicated-state-variable)
+                (if (or loophole-force-unintern
+                        (yes-or-no-p (format
+                                      "%s is defined as local.  Unintern it? "
+                                      duplicated-state-variable)))
+                    (let ((function (symbol-function duplicated-state-variable))
+                          (plist (symbol-plist duplicated-state-variable)))
+                      (unintern (symbol-name duplicated-state-variable) nil)
+                      (setq duplicated-state-variable
+                            (intern state-variable-name))
+                      (fset duplicated-state-variable function)
+                      (setplist duplicated-state-variable plist))
+                  (user-error (concat "Abort duplicating."
+                                      "  Local variable if set cannot be used"
+                                      " for global state-variable")))))
+          (set duplicated-map-variable (make-sparse-keymap))
+          (set duplicated-state-variable nil)
+          (loophole-register duplicated-map-variable duplicated-state-variable
+                             tag (loophole-global-p map-variable)))
+      (setq duplicated-map-variable (loophole-generate)))
+    (setcdr (symbol-value duplicated-map-variable)
+            (cdr (copy-keymap (symbol-value map-variable))))))
 
 ;;; Binding utilities
 
@@ -2732,6 +2810,7 @@ Followings are the key bindings for Loophole commands.
             (define-key map "\C-c]ml" #'loophole-modify-lambda-form)
             (define-key map "\C-c]mk" #'loophole-modify-kmacro)
             (define-key map "\C-c]ma" #'loophole-modify-array)
+            (define-key map "\C-c]cd" #'loophole-duplicate)
             map)
   (if loophole-mode
       (progn
