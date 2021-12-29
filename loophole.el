@@ -1731,10 +1731,12 @@ If TIME is negative, shorten timer."
                   (assoc-list (mapcar
                                (lambda (line)
                                  (cons line
-                                       (lookup-key
-                                        (symbol-value map-variable)
-                                        (kbd (car (split-string line))))))
-                               (reverse (cddr (reverse (cdddr line-list))))))
+                                       (let ((keys (car (split-string line))))
+                                         (if (stringp keys)
+                                             (lookup-key
+                                              (symbol-value map-variable)
+                                              (kbd keys))))))
+                               line-list))
                   (expanded-list
                    (mapcar (lambda (assoc)
                              (replace-regexp-in-string
@@ -1781,11 +1783,7 @@ If TIME is negative, shorten timer."
                                       (t (format "%s" entry))))
                               (car assoc) t t))
                            assoc-list)))
-             (mapconcat #'identity
-                          `(,@(butlast line-list (- (length line-list) 3))
-                            ,@expanded-list
-                            ,@(last line-list 2))
-                          "\n")))
+             (mapconcat #'identity expanded-list "\n")))
           (goto-char 1)
           (re-search-forward "`\\([^`']+\\)'" nil t)
           (help-xref-button 1 'help-variable map-variable))))))
