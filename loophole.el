@@ -1008,7 +1008,8 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                     (lambda (s)
                       (and (boundp s) (not (keywordp s))
                            (keymapp (symbol-value s))
-                           (not (memq s map-variable-list)))))))
+                           (not (memq s map-variable-list))))
+                    t)))
           (arg-state-variable
            (intern (completing-read
                     "State-variable: "
@@ -1017,7 +1018,8 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                       (and (boundp s) (not (keywordp s))
                            (not (eq arg-map-variable s))
                            (not (memq s map-variable-list))
-                           (not (memq s state-variable-list)))))))
+                           (not (memq s state-variable-list))))
+                    t)))
           (arg-tag
            (cond ((and (eq loophole-make-register-always-read-tag 'infer)
                        (null current-prefix-arg))
@@ -2351,7 +2353,8 @@ Read keymap variable with prompt in which KEY is embedded."
      (lambda (s)
        (and (boundp s)
             (not (keywordp s))
-            (keymapp (symbol-value s))))))))
+            (keymapp (symbol-value s))))
+     t))))
 
 (defun loophole-obtain-keymap-by-read-keymap-function (key)
   "Return keymap obtained by reading keymap function.
@@ -2372,7 +2375,8 @@ or a symbol whose function cell is ultimately a keymap."
                obarray
                (lambda (s)
                  (let ((f (funcall symbol-function-recursively s)))
-                   (keymapp f))))))))
+                   (keymapp f)))
+               t)))))
 
 (defun loophole-obtain-symbol-by-read-keymap-function (key)
   "Return symbol obtained by reading keymap function.
@@ -2392,7 +2396,8 @@ or a symbol whose function cell is ultimately a keymap."
       obarray
       (lambda (s)
         (let ((f (funcall symbol-function-recursively s)))
-          (keymapp f)))))))
+          (keymapp f)))
+      t))))
 
 (defun loophole-obtain-symbol-by-read-command (key)
   "Return symbol obtained by reading command symbol.
@@ -2419,7 +2424,8 @@ or a symbol whose function cell is ultimately an array."
       obarray
       (lambda (s)
         (let ((f (funcall symbol-function-recursively s)))
-          (or (vectorp f) (stringp f))))))))
+          (or (vectorp f) (stringp f))))
+      t))))
 
 ;;; Binding commands
 
