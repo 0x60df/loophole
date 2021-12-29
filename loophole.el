@@ -3224,16 +3224,16 @@ same line, multiline font lock region covers
               (catch 'found
                 (while (ignore-errors (up-list nil t t) t)
                   (let ((limit (point)))
-                    (backward-sexp)
-                    (let ((search (re-search-forward
-                                   loophole--define-map-font-lock-regexp
-                                   limit t)))
-                      (if search (throw 'found search)))))))
+                    (if (ignore-errors (backward-sexp) t)
+                        (let ((search (re-search-forward
+                                       loophole--define-map-font-lock-regexp
+                                       limit t)))
+                          (if search (throw 'found search))))))))
       (if (< (match-beginning 0) font-lock-beg)
           (setq font-lock-beg (match-beginning 0)))
       (goto-char (match-beginning 0))
-      (forward-sexp)
-      (if (< font-lock-end (point)) (setq font-lock-end (point))))))
+      (if (ignore-errors (forward-sexp) t)
+          (if (< font-lock-end (point)) (setq font-lock-end (point)))))))
 
 (defun loophole--define-map-font-lock-function (limit)
   "Font lock matcher for `loophole-define-map'.
