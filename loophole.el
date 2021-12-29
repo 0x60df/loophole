@@ -1034,9 +1034,10 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                       current-prefix-arg)
                   (read-string (format "Tag for keymap %s: " arg-map-variable)))
                  (t nil)))
-          (arg-global (if current-prefix-arg (y-or-n-p "Global? ")))
+          (arg-global (if current-prefix-arg
+                          (y-or-n-p "Register as global Loophole map? ")))
           (arg-without-base-map (if current-prefix-arg
-                                    (y-or-n-p "Without base map? "))))
+                                    (y-or-n-p "Register without base map? "))))
      (list arg-map-variable arg-state-variable arg-tag
            arg-global arg-without-base-map)))
   (cond ((loophole-registered-p map-variable state-variable)
