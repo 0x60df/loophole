@@ -161,8 +161,11 @@ regardless of the value of this user option."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-make-register-always-read-tag t
-  "Flag if interactive `loophole-register' always reads tag string."
+(defcustom loophole-make-register-always-read-tag 'infer
+  "Flag if interactive `loophole-register' always reads tag string.
+If non-nil, `loophole-register' always reads tag string,
+but if symbol infer is set, `loophole-register' try to infer
+tag string before asking."
   :group 'loophole
   :type 'boolean)
 
@@ -1015,10 +1018,22 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                            (not (eq arg-map-variable s))
                            (not (memq s map-variable-list))
                            (not (memq s state-variable-list)))))))
-          (arg-tag (if (or loophole-make-register-always-read-tag
-                           current-prefix-arg)
-                       (read-string
-                        (format "Tag for keymap %s: " arg-map-variable))))
+          (arg-tag
+           (cond ((and (eq loophole-make-register-always-read-tag 'infer)
+                       (null current-prefix-arg))
+                  (let ((map-variable-name (symbol-name arg-map-variable)))
+                    (cond ((string-match "loophole-\\([0-9]+\\)-map"
+                                         map-variable-name)
+                           (match-string 1 map-variable-name))
+                          ((string-match "loophole-\\(.+\\)-map"
+                                         map-variable-name)
+                           (substring (match-string 1 map-variable-name) 0 1))
+                          (t (read-string (format "Tag for keymap %s: "
+                                                  arg-map-variable))))))
+                 ((or loophole-make-register-always-read-tag
+                      current-prefix-arg)
+                  (read-string (format "Tag for keymap %s: " arg-map-variable)))
+                 (t nil)))
           (arg-global (if current-prefix-arg (y-or-n-p "Global? ")))
           (arg-without-base-map (if current-prefix-arg
                                     (y-or-n-p "Without base map? "))))
