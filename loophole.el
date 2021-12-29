@@ -996,17 +996,25 @@ If called interactively, read MAP-VARIABLE, STATE-VARIABLE.
 When called with prefix argument, read TAG and ask user if
 MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (interactive
-   (let* ((arg-map-variable
-           (intern (completing-read "Map-variable: "
-                                    obarray
-                                    (lambda (s)
-                                      (and (boundp s) (not (keywordp s))
-                                           (keymapp (symbol-value s)))))))
+   (let* ((map-variable-list (loophole-map-variable-list))
+          (state-variable-list (loophole-state-variable-list))
+          (arg-map-variable
+           (intern (completing-read
+                    "Map-variable: "
+                    obarray
+                    (lambda (s)
+                      (and (boundp s) (not (keywordp s))
+                           (keymapp (symbol-value s))
+                           (not (memq s map-variable-list)))))))
           (arg-state-variable
-           (intern (completing-read "State-variable: "
-                                    obarray
-                                    (lambda (s)
-                                      (and (boundp s) (not (keywordp s)))))))
+           (intern (completing-read
+                    "State-variable: "
+                    obarray
+                    (lambda (s)
+                      (and (boundp s) (not (keywordp s))
+                           (not (eq arg-map-variable s))
+                           (not (memq s map-variable-list))
+                           (not (memq s state-variable-list)))))))
           (arg-tag (if (or loophole-make-register-always-read-tag
                            current-prefix-arg)
                        (read-string
