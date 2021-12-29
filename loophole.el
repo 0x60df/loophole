@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.7.1
+;; Version: 0.7.2
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -1796,6 +1796,69 @@ If TIME is negative, shorten timer."
           (re-search-forward "`\\([^`']+\\)'" nil t)
           (help-xref-button 1 'help-variable map-variable))))))
 
+(defun loophole-merge (map-variable merger-map-variable)
+  "Merge MAP-VARIABLE to MARGER-MAP-VARIABLE.
+A copy of MAP-VARIABLE is made, and each element
+of that copy will be embedded into MERGER-MAP-VARIABLE.
+Therefore, once merge is completed, keymaps bound to
+MAP-VARIABLE and MERGER-MAP-VARIABLE are independent.
+
+Most of copies are inserted to the tail of
+MERGER-MAP-VARIABLE.  However, if a certain element is a typical one:
+a cons cell of an event and a binding or any variant of it,
+and first event of this element exists on
+MERGER-MAP-VARIABLE, the element is merged into the element
+of MERGER-MAP-VARIABLE.  On merging elements, events of
+MERGER-MAP-VARIABLE gets priority to MAP-VARIABLE; i.e.,
+events of MAP-VARIABLE will be merged into the element of
+MERGER-MAP-VARIABLE, only if that events does not exists on
+MERGER-MAP-VARIABLE and not blocked on upstream of
+MERGER-MAP-VARIABLE.
+
+After merge is completed, MAP-VARIABLE will be unregistered
+from Loophole."
+  (interactive
+   (let* ((arg-map-variable (loophole-read-map-variable "Merge keymap: "))
+          (arg-merger-map-variable
+           (loophole-read-map-variable "Merge into keymap: "
+                                       (lambda (map-variable)
+                                         (not (eq map-variable
+                                                  arg-map-variable))))))
+     (list arg-map-variable arg-merger-map-variable)))
+  (unless (loophole-registered-p map-variable)
+    (user-error "Specified map-variable %s is not registered" map-variable))
+  (unless (loophole-registered-p merger-map-variable)
+    (user-error "Specified merger-map-variable %s is not registered"
+                merger-map-variable))
+  (letrec ((merge-element
+            (lambda (element merger-element)
+              (if (and (keymapp (cdr element)) (keymapp (cdr merger-element)))
+                  (let ((parent (keymap-parent (cdr element)))
+                        (merger-parent (keymap-parent (cdr merger-element))))
+                    (set-keymap-parent (cdr element) nil)
+                    (set-keymap-parent (cdr merger-element) nil)
+                    (dolist (sub-element (cddr element))
+                      (let ((merger-sub-element (assq (car-safe sub-element)
+                                                      (cddr merger-element))))
+                        (if (and (listp sub-element)
+                                 (or (characterp (car sub-element))
+                                     (symbolp (car sub-element)))
+                                 (not (eq 'keymap (car sub-element)))
+                                 merger-sub-element)
+                            (funcall merge-element
+                                     sub-element merger-sub-element)
+                          (unless (memq sub-element (cddr merger-element))
+                            (setcdr (last merger-element)
+                                    (cons sub-element nil))))))
+                    (set-keymap-parent (cdr merger-element) merger-parent)
+                    (set-keymap-parent (cdr element) parent))))))
+    (let* ((map (copy-keymap (symbol-value map-variable)))
+           (merger-map (symbol-value merger-map-variable))
+           (pseudo-root-element (cons nil map))
+           (pseudo-merger-root-element (cons nil merger-map)))
+      (funcall merge-element pseudo-root-element pseudo-merger-root-element)))
+  (loophole-unregister map-variable))
+
 (defun loophole-duplicate (map-variable &optional map-name tag)
   "Duplicate MAP-VARIABLE.
 If optional argument MAP-NAME is given, use it for new map;
@@ -2817,6 +2880,7 @@ Followings are the key bindings for Loophole commands.
             (define-key map "\C-c]mk" #'loophole-modify-kmacro)
             (define-key map "\C-c]ma" #'loophole-modify-array)
             (define-key map "\C-c]cd" #'loophole-duplicate)
+            (define-key map "\C-c]cm" #'loophole-merge)
             map)
   (if loophole-mode
       (progn
