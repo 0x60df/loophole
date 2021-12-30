@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.7.2
+;; Version: 0.7.3
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -69,7 +69,13 @@ in order to tell that this variable is not maintained.")
 (defvar-local loophole--editing nil
   "Variable of keymap which is currently being edited.
 Loophole binds keys in this keymap.  When this value is nil,
-Loophole may generate new keymap and bind keys in it.")
+Loophole may generate new keymap and bind keys in it.
+
+If editing session is global, at that time, symbol property
+:loophole-global is non-nil, default value is used;
+otherwise, buffer local values are used.
+
+Use `loophole-editing' to get the value of this variable.")
 
 (defvar loophole--suspended nil
   "Non-nil if Loophole is suspended manually.
@@ -85,7 +91,9 @@ TIMER is a timer for MAP-VARIABLE on current buffer.
 Default value holds timers for global Loophole map.")
 
 (defvar-local loophole--editing-timer nil
-  "Timer for stopping editing loophole map.")
+  "Timer for stopping editing loophole map.
+By default, local timers are used.
+If editing session is globalized, default value is used.")
 
 (defvar loophole--read-map-variable-help-condition
   '((index . 0) (last))
@@ -261,7 +269,7 @@ key sequence to be bound.
 OBTAIN-KEYMAP is a function which takes two arguments the
 key and entry to be bound, and returns keymap object on
 which key and entry are bound; this overrides
-`loophole--editing'.
+`loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is t,
 or while it is 'negative-argument and `loophole-bind-entry'
@@ -292,7 +300,7 @@ key sequence to be bound.
 OBTAIN-KEYMAP is a function which takes two arguments the
 key and command to be bound, and returns keymap object on
 which key and command are bound; this overrides
-`loophole--editing'.
+`loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is t,
 or while it is 'negative-argument and
@@ -325,7 +333,7 @@ key sequence to be bound.
 OBTAIN-KEYMAP is a function which takes two arguments the
 key and kmacro to be bound, and returns keymap object on
 which key and kmacro are bound; this overrides
-`loophole--editing'.
+`loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is t,
 or while it is 'negative-argument and `loophole-bind-kmacro'
@@ -356,7 +364,7 @@ key sequence to be bound.
 OBTAIN-KEYMAP is a function which takes two arguments the
 key and array to be bound, and returns keymap object on
 which key and array are bound; this overrides
-`loophole--editing'.
+`loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is t,
 or while it is 'negative-argument and `loophole-bind-array'
@@ -387,7 +395,7 @@ key sequence to be bound.
 OBTAIN-ANOTHER-KEYMAP is a function which takes two
 arguments the key and keymap to be bound, and returns
 another-keymap object on which key and keymap are bound;
-this overrides `loophole--editing'.
+this overrides `loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is t,
 or while it is 'negative-argument and `loophole-bind-keymap'
@@ -418,7 +426,7 @@ key sequence to be bound.
 OBTAIN-KEYMAP is a function which takes two arguments the
 key and symbol to be bound, and returns keymap object on
 which key and symbol are bound; this overrides
-`loophole--editing'.
+`loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is t,
 or while it is 'negative-argument and `loophole-bind-symbol'
@@ -570,16 +578,17 @@ this hook is run with all of them."
             (:eval (if (and (loophole-suspending-p)
                             (not loophole-mode-lighter-use-face))
                        loophole-mode-lighter-suspending-sign))
-            (loophole--editing
-             (""
-              loophole-mode-lighter-editing-sign
-              (:eval (let ((tag (get loophole--editing :loophole-tag)))
-                       (if (and loophole-mode-lighter-use-face
-                                (stringp tag))
-                           (propertize (replace-regexp-in-string
-                                        "%" "%%" (substitute-command-keys tag))
-                                       'face 'loophole-editing)
-                         tag)))))
+            (:eval (if (loophole-editing)
+                       (concat
+                        loophole-mode-lighter-editing-sign
+                        (let ((tag (get (loophole-editing) :loophole-tag)))
+                          (if (and loophole-mode-lighter-use-face
+                                   (stringp tag))
+                              (propertize (replace-regexp-in-string
+                                           "%" "%%"
+                                           (substitute-command-keys tag))
+                                          'face 'loophole-editing)
+                            tag)))))
             (:eval
              (let ((l (seq-filter (lambda (a) (symbol-value (car a)))
                                   loophole--map-alist)))
@@ -611,7 +620,8 @@ this hook is run with all of them."
                (:eval (if (and (loophole-suspending-p)
                                (not loophole-mode-lighter-use-face))
                           loophole-mode-lighter-suspending-sign))
-               (loophole--editing loophole-mode-lighter-editing-sign)
+               (:eval (if (loophole-editing)
+                          loophole-mode-lighter-editing-sign))
                (:eval (let ((n (length
                                 (delq nil
                                       (mapcar
@@ -632,7 +642,8 @@ this hook is run with all of them."
                loophole-mode-lighter-base
                (:eval (if (loophole-suspending-p)
                           loophole-mode-lighter-suspending-sign))
-               (loophole--editing loophole-mode-lighter-editing-sign)))
+               (:eval (if (loophole-editing)
+                          loophole-mode-lighter-editing-sign))))
     (static . loophole-mode-lighter-base))
   "Alist of preset for `loophole-mode-lighter'.
 Each element looks like (STYLE . DEFINITION).
@@ -816,6 +827,15 @@ During suspension, `loophole--map-alist' is removed from
 Consequently, all Loophole maps lose effect while its state
 is preserved."
   (not (memq 'loophole--map-alist emulation-mode-map-alists)))
+
+(defun loophole-editing ()
+  "Return map variable which is being currently edited.
+If editing session is global, return default value of
+`loophole--editing'.  If editing session is local, return
+buffer local value."
+  (if (get 'loophole--editing :loophole-global)
+      (default-value 'loophole--editing)
+    loophole--editing))
 
 (defmacro loophole--do-with-current-buffer (&rest body)
   "Execute BODY for each Loophole buffer as setting it current buffer.
@@ -1127,11 +1147,17 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (if (loophole-global-p map-variable)
       (loophole--erase-global-timer map-variable)
     (loophole--erase-local-timers map-variable))
-  (loophole--do-with-current-buffer
-   (when (and (local-variable-p 'loophole--editing)
-              (eq loophole--editing map-variable))
-     (loophole-stop-editing-timer)
-     (loophole-stop-editing)))
+  (if (get 'loophole--editing :loophole-global)
+      (progn
+        (loophole-stop-editing-timer)
+        (loophole-stop-editing)
+        (force-mode-line-update t))
+    (loophole--do-with-current-buffer
+     (when (and (local-variable-p 'loophole--editing)
+                (eq loophole--editing map-variable))
+       (loophole-stop-editing-timer)
+       (loophole-stop-editing)
+       (force-mode-line-update))))
   (let ((state-variable (get map-variable :loophole-state-variable)))
     (when (listp loophole--buffer-list)
       (remove-variable-watcher state-variable
@@ -1405,10 +1431,16 @@ which had been already unbound." named-map-variable state-variable))
       (loophole--do-with-current-buffer
        (if (local-variable-p 'loophole--map-alist)
            (let ((cell (assq state-variable loophole--map-alist)))
-             (if (consp cell) (setcar cell named-state-variable))))
-       (if (and (local-variable-p 'loophole--editing)
-                (eq map-variable loophole--editing))
-           (setq loophole--editing named-map-variable)))
+             (if (consp cell) (setcar cell named-state-variable)))))
+      (if (get 'loophole--editing :loophole-global)
+          (progn
+            (setq-default loophole--editing named-map-variable)
+            (force-mode-line-update t))
+        (loophole--do-with-current-buffer
+         (when (and (local-variable-p 'loophole--editing)
+                  (eq map-variable loophole--editing))
+           (setq loophole--editing named-map-variable)
+           (force-mode-line-update))))
       (loophole--replace-map-variable-of-timer map-variable named-map-variable)
       (if (listp loophole--buffer-list)
           (remove-variable-watcher state-variable
@@ -1443,15 +1475,61 @@ which had been already unbound." named-map-variable state-variable))
   (interactive (list (loophole-read-map-variable "Start editing keymap: ")))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
-  (setq loophole--editing map-variable)
+  (if (get 'loophole--editing :loophole-global)
+      (progn
+        (setq-default loophole--editing map-variable)
+        (force-mode-line-update t))
+    (setq loophole--editing map-variable)
+    (force-mode-line-update))
   (run-hook-with-args 'loophole-start-editing-functions map-variable))
 
 (defun loophole-stop-editing ()
   "Stop keymap editing session."
   (interactive)
-  (let ((map-variable loophole--editing))
-    (setq loophole--editing nil)
+  (let ((map-variable (loophole-editing)))
+    (if (get 'loophole--editing :loophole-global)
+        (progn
+          (setq-default loophole--editing nil)
+          (force-mode-line-update t))
+      (setq loophole--editing nil)
+      (force-mode-line-update))
     (run-hook-with-args 'loophole-stop-editing-functions map-variable)))
+
+(defun loophole-globalize-editing ()
+  "Make editing session global."
+  (interactive)
+  (if (get 'loophole--editing :loophole-global)
+      (message "Editing session is already global")
+    (let ((editing (loophole-editing)))
+      (loophole--do-with-current-buffer
+       (when (local-variable-p 'loophole--editing-timer)
+         (loophole-stop-editing-timer)
+         (kill-local-variable 'loophole--editing-timer))
+       (when (local-variable-p 'loophole--editing)
+         (loophole-stop-editing)
+         (kill-local-variable 'loophole--editing)))
+      (put 'loophole--editing :loophole-global t)
+      (if (loophole-registered-p editing)
+          (loophole-start-editing editing)))
+    (force-mode-line-update t)
+    (if (called-interactively-p 'interactive)
+        (message "Editing session is globalized"))))
+
+(defun loophole-localize-editing ()
+  "Make editing session local."
+  (interactive)
+  (if (not (get 'loophole--editing :loophole-global))
+      (message "Editing session is already local")
+    (let ((editing (loophole-editing)))
+      (loophole-stop-editing)
+      (loophole-stop-editing-timer)
+      (setq-default loophole--editing-timer nil)
+      (put 'loophole--editing :loophole-global nil)
+      (if (loophole-registered-p editing)
+          (loophole-start-editing editing)))
+    (force-mode-line-update t)
+    (if (called-interactively-p 'interactive)
+        (message "Editing session is localized"))))
 
 (defun loophole-generate ()
   "Return Loophole map variable whose value is newly generated keymap.
@@ -1553,7 +1631,7 @@ Generated by `loophole-generate'." map-variable)))
 If currently editing keymap exists, return it; otherwise
 generate new one, prepare it, and return it."
   (let ((map-variable
-         (cond (loophole--editing loophole--editing)
+         (cond ((loophole-editing) (loophole-editing))
                (t (let ((generated (loophole-generate)))
                     (loophole-enable generated)
                     (loophole-start-editing generated)
@@ -1689,34 +1767,46 @@ is non-nil."
              (read-number "Time for stopping editing in sec: "
                           loophole-editing-timer-default-time))))
   (unless (integerp time) (setq time loophole-editing-timer-default-time))
-  (if (timerp loophole--editing-timer)
-      (progn
-        (timer-set-time loophole--editing-timer (timer-relative-time nil time))
-        (if (or (timer--triggered loophole--editing-timer)
-                (not (memq loophole--editing-timer timer-list)))
-            (timer-activate loophole--editing-timer)))
-    (setq loophole--editing-timer
-          (run-with-timer time nil (lambda (buffer)
-                                     (if (buffer-live-p buffer)
-                                         (with-current-buffer buffer
-                                           (loophole-stop-editing)
-                                           (force-mode-line-update))))
-                          (current-buffer))))
+  (let ((timer (if (get 'loophole--editing :loophole-global)
+                   (default-value 'loophole--editing-timer)
+                 loophole--editing-timer)))
+    (if (timerp timer)
+        (progn
+          (timer-set-time timer (timer-relative-time nil time))
+          (if (or (timer--triggered timer)
+                  (not (memq timer timer-list)))
+              (timer-activate timer)))
+      (if (get 'loophole--editing :loophole-global)
+          (setq-default loophole--editing-timer
+                        (run-with-timer time nil
+                                        (lambda ()
+                                          (loophole-stop-editing)
+                                          (force-mode-line-update t))))
+        (setq loophole--editing-timer
+              (run-with-timer time nil (lambda (buffer)
+                                         (if (buffer-live-p buffer)
+                                             (with-current-buffer buffer
+                                               (loophole-stop-editing)
+                                               (force-mode-line-update))))
+                              (current-buffer))))))
   (if (called-interactively-p 'interactive)
       (message "Editing timer is started")))
 
 (defun loophole-stop-editing-timer ()
   "Cancel timer for stopping editing session."
   (interactive)
-  (if (and (timerp loophole--editing-timer)
-           (not (timer--triggered loophole--editing-timer))
-           (memq loophole--editing-timer timer-list))
-      (progn
-        (cancel-timer loophole--editing-timer)
-        (if (called-interactively-p 'interactive)
-            (message "Editing timer is stopped")))
-    (if (called-interactively-p 'interactive)
-        (message "No active editing timer exist"))))
+  (let ((timer (if (get 'loophole--editing :loophole-global)
+                   (default-value 'loophole--editing-timer)
+                 loophole--editing-timer)))
+    (if (and (timerp timer)
+             (not (timer--triggered timer))
+             (memq timer timer-list))
+        (progn
+          (cancel-timer timer)
+          (if (called-interactively-p 'interactive)
+              (message "Editing timer is stopped")))
+      (if (called-interactively-p 'interactive)
+          (message "No active editing timer exist")))))
 
 (defun loophole-extend-editing-timer (time)
   "Extend time of editing timer by TIME in second.
@@ -1725,15 +1815,16 @@ If TIME is negative, shorten timer."
    (list (read-number "Time to extend editing timer in sec: "
                       loophole-editing-timer-default-time)))
   (unless (integerp time) (error "Specified time is invalid: %s" time))
-  (if (timerp loophole--editing-timer)
-      (progn
-        (timer-set-time loophole--editing-timer
-                        (timer-relative-time
-                         (timer--time loophole--editing-timer) time))
-        (if (or (timer--triggered loophole--editing-timer)
-                (not (memq loophole--editing-timer timer-list)))
-            (timer-activate loophole--editing-timer)))
-    (message "Editing timer does not exist")))
+  (let ((timer (if (get 'loophole--editing :loophole-global)
+                   (default-value 'loophole--editing-timer)
+                 loophole--editing-timer)))
+    (if (timerp timer)
+        (progn
+          (timer-set-time timer (timer-relative-time (timer--time timer) time))
+          (if (or (timer--triggered timer)
+                  (not (memq timer timer-list)))
+              (timer-activate timer)))
+      (message "Editing timer does not exist"))))
 
 (defun loophole-describe (map-variable)
   "Display all key bindings in MAP-VARIABLE."
@@ -2669,12 +2760,12 @@ affects the timing of this `completing-read'."
   (loophole-bind-entry key entry))
 
 (defun loophole-unset-key (key)
-  "Unset the temporary biding of KEY of `loophole--editing'."
-  (interactive (if loophole--editing
+  "Unset the temporary biding of KEY of `loophole-editing'."
+  (interactive (if (loophole-editing)
                    (list (loophole-read-key "Unset temporarily set key: "))
                  (user-error "There is no editing map")))
-  (if loophole--editing
-      (let ((map (symbol-value loophole--editing)))
+  (if (loophole-editing)
+      (let ((map (symbol-value (loophole-editing))))
         (if (lookup-key map key)
             (loophole-bind-entry key nil map)))))
 
@@ -2866,6 +2957,8 @@ Followings are the key bindings for Loophole commands.
             (define-key map "\C-c]<" #'loophole-localize)
             (define-key map "\C-c][" #'loophole-start-editing)
             (define-key map "\C-c]]" #'loophole-stop-editing)
+            (define-key map "\C-c]-" #'loophole-globalize-editing)
+            (define-key map "\C-c]=" #'loophole-localize-editing)
             (define-key map "\C-c];" #'loophole-name)
             (define-key map "\C-c]#" #'loophole-tag)
             (define-key map "\C-c]/" #'loophole-describe)
@@ -2880,6 +2973,8 @@ Followings are the key bindings for Loophole commands.
             (define-key map "\C-c]e" #'loophole-enable)
             (define-key map "\C-c]d" #'loophole-disable)
             (define-key map "\C-c]D" #'loophole-disable-all)
+            (define-key map "\C-c]cd" #'loophole-duplicate)
+            (define-key map "\C-c]cm" #'loophole-merge)
             (define-key map "\C-c]t[" #'loophole-start-timer)
             (define-key map "\C-c]t]" #'loophole-stop-timer)
             (define-key map "\C-c]t+" #'loophole-extend-timer)
@@ -2903,8 +2998,6 @@ Followings are the key bindings for Loophole commands.
             (define-key map "\C-c]ml" #'loophole-modify-lambda-form)
             (define-key map "\C-c]mk" #'loophole-modify-kmacro)
             (define-key map "\C-c]ma" #'loophole-modify-array)
-            (define-key map "\C-c]cd" #'loophole-duplicate)
-            (define-key map "\C-c]cm" #'loophole-merge)
             map)
   (if loophole-mode
       (progn
@@ -2979,27 +3072,27 @@ Instead of using this function, user can pick some hooks
 from function definition for optimized customization."
   (add-hook 'loophole-prioritize-functions
             (lambda (map-variable)
-              (unless (eq map-variable loophole--editing)
+              (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
   (add-hook 'loophole-globalize-functions
             (lambda (map-variable)
-              (unless (eq map-variable loophole--editing)
+              (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
   (add-hook 'loophole-localize-functions
             (lambda (map-variable)
-              (unless (eq map-variable loophole--editing)
+              (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
   (add-hook 'loophole-enable-functions
             (lambda (map-variable)
-              (unless (eq map-variable loophole--editing)
+              (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
   (add-hook 'loophole-disable-functions
             (lambda (map-variable)
-              (if (eq map-variable loophole--editing)
+              (if (eq map-variable (loophole-editing))
                   (loophole-stop-editing))))
   (add-hook 'loophole-name-functions
             (lambda (map-variable)
-              (unless (eq map-variable loophole--editing)
+              (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing)))))
 
 (defun loophole-turn-off-auto-stop-editing ()
@@ -3007,27 +3100,27 @@ from function definition for optimized customization."
 Remove hooks added by `loophole-turn-on-auto-stop-editing'."
   (remove-hook 'loophole-prioritize-functions
                (lambda (map-variable)
-                 (unless (eq map-variable loophole--editing)
+                 (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
   (remove-hook 'loophole-globalize-functions
                (lambda (map-variable)
-                 (unless (eq map-variable loophole--editing)
+                 (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
   (remove-hook 'loophole-localize-functions
                (lambda (map-variable)
-                 (unless (eq map-variable loophole--editing)
+                 (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
   (remove-hook 'loophole-enable-functions
                (lambda (map-variable)
-                 (unless (eq map-variable loophole--editing)
+                 (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
   (remove-hook 'loophole-disable-functions
                (lambda (map-variable)
-                 (if (eq map-variable loophole--editing)
+                 (if (eq map-variable (loophole-editing))
                      (loophole-stop-editing))))
   (remove-hook 'loophole-name-functions
                (lambda (map-variable)
-                 (unless (eq map-variable loophole--editing)
+                 (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing)))))
 
 (defun loophole-turn-on-auto-resume ()
@@ -3138,23 +3231,23 @@ Instead of using this function, user can pick some hooks
 from function definition for optimized customization."
   (add-hook 'loophole-prioritize-functions
             (lambda (map-variable)
-              (if (eq map-variable loophole--editing)
+              (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
   (add-hook 'loophole-globalize-functions
             (lambda (map-variable)
-              (if (eq map-variable loophole--editing)
+              (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
   (add-hook 'loophole-localize-functions
             (lambda (map-variable)
-              (if (eq map-variable loophole--editing)
+              (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
   (add-hook 'loophole-enable-functions
             (lambda (map-variable)
-              (if (eq map-variable loophole--editing)
+              (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
   (add-hook 'loophole-name-functions
             (lambda (map-variable)
-              (if (eq map-variable loophole--editing)
+              (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
   (add-hook 'loophole-start-editing-functions
             (lambda (_) (loophole-start-editing-timer)))
@@ -3166,23 +3259,23 @@ from function definition for optimized customization."
 Remove hooks added by `loophole-turn-on-auto-editing-timer'."
   (remove-hook 'loophole-prioritize-functions
                (lambda (map-variable)
-                 (if (eq map-variable loophole--editing)
+                 (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
   (remove-hook 'loophole-globalize-functions
                (lambda (map-variable)
-                 (if (eq map-variable loophole--editing)
+                 (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
   (remove-hook 'loophole-localize-functions
                (lambda (map-variable)
-                 (if (eq map-variable loophole--editing)
+                 (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
   (remove-hook 'loophole-enable-functions
                (lambda (map-variable)
-                 (if (eq map-variable loophole--editing)
+                 (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
   (remove-hook 'loophole-name-functions
                (lambda (map-variable)
-                 (if (eq map-variable loophole--editing)
+                 (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
   (remove-hook 'loophole-start-editing-functions
                (lambda (_) (loophole-start-editing-timer)))
