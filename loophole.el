@@ -870,7 +870,9 @@ and `loophole-unregister'."
        (if (timerp timer) (cancel-timer timer)))
      (setq loophole--timer-alist
            (seq-filter (lambda (cell) (not (eq (car cell) map-variable)))
-                       loophole--timer-alist)))))
+                       loophole--timer-alist))
+     (if (null loophole--timer-alist)
+         (kill-local-variable 'loophole--timer-alist)))))
 
 (defun loophole--erase-global-timer (map-variable)
   "Cancel and remove global timer for MAP-VARIABLE.
