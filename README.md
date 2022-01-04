@@ -285,13 +285,13 @@ the commands prefixed by `loophole-bind-` may be convenient.
 ### Automation
 
 Loophole offers some customization functions for automation.
-These functions setup some sequential call of Loophole function
-after some events.
-For example,  `loophole-stop-editing` after `loophole-disable`.
-Actually, these functions are the collections of `add-hook` forms.
-
+These functions setup some hooks and timers.
 These functions are prefixed by `loophole-turn-` on or off.
 Adding them in your init file setup automation.
+
+For example, `loophole-turn-on-auto-stop-editing` setup hooks to call
+`loophole-stop-editing` after some commands like `loophole-globalize`,
+`loophole-enable`, `loophole-prioritize`, ...
 
 They are also setter for custom variables like `loophole-use-auto-stop-editing`.
 Hence, they can be called via `custom-set-variables`.

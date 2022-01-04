@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.7.3
+;; Version: 0.7.4
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -94,6 +94,13 @@ Default value holds timers for global Loophole map.")
   "Timer for stopping editing loophole map.
 By default, local timers are used.
 If editing session is globalized, default value is used.")
+
+(defvar loophole--idle-pripritize-timer nil
+  "Idle timer for prioritize.
+If `loophole-use-idle-prioritize' is set t, idle timer is
+kept in this variable.
+Idle timer prioritizes `loophole-idle-prioritize-list' for
+all local values and default value of `loophole--map-alist'.")
 
 (defvar loophole--read-map-variable-help-condition
   '((index . 0) (last))
@@ -192,6 +199,24 @@ This option takes effect with Emacs 28 or later."
   "Default time in seconds for auto stopping editing timer."
   :group 'loophole
   :type 'number)
+
+(defcustom loophole-idle-prioritize-time (* 60 15)
+  "Idle time to run idle prioritize."
+  :group 'loophole
+  :type 'number)
+
+(defcustom loophole-idle-prioritize-list #'loophole-idle-prioritize-named-list
+  "List of map-variables for idle prioritize.
+The value of this user option also can be a function which
+returns a list of map variables.
+Entries which are not registered to Loophole is omitted.
+
+Map variables will be prioritized when
+`loophole-idle-prioritize-time' is spent.
+First entry of this list will be placed at the head of
+`loophole--map-alist'."
+  :group 'loophole
+  :type 'sexp)
 
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
@@ -940,6 +965,20 @@ This function is intended to be used in `loophole-name'."
                             (loophole-disable map-variable)
                             (force-mode-line-update))))
                     (list new-map-variable (current-buffer)))))))))))
+
+(defun loophole-idle-prioritize-named-list ()
+  "Return list of named map variables.
+Map variables are ordered in accordance with a default value
+of `loophole--map-alist'.
+This function is intended to be used for
+`loophole-idle-prioritize-list'."
+  (seq-filter (lambda (map-variable)
+                (let ((name (symbol-name map-variable)))
+                  (and (string-match "^loophole-.+-map$" name)
+                       (not (string-match "^loophole-[0-9]+-map$" name)))))
+              (mapcar (lambda (e)
+                        (get (car e) :loophole-map-variable))
+                      (default-value 'loophole--map-alist))))
 
 (defun loophole--follow-adding-local-variable (_symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
@@ -3282,6 +3321,42 @@ Remove hooks added by `loophole-turn-on-auto-editing-timer'."
   (remove-hook 'loophole-stop-editing-functions
                (lambda (_) (loophole-stop-editing-timer))))
 
+(defun loophole-turn-on-idle-prioritize ()
+  "Turn on idle prioritize as user customization.
+Start idle timer for prioritizing Loophole maps according to
+`loophole-idle-prioritize-list'.
+Idle timer is set in `loophole--idle-pripritize-timer'."
+  (if (timerp loophole--idle-pripritize-timer)
+      (cancel-timer loophole--idle-pripritize-timer))
+  (setq loophole--idle-pripritize-timer
+        (run-with-idle-timer
+         loophole-idle-prioritize-time
+         t
+         (lambda ()
+           (let ((object (if (functionp loophole-idle-prioritize-list)
+                             (funcall loophole-idle-prioritize-list)
+                           loophole-idle-prioritize-list)))
+             (unless (listp object)
+               (user-error
+                (concat "Idle prioritize failed.  "
+                        "loophole-idle-prioritize-list does not derive list")))
+             (let ((map-variable-list
+                    (seq-filter (lambda (map-variable)
+                                  (and (symbolp map-variable)
+                                       (loophole-registered-p map-variable)))
+                                object)))
+               (dolist (map-variable (reverse map-variable-list))
+                 (loophole--do-with-current-buffer
+                  (loophole-prioritize map-variable)))))))))
+
+(defun loophole-turn-off-idle-prioritize ()
+  "Turn off idle prioritize as user customization.
+Cancel timer `loophole--idle-pripritize-timer' and set nil
+to it."
+  (if (timerp loophole--idle-pripritize-timer)
+      (cancel-timer loophole--idle-pripritize-timer))
+  (setq loophole--idle-pripritize-timer nil))
+
 (defcustom loophole-use-auto-prioritize t
   "Flag if prioritize Loophole map automatically.
 
@@ -3376,6 +3451,25 @@ For more detailed customization, see documentation string of
          (if value
              (loophole-turn-on-auto-editing-timer)
            (loophole-turn-off-auto-editing-timer))))
+
+(defcustom loophole-use-idle-prioritize nil
+  "Flag if prioritize Loophole map when idle.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-turn-on-idle-prioritize' or
+`loophole-turn-off-idle-prioritize' manually.
+They setup idle timer.
+
+For more detailed customization, see documentation string of
+`loophole-turn-on-idle-prioritize'."
+  :group 'loophole
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (loophole-turn-on-idle-prioritize)
+           (loophole-turn-off-idle-prioritize))))
 
 ;;; A macro for defining keymap
 
