@@ -1,6 +1,6 @@
 ;;; loophole.el --- Manage temporary key bindings -*- lexical-binding: t -*-
 
-;; Copyright (C) 2020, 2021 0x60DF
+;; Copyright (C) 2020-2022 0x60DF
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
