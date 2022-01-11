@@ -216,7 +216,8 @@ Map variables will be prioritized when
 First entry of this list will be placed at the head of
 `loophole--map-alist'."
   :group 'loophole
-  :type 'sexp)
+  :type '(choice (repeat symbol)
+                 (function)))
 
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
