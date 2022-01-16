@@ -2160,66 +2160,67 @@ FILE will be asked."
                      (if current-prefix-arg
                          (read-file-name "Loading file: "))))
   (setq file (or file loophole-default-storage-file))
-  (unless (file-writable-p file)
-    (user-error "File storage is not writable: %s" file))
-  (let* ((target-filter
-          (cond ((eq target 'named)
-                 (lambda (map-variable)
-                   (let ((name (symbol-name map-variable)))
-                     (and (string-match "^loophole-.+-map$" name)
-                          (not (string-match "^loophole-[0-9]+-map$" name))))))
-                ((eq target 'all) (lambda () t))
-                ((functionp target) target)
-                (t (lambda (map-variable)
-                     (let ((name (symbol-name map-variable)))
-                       (string-match "^loophole-.+-map$" name))))))
-         (map-variable-list
-          (seq-filter target-filter
-                      (mapcar (lambda (e)
-                                (get (car e) :loophole-map-variable))
-                              (default-value 'loophole--map-alist))))
-         (valid-map-variable-list
-          (seq-filter (lambda (map-variable)
-                        (with-temp-buffer
-                          (save-excursion
-                            (prin1 (symbol-value map-variable)
-                                   (current-buffer)))
-                          (condition-case _e
-                              (progn (read (current-buffer)) t)
-                            (invalid-read-syntax
-                             (message (concat
-                                       "%s is not saved.  "
-                                       "It contains object(s) "
-                                       "that has no read syntax.")
-                                      map-variable)
-                             nil))))
-                      map-variable-list))
-         (printed-map-list
-          (mapcar (lambda (map-variable)
-                    `(,map-variable
-                      ,(let ((keymap (copy-keymap (symbol-value map-variable))))
-                         (set-keymap-parent keymap nil)
-                         keymap)
-                      :parent ,(let ((keymap (symbol-value map-variable)))
-                                 (if (eq (keymap-parent keymap)
-                                         loophole-base-map)
-                                     'loophole-base-map
-                                   `(quote ,(keymap-parent keymap))))
-                      :documentation ,(get map-variable 'variable-documentation)
-                      :state-variable ,(get map-variable
-                                            :loophole-state-variable)
-                      :state-variable-documentation ,(get
-                                                      (get
-                                                       map-variable
-                                                       :loophole-state-variable)
-                                                      'variable-documentation)
-                      :tag ,(get map-variable :loophole-tag)
-                      :global ,(not (local-variable-if-set-p
-                                     (get map-variable
-                                          :loophole-state-variable)))))
-                  valid-map-variable-list)))
-    (with-temp-file file
-      (prin1 printed-map-list (current-buffer)))))
+  (if (file-writable-p file)
+      (let* ((target-filter
+              (cond ((eq target 'named)
+                     (lambda (map-variable)
+                       (let ((name (symbol-name map-variable)))
+                         (and (string-match "^loophole-.+-map$" name)
+                              (not (string-match "^loophole-[0-9]+-map$"
+                                                 name))))))
+                    ((eq target 'all) (lambda () t))
+                    ((functionp target) target)
+                    (t (lambda (map-variable)
+                         (let ((name (symbol-name map-variable)))
+                           (string-match "^loophole-.+-map$" name))))))
+             (map-variable-list
+              (seq-filter target-filter
+                          (mapcar (lambda (e)
+                                    (get (car e) :loophole-map-variable))
+                                  (default-value 'loophole--map-alist))))
+             (valid-map-variable-list
+              (seq-filter (lambda (map-variable)
+                            (with-temp-buffer
+                              (save-excursion
+                                (prin1 (symbol-value map-variable)
+                                       (current-buffer)))
+                              (condition-case _e
+                                  (progn (read (current-buffer)) t)
+                                (invalid-read-syntax
+                                 (message (concat
+                                           "%s is not saved.  "
+                                           "It contains object(s) "
+                                           "that has no read syntax.")
+                                          map-variable)
+                                 nil))))
+                          map-variable-list))
+             (printed-map-list
+              (mapcar (lambda (map-variable)
+                        `(,map-variable
+                          ,(let ((keymap (copy-keymap
+                                          (symbol-value map-variable))))
+                             (set-keymap-parent keymap nil)
+                             keymap)
+                          :parent ,(let ((keymap (symbol-value map-variable)))
+                                     (if (eq (keymap-parent keymap)
+                                             loophole-base-map)
+                                         'loophole-base-map
+                                       `(quote ,(keymap-parent keymap))))
+                          :documentation ,(get map-variable
+                                               'variable-documentation)
+                          :state-variable ,(get map-variable
+                                                :loophole-state-variable)
+                          :state-variable-documentation
+                          ,(get (get map-variable :loophole-state-variable)
+                                'variable-documentation)
+                          :tag ,(get map-variable :loophole-tag)
+                          :global ,(not (local-variable-if-set-p
+                                         (get map-variable
+                                              :loophole-state-variable)))))
+                      valid-map-variable-list)))
+        (with-temp-file file
+          (prin1 printed-map-list (current-buffer))))
+    (message "File storage is not writable: %s" file)))
 
 (defun loophole-load (&optional target file)
   "Load Loophole maps from file storage.
@@ -2254,61 +2255,63 @@ FILE will be asked."
                      (if current-prefix-arg
                          (read-file-name "Loading file: "))))
   (setq file (or file loophole-default-storage-file))
-  (unless (file-readable-p file)
-    (user-error "File storage is not readable: %s" file))
-  (let* ((target-filter
-          (cond ((eq target 'named)
-                 (lambda (map)
-                   (let ((name (symbol-name (car map))))
-                     (and (string-match "^loophole-.+-map$" name)
-                          (not (string-match "^loophole-[0-9]+-map$" name))))))
-                ((eq target 'all) (lambda () t))
-                ((functionp target) target)
-                (t (lambda (map)
-                     (let ((name (symbol-name (car map))))
-                       (string-match "^loophole-.+-map$" name))))))
-         (read-map-list
-          (with-temp-buffer
-            (insert-file-contents file)
-            (read (current-buffer))))
-         (map-list (seq-filter target-filter read-map-list)))
-    (dolist (map (reverse map-list))
-      (let* ((map-variable (car map))
-             (keymap (cadr map))
-             (plist (cddr map))
-             (parent (eval (plist-get plist :parent)))
-             (documentation (plist-get plist :documentation))
-             (state-variable (plist-get plist :state-variable))
-             (state-variable-documentation
-              (plist-get plist :state-variable-documentation))
-             (tag (plist-get plist :tag))
-             (global (plist-get plist :global)))
-        (when (or (and (not (loophole-registered-p map-variable))
-                     (not (boundp map-variable))
-                     (not (boundp state-variable)))
-                  (cond ((eq loophole-make-load-overwrite-map 'all))
-                        ((eq loophole-make-load-overwrite-map 'temporary)
-                         (string-match "^loophole-[0-9]+-map$"
-                                       (symbol-name map-variable)))
-                        ((functionp loophole-make-load-overwrite-map)
-                         (funcall loophole-make-load-overwrite-map
-                                  map-variable))
-                        (loophole-make-load-overwrite-map
-                         (string-match "^loophole-.+-map$"
-                                       (symbol-name map-variable))))
-                  (yes-or-no-p
-                   (format
-                    "%s has already been bound or registered.  Overwrite it? "
-                    map-variable)))
-          (if (loophole-registered-p map-variable)
-              (loophole-unregister map-variable))
-          (set map-variable keymap)
-          (put map-variable 'variable-documentation documentation)
-          (set-keymap-parent keymap parent)
-          (set state-variable nil)
-          (put state-variable 'variable-documentation
-               state-variable-documentation)
-          (loophole-register map-variable state-variable tag global t))))))
+  (if (file-readable-p file)
+      (let* ((target-filter
+              (cond ((eq target 'named)
+                     (lambda (map)
+                       (let ((name (symbol-name (car map))))
+                         (and (string-match "^loophole-.+-map$" name)
+                              (not (string-match "^loophole-[0-9]+-map$"
+                                                 name))))))
+                    ((eq target 'all) (lambda () t))
+                    ((functionp target) target)
+                    (t (lambda (map)
+                         (let ((name (symbol-name (car map))))
+                           (string-match "^loophole-.+-map$" name))))))
+             (read-map-list
+              (with-temp-buffer
+                (insert-file-contents file)
+                (read (current-buffer))))
+             (map-list (seq-filter target-filter read-map-list)))
+        (dolist (map (reverse map-list))
+          (let* ((map-variable (car map))
+                 (keymap (cadr map))
+                 (plist (cddr map))
+                 (parent (eval (plist-get plist :parent)))
+                 (documentation (plist-get plist :documentation))
+                 (state-variable (plist-get plist :state-variable))
+                 (state-variable-documentation
+                  (plist-get plist :state-variable-documentation))
+                 (tag (plist-get plist :tag))
+                 (global (plist-get plist :global)))
+            (when (or (and (not (loophole-registered-p map-variable))
+                           (not (boundp map-variable))
+                           (not (boundp state-variable)))
+                      (cond ((eq loophole-make-load-overwrite-map 'all))
+                            ((eq loophole-make-load-overwrite-map 'temporary)
+                             (string-match "^loophole-[0-9]+-map$"
+                                           (symbol-name map-variable)))
+                            ((functionp loophole-make-load-overwrite-map)
+                             (funcall loophole-make-load-overwrite-map
+                                      map-variable))
+                            (loophole-make-load-overwrite-map
+                             (string-match "^loophole-.+-map$"
+                                           (symbol-name map-variable))))
+                      (yes-or-no-p
+                       (format
+                        (concat "%s has already been bound or registered.  "
+                                "Overwrite it? ")
+                        map-variable)))
+              (if (loophole-registered-p map-variable)
+                  (loophole-unregister map-variable))
+              (set map-variable keymap)
+              (put map-variable 'variable-documentation documentation)
+              (set-keymap-parent keymap parent)
+              (set state-variable nil)
+              (put state-variable 'variable-documentation
+                   state-variable-documentation)
+              (loophole-register map-variable state-variable tag global t)))))
+    (message "File storage is not readable: %s" file)))
 
 ;;; Binding utilities
 
