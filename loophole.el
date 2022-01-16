@@ -3663,10 +3663,7 @@ Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
 `loophole-turn-on-idle-prioritize' or
 `loophole-turn-off-idle-prioritize' manually.
-They setup idle timer.
-
-For more detailed customization, see documentation string of
-`loophole-turn-on-idle-prioritize'."
+They setup idle timer."
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
