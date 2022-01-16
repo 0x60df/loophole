@@ -260,6 +260,18 @@ Started timer can be controlled by `loophole-start-timer`,
 `loophole-stop-editing-timer`, `loophole-extend-timer` and
 `loophole-extend-editing-timer`.
 
+#### Save Loophole maps and use them in other session of Emacs
+
+`loophole-save` saves Loophole maps into file storage and `loophole-load`
+restores them.
+The following lines in your init file call them automatically.
+
+``` emacs-lisp
+(with-eval-after-load 'loophole
+  (loophole-load)
+  (add-hook 'kill-emacs-hook #'loophole-save))
+```
+
 #### Describe Loophole map
 
 `loophole-describe` describes Loophole map.
