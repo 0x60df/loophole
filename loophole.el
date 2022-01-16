@@ -2133,6 +2133,7 @@ saved.
 When TARGET is a function, it will be used as a filter
 function who takes one argument, each map-variable of
 Loophole maps.
+Other than above, falls back on nil.
 
 If an optional argument FILE is non-nil, this function will
 save maps into FILE instead of
@@ -2224,6 +2225,7 @@ loaded.
 When TARGET is a function, it will be used as a filter
 function who takes one argument, each map-variable of
 saved maps.
+Other than above, falls back on nil.
 
 If an optional argument FILE is non-nil, this function load
 maps from FILE instead of `loophole-default-storage-file'.
