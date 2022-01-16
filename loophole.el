@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.7.4
+;; Version: 0.7.5
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -101,6 +101,12 @@ If `loophole-use-idle-prioritize' is set t, idle timer is
 kept in this variable.
 Idle timer prioritizes `loophole-idle-prioritize-list' for
 all local values and default value of `loophole--map-alist'.")
+
+(defvar loophole--idle-save-timer nil
+  "Idle timer for save.
+If `loophole-use-idle-save' is set t, idle timer is kept in
+this variable.
+Idle timer do `loophole-save'.")
 
 (defvar loophole--read-map-variable-help-condition
   '((index . 0) (last))
@@ -218,6 +224,13 @@ First entry of this list will be placed at the head of
   :group 'loophole
   :type '(choice (repeat symbol)
                  (function)))
+
+(defcustom loophole-idle-save-time (* 60 30)
+  "Idle time to run idle save.
+This should be set before `loophole-use-idle-save' to take
+effect."
+  :group 'loophole
+  :type 'number)
 
 (defvar loophole-write-lisp-mode-map
   (let ((map (make-sparse-keymap)))
@@ -3561,6 +3574,25 @@ to it."
       (cancel-timer loophole--idle-prioritize-timer))
   (setq loophole--idle-prioritize-timer nil))
 
+(defun loophole-turn-on-idle-save (&optional target)
+  "Turn on idle save as user customization.
+Start idle timer for saving Loophole maps.
+Idle timer is set in `loophole--idle-save-timer'.
+
+Optional argument TARGET will be passed to `loophole-save'."
+  (if (timerp loophole--idle-save-timer)
+      (cancel-timer loophole--idle-save-timer))
+  (setq loophole--idle-save-timer
+        (run-with-idle-timer loophole-idle-save-time t
+                             #'loophole-save target)))
+
+(defun loophole-turn-off-idle-save ()
+  "Turn off idle save as user customization.
+Cancel timer `loophole--idle-save-timer' and set nil to it."
+  (if (timerp loophole--idle-save-timer)
+      (cancel-timer loophole--idle-save-timer))
+  (setq loophole--idle-save-timer nil))
+
 (defcustom loophole-use-auto-prioritize t
   "Flag if prioritize Loophole map automatically.
 
@@ -3671,6 +3703,25 @@ They setup idle timer."
          (if value
              (loophole-turn-on-idle-prioritize)
            (loophole-turn-off-idle-prioritize))))
+
+(defcustom loophole-use-idle-save nil
+  "Flag if save Loophole maps when idle.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-turn-on-idle-save' or
+`loophole-turn-off-idle-save' manually.
+They setup idle timer.
+
+The value of this user option is passed to `loophole-save'
+through `loophople-turn-on-idle-save'."
+  :group 'loophole
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (loophole-turn-on-idle-save value)
+           (loophole-turn-off-idle-save))))
 
 ;;; A macro for defining keymap
 
