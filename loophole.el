@@ -95,7 +95,7 @@ Default value holds timers for global Loophole map.")
 By default, local timers are used.
 If editing session is globalized, default value is used.")
 
-(defvar loophole--idle-pripritize-timer nil
+(defvar loophole--idle-prioritize-timer nil
   "Idle timer for prioritize.
 If `loophole-use-idle-prioritize' is set t, idle timer is
 kept in this variable.
@@ -3527,10 +3527,10 @@ Remove hooks added by `loophole-turn-on-auto-editing-timer'."
   "Turn on idle prioritize as user customization.
 Start idle timer for prioritizing Loophole maps according to
 `loophole-idle-prioritize-list'.
-Idle timer is set in `loophole--idle-pripritize-timer'."
-  (if (timerp loophole--idle-pripritize-timer)
-      (cancel-timer loophole--idle-pripritize-timer))
-  (setq loophole--idle-pripritize-timer
+Idle timer is set in `loophole--idle-prioritize-timer'."
+  (if (timerp loophole--idle-prioritize-timer)
+      (cancel-timer loophole--idle-prioritize-timer))
+  (setq loophole--idle-prioritize-timer
         (run-with-idle-timer
          loophole-idle-prioritize-time
          t
@@ -3553,11 +3553,11 @@ Idle timer is set in `loophole--idle-pripritize-timer'."
 
 (defun loophole-turn-off-idle-prioritize ()
   "Turn off idle prioritize as user customization.
-Cancel timer `loophole--idle-pripritize-timer' and set nil
+Cancel timer `loophole--idle-prioritize-timer' and set nil
 to it."
-  (if (timerp loophole--idle-pripritize-timer)
-      (cancel-timer loophole--idle-pripritize-timer))
-  (setq loophole--idle-pripritize-timer nil))
+  (if (timerp loophole--idle-prioritize-timer)
+      (cancel-timer loophole--idle-prioritize-timer))
+  (setq loophole--idle-prioritize-timer nil))
 
 (defcustom loophole-use-auto-prioritize t
   "Flag if prioritize Loophole map automatically.
