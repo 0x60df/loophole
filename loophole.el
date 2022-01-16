@@ -2159,6 +2159,9 @@ FILE will be asked."
                           (completing-read "Saving target: " '(named all))))
                      (if current-prefix-arg
                          (read-file-name "Loading file: "))))
+  (setq file (or file loophole-default-storage-file))
+  (unless (file-writable-p file)
+    (user-error "File storage is not writable: %s" file))
   (let* ((target-filter
           (cond ((eq target 'named)
                  (lambda (map-variable)
@@ -2215,7 +2218,7 @@ FILE will be asked."
                                      (get map-variable
                                           :loophole-state-variable)))))
                   valid-map-variable-list)))
-    (with-temp-file (or file loophole-default-storage-file)
+    (with-temp-file file
       (prin1 printed-map-list (current-buffer)))))
 
 (defun loophole-load (&optional target file)
@@ -2250,6 +2253,9 @@ FILE will be asked."
                           (completing-read "Loading target: " '(named all))))
                      (if current-prefix-arg
                          (read-file-name "Loading file: "))))
+  (setq file (or file loophole-default-storage-file))
+  (unless (file-readable-p file)
+    (user-error "File storage is not readable: %s" file))
   (let* ((target-filter
           (cond ((eq target 'named)
                  (lambda (map)
@@ -2263,7 +2269,7 @@ FILE will be asked."
                        (string-match "^loophole-.+-map$" name))))))
          (read-map-list
           (with-temp-buffer
-            (insert-file-contents (or file loophole-default-storage-file))
+            (insert-file-contents file)
             (read (current-buffer))))
          (map-list (seq-filter target-filter read-map-list)))
     (dolist (map (reverse map-list))
