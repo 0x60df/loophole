@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.7.5
+;; Version: 0.7.6
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -3155,6 +3155,32 @@ the first one will be read."
         (if (or (vectorp array) (stringp array))
             (loophole-bind-entry key array (symbol-value map-variable))
           (user-error "Modified Lisp object is not array: %s" array))))))
+
+(defun loophole-modify (key &optional map-variable)
+  "Modify entry bound to KEY in MAP-VARIABLE.
+If MAP-VARIABLE is nil, lookup all active Loophole maps.
+
+This function checks entry bound to KEY and call properly
+function to modify it."
+  (interactive (list (loophole-read-key "Modify entry for key: ")
+                     (if current-prefix-arg
+                         (loophole-read-map-variable "Lookup: "))))
+  (if map-variable
+      (unless (loophole-registered-p map-variable)
+        (user-error "Specified map-variable %s is not registered" map-variable))
+    (setq map-variable (loophole-map-variable-for-key-binding key))
+    (unless map-variable
+      (user-error "No entry found in loophole maps for key: %s"
+                  (key-description key))))
+  (let ((entry (lookup-key (symbol-value map-variable) key)))
+    (cond ((null entry)
+           (user-error "No entry found in loophole map: %s" map-variable))
+          ((and (commandp entry) (listp entry) (eq (car entry) 'lambda))
+           (loophole-modify-lambda-form key map-variable))
+          ((kmacro-p entry) (loophole-modify-kmacro key map-variable))
+          ((or (vectorp entry) (stringp entry))
+           (loophole-modify-array key map-variable))
+          (t (message "%s is bound to unmodifiable entry: %s" key entry)))))
 
 ;;; Base control
 
@@ -3260,9 +3286,7 @@ Followings are the key bindings for Loophole commands.
             (define-key map "\C-c]ba" #'loophole-bind-array)
             (define-key map "\C-c]bm" #'loophole-bind-keymap)
             (define-key map "\C-c]bs" #'loophole-bind-symbol)
-            (define-key map "\C-c]ml" #'loophole-modify-lambda-form)
-            (define-key map "\C-c]mk" #'loophole-modify-kmacro)
-            (define-key map "\C-c]ma" #'loophole-modify-array)
+            (define-key map "\C-c]m" #'loophole-modify)
             map)
   (if loophole-mode
       (progn
