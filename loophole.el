@@ -3156,7 +3156,7 @@ the first one will be read."
             (loophole-bind-entry key array (symbol-value map-variable))
           (user-error "Modified Lisp object is not array: %s" array))))))
 
-(defun loophole-modify (key &optional map-variable)
+(defun loophole-modify-entry (key &optional map-variable)
   "Modify entry bound to KEY in MAP-VARIABLE.
 If MAP-VARIABLE is nil, lookup all active Loophole maps.
 
@@ -3286,7 +3286,7 @@ Followings are the key bindings for Loophole commands.
             (define-key map "\C-c]ba" #'loophole-bind-array)
             (define-key map "\C-c]bm" #'loophole-bind-keymap)
             (define-key map "\C-c]bs" #'loophole-bind-symbol)
-            (define-key map "\C-c]m" #'loophole-modify)
+            (define-key map "\C-c]m" #'loophole-modify-entry)
             map)
   (if loophole-mode
       (progn
