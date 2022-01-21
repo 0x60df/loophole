@@ -613,6 +613,17 @@ If the value is nil, always ask user to overwrite a map."
                  (function :tag "Predicate to filter maps")
                  (other :tag "Normal Loophole maps" t)))
 
+(defcustom loophole-print-event-in-char-read-syntax t
+  "Flag if question mark format is used for printing ordinary keys.
+This user option mainly affects to modifying functions like
+`loophole-modify-kmacro' and `loophole-modify-array'.
+When they print events stored in kmacro or array, this user
+option is referred to decide format.
+
+If nil, ordinary key event is printed as raw integer."
+  :group 'loophole
+  :type 'boolean)
+
 (defcustom loophole-tag-sign "#"
   "String indicating tag string of Loophole map."
   :group 'loophole
@@ -945,6 +956,29 @@ executed, original window configuration is recovered."
          (if (frame-live-p ,frame) (select-frame-set-input-focus ,frame t))
          (if (window-live-p ,window) (select-window ,window t))
          (if (buffer-live-p ,buffer) (switch-to-buffer ,buffer t t))))))
+
+(defun loophole--char-read-syntax (event)
+  "Return printed representation of EVENT by question mark format.
+This function assumes that EVENT is a component of a vector
+for keyboard events.
+An ordinary key event, i.e., integer is translated into
+question mark format string; otherwise, EVENT itself is
+returned."
+  (if (integerp event)
+      (let ((modifiers (event-modifiers event))
+            (basic-type (event-basic-type event)))
+        (format "?%s%s"
+                (mapconcat (lambda (modifier)
+                             (format "\\%s-"
+                                     (cond ((eq modifier 'meta) "M")
+                                           ((eq modifier 'control) "C")
+                                           ((eq modifier 'shift) "S")
+                                           ((eq modifier 'hyper) "H")
+                                           ((eq modifier 'super) "s")
+                                           ((eq modifier 'alt) "A"))))
+                           modifiers "")
+                (char-to-string basic-type)))
+    event))
 
 (defun loophole--erase-local-timers (map-variable)
   "Cancel and remove all local timers for MAP-VARIABLE .
@@ -3112,7 +3146,13 @@ the first one will be read."
       (insert ";; For modifying kmacro.\n\n")
       (let ((extracted (kmacro-extract-lambda entry)))
         (insert ";; Key description: " (key-description (car extracted)) "\n")
-        (pp extracted (current-buffer)))
+        (if loophole-print-event-in-char-read-syntax
+            (insert "(["
+                    (mapconcat #'loophole--char-read-syntax (car extracted) " ")
+                    "]\n "
+                    (substring (prin1-to-string (cdr extracted)) 1)
+                    "\n")
+          (pp extracted (current-buffer))))
       (loophole-write-lisp-mode)
       (goto-char 1)
       (let ((kmacro (kmacro-lambda-form (read (current-buffer)))))
@@ -3148,7 +3188,9 @@ the first one will be read."
       (erase-buffer)
       (insert ";; For modifying array.\n\n")
       (insert ";; Key description: " (key-description entry) "\n")
-      (pp entry (current-buffer))
+      (if loophole-print-event-in-char-read-syntax
+          (insert "[" (mapconcat #'loophole--char-read-syntax entry " ") "]\n")
+        (pp entry (current-buffer)))
       (loophole-write-lisp-mode)
       (goto-char 1)
       (let ((array (read (current-buffer))))
