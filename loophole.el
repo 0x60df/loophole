@@ -919,6 +919,7 @@ buffer local value."
 If `loophole-mode' is enabled, only `loophole--buffer-list'
 is referred as Loophole buffers.
 Otherwise, this macro does BODY on all existing buffers."
+  (declare (debug t))
   (let ((buffer (make-symbol "buffer")))
     `(dolist (,buffer (if (listp loophole--buffer-list)
                           loophole--buffer-list
@@ -930,7 +931,7 @@ Otherwise, this macro does BODY on all existing buffers."
 The buffer specified by BUFFER-OR-NAME is transiently
 displayed in other window, and immediately after body is
 executed, original window configuration is recovered."
-  (declare (indent 1))
+  (declare (debug t) (indent 1))
   (let ((buffer (make-symbol "buffer"))
         (window (make-symbol "window"))
         (frame (make-symbol "frame"))
@@ -3902,7 +3903,7 @@ expanded forms.
 
 TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
 `loophole-register'."
-  (declare (doc-string 3) (indent 1))
+  (declare (debug t) (doc-string 3) (indent 1))
   (unless state
     (setq state (intern (concat (symbol-name map) "-state"))))
   `(progn
