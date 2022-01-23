@@ -508,98 +508,126 @@ called with `negative-argument',
   :group 'loophole
   :type '(repeat sexp))
 
-(defcustom loophole-register-functions nil
+(define-obsolete-variable-alias 'loophole-register-functions
+  'loophole-after-register-functions "27.1")
+(defcustom loophole-after-register-functions nil
   "Hook for `loophole-register'.
 Functions added to this user option are called with one
 argument, registered map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-unregister-functions nil
+(define-obsolete-variable-alias 'loophole-unregister-functions
+  'loophole-after-unregister-functions "27.1")
+(defcustom loophole-after-unregister-functions nil
   "Hook for `loophole-unregister'.
 Functions added to this user option are called with one
 argument, unregistered map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-prioritize-functions nil
+(define-obsolete-variable-alias 'loophole-prioritize-functions
+  'loophole-after-prioritize-functions "27.1")
+(defcustom loophole-after-prioritize-functions nil
   "Hook for `loophole-prioritize'.
 Functions added to this user option are called with one
 argument, prioritized map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-globalize-functions nil
+(define-obsolete-variable-alias 'loophole-globalize-functions
+  'loophole-after-globalize-functions "27.1")
+(defcustom loophole-after-globalize-functions nil
   "Hook for `loophole-globalize'.
 Functions added to this user option are called with one
 argument, globalized map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-localize-functions nil
+(define-obsolete-variable-alias 'loophole-localize-functions
+  'loophole-after-localize-functions "27.1")
+(defcustom loophole-after-localize-functions nil
   "Hook for `loophole-localize'.
 Functions added to this user option are called with one
 argument, localized map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-enable-functions nil
+(define-obsolete-variable-alias 'loophole-enable-functions
+  'loophole-after-enable-functions "27.1")
+(defcustom loophole-after-enable-functions nil
   "Hook for `loophole-enable'.
 Functions added to this user option are called with one
 argument, enabled map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-disable-functions nil
+(define-obsolete-variable-alias 'loophole-disable-functions
+  'loophole-after-disable-functions "27.1")
+(defcustom loophole-after-disable-functions nil
   "Hook for `loophole-disable'.
 Functions added to this user option are called with one
 argument, disabled map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-start-editing-functions nil
+(define-obsolete-variable-alias 'loophole-start-editing-functions
+  'loophole-after-start-editing-functions "27.1")
+(defcustom loophole-after-start-editing-functions nil
   "Hook for `loophole-start-editing'.
 Functions added to this user option are called with one
 argument, which is being edited map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-stop-editing-functions nil
+(define-obsolete-variable-alias 'loophole-stop-editing-functions
+  'loophole-after-stop-editing-functions "27.1")
+(defcustom loophole-after-stop-editing-functions nil
   "Hook for `loophole-stop-editing'.
 Functions added to this user option are called with one
 argument, which has been edited map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-globalize-editing-functions nil
+(define-obsolete-variable-alias 'loophole-globalize-editing-functions
+  'loophole-after-globalize-editing-functions "27.1")
+(defcustom loophole-after-globalize-editing-functions nil
   "Hook for `loophole-globalize-editing'.
 Functions added to this user option are called with one
 argument, which is being edited map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-localize-editing-functions nil
+(define-obsolete-variable-alias 'loophole-localize-editing-functions
+  'loophole-after-localize-editing-functions "27.1")
+(defcustom loophole-after-localize-editing-functions nil
   "Hook for `loophole-localize-editing'.
 Functions added to this user option are called with one
 argument, which is being edited map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-name-functions nil
+(define-obsolete-variable-alias 'loophole-name-functions
+  'loophole-after-name-functions "27.1")
+(defcustom loophole-after-name-functions nil
   "Hook for `loophole-name'.
 Functions added to this user option are called with one
 argument, named new map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-merge-functions nil
+(define-obsolete-variable-alias 'loophole-merge-functions
+  'loophole-after-merge-functions "27.1")
+(defcustom loophole-after-merge-functions nil
   "Hook for `loophole-merge'.
 Functions added to this user option are called with one
 argument, merger map variable."
   :group 'loophole
   :type 'hook)
 
-(defcustom loophole-duplicate-functions nil
+(define-obsolete-variable-alias 'loophole-duplicate-functions
+  'loophole-after-duplicate-functions "27.1")
+(defcustom loophole-after-duplicate-functions nil
   "Hook for `loophole-duplicate'.
 Functions added to this user option are called with two
 argument, first one is original map variable and second one
@@ -1281,7 +1309,7 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
           (force-mode-line-update))))
     (add-variable-watcher state-variable
                           #'loophole--follow-adding-local-variable))
-  (run-hook-with-args 'loophole-register-functions map-variable))
+  (run-hook-with-args 'loophole-after-register-functions map-variable))
 
 (defun loophole-unregister (map-variable)
   "Unregister MAP-VARIABLE from loophole."
@@ -1330,7 +1358,7 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
     (put map-variable :loophole-tag nil)
     (put state-variable :loophole-map-variable nil)
     (put map-variable :loophole-state-variable nil))
-  (run-hook-with-args 'loophole-unregister-functions map-variable))
+  (run-hook-with-args 'loophole-after-unregister-functions map-variable))
 
 (defun loophole-prioritize (map-variable)
   "Give first priority to MAP-VARIABLE.
@@ -1350,7 +1378,7 @@ the front."
                (seq-filter (lambda (cell)
                              (not (eq (car cell) state-variable)))
                            (default-value 'loophole--map-alist))))
-        (run-hook-with-args 'loophole-prioritize-functions map-variable))
+        (run-hook-with-args 'loophole-after-prioritize-functions map-variable))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-globalize (map-variable)
@@ -1395,7 +1423,7 @@ the front."
              (setq loophole--buffer-list
                    (delq (current-buffer) loophole--buffer-list))))))
     (loophole--erase-local-timers map-variable)
-    (run-hook-with-args 'loophole-globalize-functions map-variable)))
+    (run-hook-with-args 'loophole-after-globalize-functions map-variable)))
 
 (defun loophole-localize (map-variable)
   "Make MAP-VARIABLE local."
@@ -1421,7 +1449,7 @@ the front."
                             "  Gloabl variable cannot be used"
                             " for local state-variable")))
       (loophole--erase-global-timer map-variable)
-      (run-hook-with-args 'loophole-localize-functions map-variable))))
+      (run-hook-with-args 'loophole-after-localize-functions map-variable))))
 
 (defun loophole-enable (map-variable)
   "Enable the keymap stored in MAP-VARIABLE."
@@ -1433,7 +1461,7 @@ the front."
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (set state-variable t)
-        (run-hook-with-args 'loophole-enable-functions map-variable))
+        (run-hook-with-args 'loophole-after-enable-functions map-variable))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable (map-variable)
@@ -1446,7 +1474,7 @@ the front."
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
         (set state-variable nil)
-        (run-hook-with-args 'loophole-disable-functions map-variable))
+        (run-hook-with-args 'loophole-after-disable-functions map-variable))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
 (defun loophole-disable-latest ()
@@ -1596,7 +1624,7 @@ which had been already unbound." named-map-variable state-variable))
       (makunbound map-variable)
       (put state-variable 'variable-documentation nil)
       (put map-variable 'variable-documentation nil)
-      (run-hook-with-args 'loophole-name-functions named-map-variable))))
+      (run-hook-with-args 'loophole-after-name-functions named-map-variable))))
 
 (defun loophole-tag (map-variable tag)
   "Set TAG to tag string of MAP-VARIABLE."
@@ -1625,7 +1653,7 @@ which had been already unbound." named-map-variable state-variable))
         (force-mode-line-update t))
     (setq loophole--editing map-variable)
     (force-mode-line-update))
-  (run-hook-with-args 'loophole-start-editing-functions map-variable))
+  (run-hook-with-args 'loophole-after-start-editing-functions map-variable))
 
 (defun loophole-stop-editing ()
   "Stop keymap editing session."
@@ -1637,7 +1665,7 @@ which had been already unbound." named-map-variable state-variable))
           (force-mode-line-update t))
       (setq loophole--editing nil)
       (force-mode-line-update))
-    (run-hook-with-args 'loophole-stop-editing-functions map-variable)))
+    (run-hook-with-args 'loophole-after-stop-editing-functions map-variable)))
 
 (defun loophole-globalize-editing ()
   "Make editing session global."
@@ -1658,7 +1686,8 @@ which had been already unbound." named-map-variable state-variable))
       (force-mode-line-update t)
       (if (called-interactively-p 'interactive)
           (message "Editing session is globalized"))
-      (run-hook-with-args 'loophole-globalize-editing-functions editing))))
+      (run-hook-with-args 'loophole-after-globalize-editing-functions
+                          editing))))
 
 (defun loophole-localize-editing ()
   "Make editing session local."
@@ -1675,7 +1704,7 @@ which had been already unbound." named-map-variable state-variable))
       (force-mode-line-update t)
       (if (called-interactively-p 'interactive)
           (message "Editing session is localized"))
-      (run-hook-with-args 'loophole-localize-editing-functions editing))))
+      (run-hook-with-args 'loophole-after-localize-editing-functions editing))))
 
 (defun loophole-generate ()
   "Return Loophole map variable whose value is newly generated keymap.
@@ -2115,7 +2144,7 @@ from Loophole."
            (pseudo-merger-root-element (cons nil merger-map)))
       (funcall merge-element pseudo-root-element pseudo-merger-root-element)))
   (loophole-unregister map-variable)
-  (run-hook-with-args 'loophole-merge-functions merger-map-variable))
+  (run-hook-with-args 'loophole-after-merge-functions merger-map-variable))
 
 (defun loophole-duplicate (map-variable &optional map-name tag)
   "Duplicate MAP-VARIABLE.
@@ -2194,7 +2223,7 @@ with any prefix argument."
       (setq duplicated-map-variable (loophole-generate)))
     (setcdr (symbol-value duplicated-map-variable)
             (cdr (copy-keymap (symbol-value map-variable))))
-    (run-hook-with-args 'loophole-duplicate-functions
+    (run-hook-with-args 'loophole-after-duplicate-functions
                         map-variable duplicated-map-variable)))
 
 (defun loophole-save (&optional target file)
@@ -3410,26 +3439,26 @@ Add hooks to call `loophole-prioritize' for
 All of hooks are optional.
 Instead of using this function, user can pick some hooks
 from function definition for optimized customization."
-  (add-hook 'loophole-globalize-functions #'loophole-prioritize)
-  (add-hook 'loophole-localize-functions #'loophole-prioritize)
-  (add-hook 'loophole-enable-functions #'loophole-prioritize)
-  (add-hook 'loophole-name-functions #'loophole-prioritize)
-  (add-hook 'loophole-start-editing-functions #'loophole-prioritize)
-  (add-hook 'loophole-merge-functions #'loophole-prioritize)
-  (add-hook 'loophole-duplicate-functions
+  (add-hook 'loophole-after-globalize-functions #'loophole-prioritize)
+  (add-hook 'loophole-after-localize-functions #'loophole-prioritize)
+  (add-hook 'loophole-after-enable-functions #'loophole-prioritize)
+  (add-hook 'loophole-after-name-functions #'loophole-prioritize)
+  (add-hook 'loophole-after-start-editing-functions #'loophole-prioritize)
+  (add-hook 'loophole-after-merge-functions #'loophole-prioritize)
+  (add-hook 'loophole-after-duplicate-functions
             (lambda (_map-variable duplicated-map-variable)
               (loophole-prioritize duplicated-map-variable))))
 
 (defun loophole-turn-off-auto-prioritize ()
   "Turn off auto prioritize as user customization.
 Remove hooks added by `loophole-turn-on-auto-prioritize'."
-  (remove-hook 'loophole-globalize-functions #'loophole-prioritize)
-  (remove-hook 'loophole-localize-functions #'loophole-prioritize)
-  (remove-hook 'loophole-enable-functions #'loophole-prioritize)
-  (remove-hook 'loophole-name-functions #'loophole-prioritize)
-  (remove-hook 'loophole-start-editing-functions #'loophole-prioritize)
-  (remove-hook 'loophole-merge-functions #'loophole-prioritize)
-  (remove-hook 'loophole-duplicate-functions
+  (remove-hook 'loophole-after-globalize-functions #'loophole-prioritize)
+  (remove-hook 'loophole-after-localize-functions #'loophole-prioritize)
+  (remove-hook 'loophole-after-enable-functions #'loophole-prioritize)
+  (remove-hook 'loophole-after-name-functions #'loophole-prioritize)
+  (remove-hook 'loophole-after-start-editing-functions #'loophole-prioritize)
+  (remove-hook 'loophole-after-merge-functions #'loophole-prioritize)
+  (remove-hook 'loophole-after-duplicate-functions
                (lambda (_map-variable duplicated-map-variable)
                  (loophole-prioritize duplicated-map-variable))))
 
@@ -3445,35 +3474,35 @@ also affected by the hook for `loophole-disable'.
 All of hooks are optional.
 Instead of using this function, user can pick some hooks
 from function definition for optimized customization."
-  (add-hook 'loophole-prioritize-functions
+  (add-hook 'loophole-after-prioritize-functions
             (lambda (map-variable)
               (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
-  (add-hook 'loophole-globalize-functions
+  (add-hook 'loophole-after-globalize-functions
             (lambda (map-variable)
               (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
-  (add-hook 'loophole-localize-functions
+  (add-hook 'loophole-after-localize-functions
             (lambda (map-variable)
               (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
-  (add-hook 'loophole-enable-functions
+  (add-hook 'loophole-after-enable-functions
             (lambda (map-variable)
               (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
-  (add-hook 'loophole-disable-functions
+  (add-hook 'loophole-after-disable-functions
             (lambda (map-variable)
               (if (eq map-variable (loophole-editing))
                   (loophole-stop-editing))))
-  (add-hook 'loophole-name-functions
+  (add-hook 'loophole-after-name-functions
             (lambda (map-variable)
               (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
-  (add-hook 'loophole-merge-functions
+  (add-hook 'loophole-after-merge-functions
             (lambda (map-variable)
               (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing))))
-  (add-hook 'loophole-duplicate-functions
+  (add-hook 'loophole-after-duplicate-functions
             (lambda (map-variable _duplicated-map-variable)
               (unless (eq map-variable (loophole-editing))
                 (loophole-stop-editing)))))
@@ -3481,31 +3510,31 @@ from function definition for optimized customization."
 (defun loophole-turn-off-auto-stop-editing ()
   "Turn off auto stop-editing as user customization.
 Remove hooks added by `loophole-turn-on-auto-stop-editing'."
-  (remove-hook 'loophole-prioritize-functions
+  (remove-hook 'loophole-after-prioritize-functions
                (lambda (map-variable)
                  (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
-  (remove-hook 'loophole-globalize-functions
+  (remove-hook 'loophole-after-globalize-functions
                (lambda (map-variable)
                  (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
-  (remove-hook 'loophole-localize-functions
+  (remove-hook 'loophole-after-localize-functions
                (lambda (map-variable)
                  (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
-  (remove-hook 'loophole-enable-functions
+  (remove-hook 'loophole-after-enable-functions
                (lambda (map-variable)
                  (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
-  (remove-hook 'loophole-disable-functions
+  (remove-hook 'loophole-after-disable-functions
                (lambda (map-variable)
                  (if (eq map-variable (loophole-editing))
                      (loophole-stop-editing))))
-  (remove-hook 'loophole-merge-functions
+  (remove-hook 'loophole-after-merge-functions
                (lambda (map-variable)
                  (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing))))
-  (remove-hook 'loophole-duplicate-functions
+  (remove-hook 'loophole-after-duplicate-functions
                (lambda (map-variable _duplicated-map-variable)
                  (unless (eq map-variable (loophole-editing))
                    (loophole-stop-editing)))))
@@ -3526,37 +3555,45 @@ Binding commands including `loophole-set-key' and
 All of hooks are optional.
 Instead of using this function, user can pick some hooks
 from function definition for optimized customization."
-  (add-hook 'loophole-register-functions (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-prioritize-functions (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-globalize-functions (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-localize-functions (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-enable-functions (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-name-functions (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-start-editing-functions (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-globalize-editing-functions
+  (add-hook 'loophole-after-register-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-after-prioritize-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-after-globalize-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-after-localize-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-after-enable-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-after-name-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-after-start-editing-functions
             (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-localize-editing-functions
+  (add-hook 'loophole-after-globalize-editing-functions
             (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-merge-functions (lambda (_) (loophole-resume)))
-  (add-hook 'loophole-duplicate-functions (lambda (_ __) (loophole-resume)))
+  (add-hook 'loophole-after-localize-editing-functions
+            (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-after-merge-functions (lambda (_) (loophole-resume)))
+  (add-hook 'loophole-after-duplicate-functions
+            (lambda (_ __) (loophole-resume)))
   (add-hook 'loophole-bind-hook #'loophole-resume))
 
 (defun loophole-turn-off-auto-resume ()
   "Turn off auto resume as user customization.
 Remove hooks added by `loophole-turn-on-auto-resume'."
-  (remove-hook 'loophole-register-functions (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-prioritize-functions (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-globalize-functions (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-localize-functions (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-enable-functions (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-name-functions (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-start-editing-functions (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-globalize-editing-functions
+  (remove-hook 'loophole-after-register-functions
                (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-localize-editing-functions
+  (remove-hook 'loophole-after-prioritize-functions
                (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-merge-functions (lambda (_) (loophole-resume)))
-  (remove-hook 'loophole-duplicate-functions (lambda (_ __) (loophole-resume)))
+  (remove-hook 'loophole-after-globalize-functions
+               (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-after-localize-functions
+               (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-after-enable-functions (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-after-name-functions (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-after-start-editing-functions
+               (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-after-globalize-editing-functions
+               (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-after-localize-editing-functions
+               (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-after-merge-functions (lambda (_) (loophole-resume)))
+  (remove-hook 'loophole-after-duplicate-functions
+               (lambda (_ __) (loophole-resume)))
   (remove-hook 'loophole-bind-hook #'loophole-resume))
 
 (defun loophole-turn-on-auto-timer ()
@@ -3570,25 +3607,25 @@ Add hooks to call `loophole-start-timer' and
 All of hooks are optional.
 Instead of using this function, user can pick some hooks
 from function definition for optimized customization."
-  (add-hook 'loophole-prioritize-functions
+  (add-hook 'loophole-after-prioritize-functions
             (lambda (map-variable)
               (if (symbol-value (get map-variable :loophole-state-variable))
                   (loophole-start-timer map-variable))))
-  (add-hook 'loophole-globalize-functions
+  (add-hook 'loophole-after-globalize-functions
             (lambda (map-variable)
               (if (symbol-value (get map-variable :loophole-state-variable))
                   (loophole-start-timer map-variable))))
-  (add-hook 'loophole-localize-functions
+  (add-hook 'loophole-after-localize-functions
             (lambda (map-variable)
               (if (symbol-value (get map-variable :loophole-state-variable))
                   (loophole-start-timer map-variable))))
-  (add-hook 'loophole-enable-functions #'loophole-start-timer)
-  (add-hook 'loophole-disable-functions #'loophole-stop-timer)
-  (add-hook 'loophole-name-functions
+  (add-hook 'loophole-after-enable-functions #'loophole-start-timer)
+  (add-hook 'loophole-after-disable-functions #'loophole-stop-timer)
+  (add-hook 'loophole-after-name-functions
             (lambda (map-variable)
               (if (symbol-value (get map-variable :loophole-state-variable))
                   (loophole-start-timer map-variable))))
-  (add-hook 'loophole-start-editing-functions
+  (add-hook 'loophole-after-start-editing-functions
             (lambda (map-variable)
               (if (symbol-value (get map-variable :loophole-state-variable))
                   (loophole-start-timer map-variable)))))
@@ -3596,25 +3633,25 @@ from function definition for optimized customization."
 (defun loophole-turn-off-auto-timer ()
   "Turn off auto timer as user customization.
 Remove hooks added by `loophole-turn-on-auto-timer'."
-  (remove-hook 'loophole-prioritize-functions
+  (remove-hook 'loophole-after-prioritize-functions
                (lambda (map-variable)
                  (if (symbol-value (get map-variable :loophole-state-variable))
                      (loophole-start-timer map-variable))))
-  (remove-hook 'loophole-globalize-functions
+  (remove-hook 'loophole-after-globalize-functions
                (lambda (map-variable)
                  (if (symbol-value (get map-variable :loophole-state-variable))
                      (loophole-start-timer map-variable))))
-  (remove-hook 'loophole-localize-functions
+  (remove-hook 'loophole-after-localize-functions
                (lambda (map-variable)
                  (if (symbol-value (get map-variable :loophole-state-variable))
                      (loophole-start-timer map-variable))))
-  (remove-hook 'loophole-enable-functions #'loophole-start-timer)
-  (remove-hook 'loophole-disable-functions #'loophole-stop-timer)
-  (remove-hook 'loophole-name-functions
+  (remove-hook 'loophole-after-enable-functions #'loophole-start-timer)
+  (remove-hook 'loophole-after-disable-functions #'loophole-stop-timer)
+  (remove-hook 'loophole-after-name-functions
                (lambda (map-variable)
                  (if (symbol-value (get map-variable :loophole-state-variable))
                      (loophole-start-timer map-variable))))
-  (remove-hook 'loophole-start-editing-functions
+  (remove-hook 'loophole-after-start-editing-functions
                (lambda (map-variable)
                  (if (symbol-value (get map-variable :loophole-state-variable))
                      (loophole-start-timer map-variable)))))
@@ -3632,65 +3669,65 @@ Add hooks to call `loophole-start-editing-timer' and
 All of hooks are optional.
 Instead of using this function, user can pick some hooks
 from function definition for optimized customization."
-  (add-hook 'loophole-prioritize-functions
+  (add-hook 'loophole-after-prioritize-functions
             (lambda (map-variable)
               (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
-  (add-hook 'loophole-globalize-functions
+  (add-hook 'loophole-after-globalize-functions
             (lambda (map-variable)
               (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
-  (add-hook 'loophole-localize-functions
+  (add-hook 'loophole-after-localize-functions
             (lambda (map-variable)
               (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
-  (add-hook 'loophole-enable-functions
+  (add-hook 'loophole-after-enable-functions
             (lambda (map-variable)
               (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
-  (add-hook 'loophole-name-functions
+  (add-hook 'loophole-after-name-functions
             (lambda (map-variable)
               (if (eq map-variable (loophole-editing))
                   (loophole-start-editing-timer))))
-  (add-hook 'loophole-start-editing-functions
+  (add-hook 'loophole-after-start-editing-functions
             (lambda (_) (loophole-start-editing-timer)))
-  (add-hook 'loophole-stop-editing-functions
+  (add-hook 'loophole-after-stop-editing-functions
             (lambda (_) (loophole-stop-editing-timer)))
-  (add-hook 'loophole-globalize-editing-functions
+  (add-hook 'loophole-after-globalize-editing-functions
             (lambda (_) (loophole-start-editing-timer)))
-  (add-hook 'loophole-localize-editing-functions
+  (add-hook 'loophole-after-localize-editing-functions
             (lambda (_) (loophole-start-editing-timer))))
 
 (defun loophole-turn-off-auto-editing-timer ()
   "Turn off auto editing timer as user customization.
 Remove hooks added by `loophole-turn-on-auto-editing-timer'."
-  (remove-hook 'loophole-prioritize-functions
+  (remove-hook 'loophole-after-prioritize-functions
                (lambda (map-variable)
                  (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
-  (remove-hook 'loophole-globalize-functions
+  (remove-hook 'loophole-after-globalize-functions
                (lambda (map-variable)
                  (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
-  (remove-hook 'loophole-localize-functions
+  (remove-hook 'loophole-after-localize-functions
                (lambda (map-variable)
                  (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
-  (remove-hook 'loophole-enable-functions
+  (remove-hook 'loophole-after-enable-functions
                (lambda (map-variable)
                  (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
-  (remove-hook 'loophole-name-functions
+  (remove-hook 'loophole-after-name-functions
                (lambda (map-variable)
                  (if (eq map-variable (loophole-editing))
                      (loophole-start-editing-timer))))
-  (remove-hook 'loophole-start-editing-functions
+  (remove-hook 'loophole-after-start-editing-functions
                (lambda (_) (loophole-start-editing-timer)))
-  (remove-hook 'loophole-stop-editing-functions
+  (remove-hook 'loophole-after-stop-editing-functions
                (lambda (_) (loophole-stop-editing-timer)))
-  (remove-hook 'loophole-globalize-editing-functions
+  (remove-hook 'loophole-after-globalize-editing-functions
                (lambda (_) (loophole-start-editing-timer)))
-  (remove-hook 'loophole-localize-editing-functions
+  (remove-hook 'loophole-after-localize-editing-functions
                (lambda (_) (loophole-start-editing-timer))))
 
 (defun loophole-turn-on-idle-prioritize ()
