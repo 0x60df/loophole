@@ -3938,7 +3938,7 @@ for this variable.  Use `custom-set-variables' or call
 They setup idle timer.
 
 The value of this user option is passed to `loophole-save'
-through `loophople-turn-on-idle-save'."
+as an argument TARGET through `loophople-turn-on-idle-save'."
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
