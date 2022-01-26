@@ -164,6 +164,13 @@ options like `loophole-set-key-order' will be omitted."
   :group 'loophole
   :type 'boolean)
 
+(defcustom loophole-protect-keymap-entry t
+  "If non-nil, when keymap object is bound, it will be protected.
+Protected entry is referable, but not writable.
+Technically, these entries are bound in the parent keymap."
+  :group 'loophole
+  :type 'boolean)
+
 (defcustom loophole-force-make-variable-buffer-local t
   "Flag if `make-variable-buffer-local' is done without prompting."
   :group 'loophole
@@ -1195,6 +1202,13 @@ has a form described above, if other feature modifies keymap
 parent, `loophole-unregister' cannot remove
 `loophole-base-map' properly.
 
+Furthermore, Loophole uses parent keymap for protected
+keymap entry.  Therefore, if other feature modifies keymap
+parent of registered Loophole map, some entries may be
+corrupted.
+Be careful especially when registering keymaps controlled by
+the feature other than Loophole.
+
 If called interactively, read MAP-VARIABLE, STATE-VARIABLE.
 When called with prefix argument, read TAG and ask user if
 MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
@@ -1376,6 +1390,7 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                   (seq-filter (lambda (cell)
                                 (not (eq (car cell) state-variable)))
                               (default-value 'loophole--map-alist)))
+    (put map-variable :loophole-protected-keymap nil)
     (put map-variable :loophole-tag nil)
     (put state-variable :loophole-map-variable nil)
     (put map-variable :loophole-state-variable nil))
@@ -2943,16 +2958,32 @@ method.  `loophole-decide-obtaining-method-after-read-key'
 affects the timing of this `completing-read'."
   (interactive
    (loophole--arg-list loophole-bind-entry-order current-prefix-arg))
-  (define-key
-    (if keymap
-        (let ((map-variable (loophole-map-variable-for-keymap keymap)))
-          (if (and map-variable
-                   (loophole-registered-p map-variable))
-              keymap
-            (user-error "Invalid keymap: %s" keymap)))
-      (loophole-ready-map))
-    key
-    entry)
+  (setq keymap
+        (if keymap
+            (let ((map-variable (loophole-map-variable-for-keymap keymap)))
+              (if (and map-variable
+                       (loophole-registered-p map-variable))
+                  keymap
+                (user-error "Invalid keymap: %s" keymap)))
+          (loophole-ready-map)))
+  (if (and (keymapp entry) loophole-protect-keymap-entry)
+      (let* ((map-variable (loophole-map-variable-for-keymap keymap))
+             (protected-keymap (get map-variable :loophole-protected-keymap)))
+        (unless protected-keymap
+          (setq protected-keymap (make-sparse-keymap))
+          (put map-variable :loophole-protected-keymap protected-keymap)
+          (let ((parent (keymap-parent keymap)))
+            (cond ((null parent) (set-keymap-parent keymap protected-keymap))
+                  ((memq loophole-base-map parent)
+                   (setcdr parent (cons protected-keymap (cdr parent))))
+                  (t (set-keymap-parent keymap
+                                        (make-composed-keymap
+                                         (list protected-keymap parent)))))))
+        (setcdr protected-keymap (cons (let ((map (make-sparse-keymap)))
+                                      (define-key map key entry)
+                                      map)
+                                    (cdr protected-keymap))))
+    (define-key keymap key entry))
   (run-hooks 'loophole-bind-hook))
 
 ;;;###autoload
