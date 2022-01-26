@@ -2266,7 +2266,7 @@ FILE will be asked."
                          (and (string-match "^loophole-.+-map$" name)
                               (not (string-match "^loophole-[0-9]+-map$"
                                                  name))))))
-                    ((eq target 'all) (lambda () t))
+                    ((eq target 'all) (lambda (_) t))
                     ((functionp target) target)
                     (t (lambda (map-variable)
                          (let ((name (symbol-name map-variable)))
@@ -2361,7 +2361,7 @@ FILE will be asked."
                          (and (string-match "^loophole-.+-map$" name)
                               (not (string-match "^loophole-[0-9]+-map$"
                                                  name))))))
-                    ((eq target 'all) (lambda () t))
+                    ((eq target 'all) (lambda (_) t))
                     ((functionp target) target)
                     (t (lambda (map)
                          (let ((name (symbol-name (car map))))
