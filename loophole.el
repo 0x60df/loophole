@@ -2533,23 +2533,25 @@ Definition can be finished by calling `loophole-end-kmacro'."
   (unless (zerop (recursion-depth)) (abort-recursive-edit))
   (keyboard-quit))
 
-(defun loophole-read-key-for-kmacro-by-read-key ()
-  "`loophole-read-key' with checking finish and quit key."
+(defun loophole-read-key-for-kmacro-by-read-key (prompt)
+  "`loophole-read-key' with checking finish and quit key.
+PROMPT is a string for reading key."
   (let ((finish (vconcat loophole-kmacro-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
     (or (not (zerop (length finish)))
         (not (zerop (length quit)))
         (user-error "Neither finishing key nor quitting key is invalid")))
-  (loophole-read-key "Set key temporarily: "))
+  (loophole-read-key prompt))
 
-(defun loophole-read-key-for-array-by-read-key ()
-  "`loophole-read-key' with checking finish and quit key."
+(defun loophole-read-key-for-array-by-read-key (prompt)
+  "`loophole-read-key' with checking finish and quit key.
+PROMPT is a string for reading key."
   (let ((finish (vconcat loophole-array-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
     (or (not (zerop (length finish)))
         (not (zerop (length quit)))
         (user-error "Neither finishing key nor quitting key is invalid")))
-  (loophole-read-key "Set key temporarily: "))
+  (loophole-read-key prompt))
 
 (defun loophole-prefix-arg-rank (arg)
   "Return rank value for raw prefix argument ARG.
@@ -2616,9 +2618,8 @@ key and binding only."
               (unless without-keymap
                 (funcall get-obtain-keymap-function obtaining-method-spec))))
       (let ((arg-key
-             (if read-key-function
-                 (funcall read-key-function)
-               (loophole-read-key "Set key temporarily: "))))
+             (funcall (or read-key-function #'loophole-read-key)
+                      "Set key temporarily: ")))
         (when (or (eq loophole-decide-obtaining-method-after-read-key t)
                   (and (eq loophole-decide-obtaining-method-after-read-key
                            'negative-argument)

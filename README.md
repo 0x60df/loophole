@@ -338,8 +338,8 @@ binding entry.
 Each element optionally can be a list whose car is a
 function described above, and cdr is a plist which has
 a property `:key`.  It looks like `(OBTAIN-ENTRY :key READ-KEY)`.
-`READ-KEY` is a function which takes no arguments and returns
-key sequence to be bound.
+`READ-KEY` is a function which takes one argument a standard prompt string
+for reading key, and returns key sequence to be bound.
 However, if `loophole-decide-obtaining-method-after-read-key` is
 `t`, or while it is the symbol `negative-argument` and
 binding commands are called with `negative-argument`,
