@@ -1097,6 +1097,20 @@ and SYMBOL and last (keymap ...) is an entry."
                              (funcall prefix-key-list (cdadr object))))))))
     (vconcat (funcall prefix-key-list keymap))))
 
+(defun loophole--trace-key-to-find-non-keymap-entry (key-sequence keymap)
+  "Trace KEY-SEQUENCE in KEYMAP to find non-keymap entry.
+If found, return a key sequence bound to non-keymap entry;
+otherwise, return nil."
+  (letrec ((find-non-keymap-entry
+            (lambda (reversal-key-list)
+              (let ((entry (lookup-key keymap
+                                       (vconcat (reverse reversal-key-list)))))
+                (cond ((or (null reversal-key-list) (null entry)) nil)
+                      ((or (keymapp entry) (numberp entry))
+                       (funcall find-non-keymap-entry (cdr reversal-key-list)))
+                      (t (vconcat (reverse reversal-key-list))))))))
+    (funcall find-non-keymap-entry (reverse (append key-sequence nil)))))
+
 (defun loophole--erase-local-timers (map-variable)
   "Cancel and remove all local timers for MAP-VARIABLE .
 This function is intended to be used in `loophole-globalize'
@@ -2205,35 +2219,73 @@ from Loophole."
   (unless (loophole-registered-p merger-map-variable)
     (user-error "Specified merger-map-variable %s is not registered"
                 merger-map-variable))
-  (letrec ((merge-element
-            (lambda (element merger-element)
-              (if (and (keymapp (cdr element)) (keymapp (cdr merger-element)))
-                  (let ((parent (keymap-parent (cdr element)))
-                        (merger-parent (keymap-parent (cdr merger-element))))
-                    (set-keymap-parent (cdr element) nil)
-                    (set-keymap-parent (cdr merger-element) nil)
-                    (unwind-protect
-                        (dolist (sub-element (cddr element))
-                          (let ((merger-sub-element
-                                 (assq (car-safe sub-element)
-                                       (cddr merger-element))))
-                            (if (and (listp sub-element)
-                                     (or (characterp (car sub-element))
-                                         (symbolp (car sub-element)))
-                                     (not (eq 'keymap (car sub-element)))
-                                     merger-sub-element)
-                                (funcall merge-element
-                                         sub-element merger-sub-element)
-                              (unless (memq sub-element (cddr merger-element))
-                                (setcdr (last merger-element)
-                                        (cons sub-element nil))))))
-                      (set-keymap-parent (cdr merger-element) merger-parent)
-                      (set-keymap-parent (cdr element) parent)))))))
-    (let* ((map (copy-keymap (symbol-value map-variable)))
-           (merger-map (symbol-value merger-map-variable))
-           (pseudo-root-element (cons nil map))
-           (pseudo-merger-root-element (cons nil merger-map)))
-      (funcall merge-element pseudo-root-element pseudo-merger-root-element)))
+  (letrec
+      ((trim-existing-on-protected
+        (lambda (key-vector element)
+          (if (and (listp element)
+                   (or (characterp (car element))
+                       (symbolp (car element)))
+                   (not (eq 'keymap (car element))))
+              (let* ((key-sequence (vconcat key-vector (vector (car element))))
+                     (protected-keymap
+                      (get merger-map-variable :loophole-protected-keymap))
+                     (lookup (lookup-key protected-keymap key-sequence)))
+                (cond ((keymapp lookup)
+                       (if (keymapp (cdr element))
+                           (cons (car element)
+                                 (cons (cadr element)
+                                       (remq nil
+                                             (mapcar
+                                              (lambda (sub-element)
+                                                (funcall
+                                                 trim-existing-on-protected
+                                                 key-sequence
+                                                 sub-element))
+                                              (cddr element)))))))
+                      ((or (null lookup)
+                           (null (loophole--trace-key-to-find-non-keymap-entry
+                                  key-sequence protected-keymap)))
+                       element)))
+            element))))
+    (letrec ((merge-element
+              (lambda (element merger-element reversal-key-list)
+                (if (and (keymapp (cdr element)) (keymapp (cdr merger-element)))
+                    (let ((parent (keymap-parent (cdr element)))
+                          (merger-parent (keymap-parent (cdr merger-element))))
+                      (set-keymap-parent (cdr element) nil)
+                      (set-keymap-parent (cdr merger-element) nil)
+                      (unwind-protect
+                          (dolist (sub-element (cddr element))
+                            (let ((merger-sub-element
+                                   (assq (car-safe sub-element)
+                                         (cddr merger-element))))
+                              (if (and (listp sub-element)
+                                       (or (characterp (car sub-element))
+                                           (symbolp (car sub-element)))
+                                       (not (eq 'keymap (car sub-element)))
+                                       merger-sub-element)
+                                  (funcall merge-element
+                                           sub-element merger-sub-element
+                                           (cons (car sub-element)
+                                                 reversal-key-list))
+                                (unless (memq sub-element (cddr merger-element))
+                                  (let ((trimmed-sub-element
+                                         (funcall
+                                          trim-existing-on-protected
+                                          (vconcat (reverse reversal-key-list))
+                                          sub-element)))
+                                    (if trimmed-sub-element
+                                        (setcdr (last merger-element)
+                                                (cons trimmed-sub-element
+                                                      nil))))))))
+                        (set-keymap-parent (cdr merger-element) merger-parent)
+                        (set-keymap-parent (cdr element) parent)))))))
+      (let* ((map (copy-keymap (symbol-value map-variable)))
+             (merger-map (symbol-value merger-map-variable))
+             (pseudo-root-element (cons nil map))
+             (pseudo-merger-root-element (cons nil merger-map)))
+        (funcall merge-element pseudo-root-element
+                 pseudo-merger-root-element nil))))
   (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
     (if protected-keymap
         (dolist (protected-element (reverse (cdr protected-keymap)))
