@@ -1072,6 +1072,31 @@ returned."
                     map)
                   (cdr protected-keymap)))))
 
+(defun loophole--protected-keymap-prefix-key (keymap)
+  "Return prefix key of protected keymap element KEYMAP.
+KEYMAP must be a keymap for binding keymap on protected
+region, i.e., looks like
+  (keymap (KEY (keymap ... (KEY . SYMBOL)))) or
+  (keymap (KEY (keymap ... (KEY . (keymap . (keymap ...)))))).
+First one is for a symbol whose function cell is a keymap.
+Second one is for a keymap object.
+The portion (KEY (keymap ... (KEY ...))) is a prefix key,
+and SYMBOL and last (keymap ...) is an entry."
+  (letrec ((prefix-key-list
+            (lambda (object)
+              (cond ((or (symbolp object)
+                         (and (keymapp object)
+                              (keymap-parent object)))
+                     nil)
+                    ((or (not (consp (cdr object)))
+                         (not (= (length object) 2))
+                         (not (eventp (caadr object)))
+                         (not (keymapp (cdadr object))))
+                     (error "KEYMAP is not an element of protected keymap"))
+                    (t (cons (caadr object)
+                             (funcall prefix-key-list (cdadr object))))))))
+    (vconcat (funcall prefix-key-list keymap))))
+
 (defun loophole--erase-local-timers (map-variable)
   "Cancel and remove all local timers for MAP-VARIABLE .
 This function is intended to be used in `loophole-globalize'
@@ -2207,6 +2232,24 @@ from Loophole."
            (pseudo-root-element (cons nil map))
            (pseudo-merger-root-element (cons nil merger-map)))
       (funcall merge-element pseudo-root-element pseudo-merger-root-element)))
+  (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
+    (if protected-keymap
+        (dolist (protected-element (reverse (cdr protected-keymap)))
+          (let* ((prefix-key (loophole--protected-keymap-prefix-key
+                              protected-element))
+                 (raw-entry (lookup-key protected-element
+                                        prefix-key))
+                 (entry (cond ((symbolp raw-entry) raw-entry)
+                              ((and (keymapp raw-entry)
+                                    (keymap-parent raw-entry))
+                               (keymap-parent raw-entry))
+                              (t (error (concat
+                                         "Protected keymap element"
+                                         " is corrupted: %s")
+                                        protected-element)))))
+            (loophole--add-protected-keymap merger-map-variable
+                                            prefix-key
+                                            entry)))))
   (loophole-unregister map-variable)
   (run-hook-with-args 'loophole-after-merge-functions merger-map-variable))
 
@@ -2285,8 +2328,53 @@ with any prefix argument."
           (loophole-register duplicated-map-variable duplicated-state-variable
                              tag (loophole-global-p map-variable)))
       (setq duplicated-map-variable (loophole-generate)))
-    (setcdr (symbol-value duplicated-map-variable)
-            (cdr (copy-keymap (symbol-value map-variable))))
+    (let ((parent (keymap-parent (symbol-value map-variable))))
+      (set-keymap-parent (symbol-value map-variable) nil)
+      (unwind-protect
+          (let ((protected-keymap (get map-variable :loophole-protected-keymap))
+                (duplicated-keymap (symbol-value duplicated-map-variable)))
+            (setcdr duplicated-keymap
+                    (cdr (copy-keymap (symbol-value map-variable))))
+            (set-keymap-parent
+             duplicated-keymap
+             (cond ((or (and protected-keymap
+                             (memq protected-keymap parent))
+                        (memq loophole-base-map parent))
+                    (let ((grand-parent (keymap-parent parent)))
+                      (set-keymap-parent parent nil)
+                      (unwind-protect
+                          (if (and protected-keymap
+                                   (memq protected-keymap parent))
+                              (make-composed-keymap
+                               (remq protected-keymap (cdr parent))
+                               grand-parent)
+                            (let ((duplicated-parent (copy-sequence parent)))
+                              (set-keymap-parent duplicated-parent grand-parent)
+                              duplicated-parent))
+                        (set-keymap-parent parent grand-parent))))
+                   ((and protected-keymap (eq parent protected-keymap)) nil)
+                   (t parent)))
+            (if protected-keymap
+                (dolist (protected-element (reverse (cdr protected-keymap)))
+                  (let* ((prefix-key (loophole--protected-keymap-prefix-key
+                                     protected-element))
+                         (raw-entry (lookup-key protected-element
+                                                prefix-key))
+                         (entry (cond ((symbolp raw-entry) raw-entry)
+                                      ((and (keymapp raw-entry)
+                                            (keymap-parent raw-entry))
+                                       (keymap-parent raw-entry))
+                                      (t (error (concat
+                                                 "Protected keymap element"
+                                                 " is corrupted: %s")
+                                                protected-element)))))
+                    (loophole--add-protected-keymap duplicated-map-variable
+                                                    prefix-key
+                                                    entry)))))
+          (set-keymap-parent (symbol-value map-variable) parent)))
+    (if (called-interactively-p 'interactive)
+        (message "%s is duplicated to %s"
+                 map-variable duplicated-map-variable))
     (run-hook-with-args 'loophole-after-duplicate-functions
                         map-variable duplicated-map-variable)))
 
