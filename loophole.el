@@ -132,7 +132,8 @@ or enabled earliest used one."
 (defcustom loophole-allow-keyboard-quit t
   "If non-nil, binding commands can be quit even while reading keys.
 If binidng commands use reading key function other than
-`loohpole-read-key', this variable takes no effect."
+`loohpole-read-key' and its variant, this variable takes no
+effect."
   :group 'loophole
   :type 'boolean)
 
@@ -167,9 +168,22 @@ options like `loophole-set-key-order' will be omitted."
 (defcustom loophole-protect-keymap-entry t
   "If non-nil, when keymap object is bound, it will be protected.
 Protected entry is referable, but not writable.
-Technically, these entries are bound in the parent keymap."
+This prevents accidental modification on existing keymap.
+
+Technically, these entries are bound in the parent keymap.
+When some other new bindings shade protected entry, they
+are removed from parent keymap.  Furthermore, when existing
+ordinary binding shades protected entry on binidng it,
+shader will be removed.  Thus, user can use protected
+entries as well as ordinary entries except for that they are
+write protected."
   :group 'loophole
   :type 'boolean)
+
+(defcustom loophole-read-key-limit-time 1.0
+  "Limit time in seconds for `loohpole-read-key-with-time-limit'."
+  :group 'loophole
+  :type 'number)
 
 (defcustom loophole-force-make-variable-buffer-local t
   "Flag if `make-variable-buffer-local' is done without prompting."
@@ -883,6 +897,42 @@ Otherwise, \\[keyboard-quit] will be returned as it is read."
          (keyboard-quit))
     key))
 
+(defun loophole-read-key-with-time-limit (prompt)
+  "Read arbitrary key sequence with time limit, and return read keys.
+PROMPT is a prompt string displayed at the first time for
+reading key.  A second or later time for reading key, read
+keys will be prompetd."
+  (let ((menu-prompting nil)
+        (quit (vconcat (where-is-internal 'keyboard-quit nil t)))
+        (read-keys nil))
+    (let ((timer (run-with-idle-timer
+                  loophole-read-key-limit-time
+                  t
+                  (lambda () (if read-keys (throw 'read-keys read-keys))))))
+      (unwind-protect
+          (let ((key (catch 'read-keys
+                       (setq read-keys (vector (read-key prompt)))
+                       (while t
+                         (if (and loophole-allow-keyboard-quit
+                                  (not (zerop (length quit)))
+                                  (loophole-key-equal
+                                   (seq-take read-keys (length quit))
+                                   quit))
+                             (keyboard-quit))
+                         (setq read-keys
+                               (vconcat read-keys
+                                        (vector
+                                         (read-key
+                                          (mapconcat (lambda (e)
+                                                       (key-description
+                                                        (vector e)))
+                                                     read-keys
+                                                     " ")))))))))
+            (or (vectorp key) (stringp key)
+                (signal 'wrong-type-argument (list 'arrayp key)))
+            key)
+        (cancel-timer timer)))))
+
 (defun loophole-read-map-variable (prompt &optional predicate)
   "`completing-read' existing map-variable and return read one.
 PROMPT is used for `completing-read'.
@@ -1045,32 +1095,117 @@ returned."
                 (char-to-string basic-type)))
     event))
 
-(defun loophole--add-protected-keymap (map-variable key keymap)
-  "Add KEYMAP bound with KEY in protected region of MAP-VARIABLE."
+(defun loophole--add-protected-keymap-entry (map-variable key keymap)
+  "Add KEYMAP bound with KEY in protected region of MAP-VARIABLE.
+Protected keymap is set in keymap parent and symbol property
+:loophole-protected-keymap.
+Ordinary key bindings that shades KEY will be removed to
+make KEYMAP accessible."
   (unless (keymapp keymap)
     (signal 'wrong-type-argument (list 'keymapp keymap)))
-  (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
+  (let* ((map (symbol-value map-variable))
+         (parent (keymap-parent map))
+         (protected-keymap (get map-variable :loophole-protected-keymap)))
+    (set-keymap-parent map nil)
+    (let ((lookup (lookup-key protected-keymap key))
+          (trace (loophole--trace-key-to-find-non-keymap-entry
+                  key protected-keymap)))
+      (when (and (numberp lookup) trace)
+        (error "Key sequence %s starts with non-prefix key %s"
+               (key-description key)
+               (key-description trace))))
+    (unwind-protect
+        (letrec
+            ((existing-cell
+              (lambda (key-list object)
+                (cond ((or (null object) (null key-list)) nil)
+                      ((not (keymapp object))
+                       (error
+                        "Key sequence %s starts with non-prefix key %s"
+                        (key-description key)
+                        (key-description (seq-subseq
+                                          key 0 (- (length key-list))))))
+                      ((assoc (car key-list) object #'eql)
+                       (or (funcall existing-cell
+                                    (cdr key-list)
+                                    (cdr (assoc (car key-list) object #'eql)))
+                           (letrec ((one-before
+                                     (lambda (last-key list)
+                                       (cond ((eql (caadr list) last-key) list)
+                                             (t (funcall one-before last-key
+                                                         (cdr list)))))))
+                             (funcall one-before (car key-list) object))))))))
+          (let ((cell (funcall existing-cell (append key nil) map)))
+            (if cell (setcdr cell (cddr cell)))))
+      (set-keymap-parent map parent))
     (unless protected-keymap
       (setq protected-keymap (make-sparse-keymap))
       (put map-variable :loophole-protected-keymap protected-keymap)
-      (let ((parent (keymap-parent (symbol-value map-variable))))
-        (cond ((null parent)
-               (set-keymap-parent (symbol-value map-variable) protected-keymap))
+      (let ((parent (keymap-parent map)))
+        (cond ((null parent) (set-keymap-parent map protected-keymap))
               ((memq loophole-base-map parent)
                (setcdr parent (cons protected-keymap (cdr parent))))
-              (t (set-keymap-parent (symbol-value map-variable)
-                                    (make-composed-keymap
-                                     (list protected-keymap parent)))))))
+              (t (set-keymap-parent map (make-composed-keymap
+                                         (list protected-keymap parent)))))))
     (setcdr protected-keymap
-            (cons (let ((map (make-sparse-keymap)))
-                    (define-key map key
+            (cons (let ((element-map (make-sparse-keymap)))
+                    (define-key element-map key
                       (if (symbolp keymap)
                           keymap
                         (let ((entry-map (make-sparse-keymap)))
                           (set-keymap-parent entry-map keymap)
                           entry-map)))
-                    map)
+                    element-map)
                   (cdr protected-keymap)))))
+
+(defun loophole--define-ordinary-entry (map-variable key entry)
+  "Define KEY as ordinary ENTRY in MAP-VARIABLE.
+This function `define-key' KEY and ENTRY in a keymap bound
+with MAP-VARIABLE with taking care of protected keymap
+entry.  When KEY shaeds existing protected keymap entry,
+they will be removed."
+  (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
+    (if (< 0 (length key))
+        (let ((non-prefix-key (loophole--trace-key-to-find-non-keymap-entry
+                               (seq-subseq key 0 -1)
+                               protected-keymap)))
+          (if non-prefix-key
+              (error "Key sequence %s starts with non-prefix key %s"
+                     (key-description key)
+                     (key-description non-prefix-key)))))
+    (define-key (symbol-value map-variable) key entry)
+    (letrec ((delete-from-keymap
+              (lambda (target current-cell)
+                (cond ((null (cdr current-cell)))
+                      ((eq target (cadr current-cell))
+                       (setcdr current-cell (cddr current-cell))
+                       (funcall delete-from-keymap target current-cell))
+                      (t (funcall delete-from-keymap
+                                  target (cdr current-cell))))))
+             (shadedp
+              (lambda (object key-list)
+                (cond ((null key-list))
+                      ((and (keymapp object)
+                            (progn
+                              (if (symbolp object)
+                                  (setq object (symbol-function object)))
+                              (= 2 (length object)))
+                            (assoc (car key-list) object #'eql))
+                       (funcall shadedp
+                                (cdr (assoc (car key-list) object #'eql))
+                                (cdr key-list)))))))
+      (dolist (shaded (seq-filter (lambda (protected-element)
+                                    (funcall shadedp protected-element
+                                             (append key nil)))
+                                  (cdr protected-keymap)))
+        (funcall delete-from-keymap shaded protected-keymap))
+      (when (< (length protected-keymap) 2)
+        (let* ((map (symbol-value map-variable))
+               (parent (keymap-parent map)))
+          (cond ((eq parent protected-keymap) (set-keymap-parent map nil))
+                ((memq protected-keymap parent)
+                 (funcall delete-from-keymap protected-keymap parent)))
+          (put map-variable :loophole-protected-keymap nil))))))
 
 (defun loophole--protected-keymap-prefix-key (keymap)
   "Return prefix keys vector of protected keymap element KEYMAP.
@@ -2310,9 +2445,13 @@ from Loophole."
                                          "Protected keymap element"
                                          " is corrupted: %s")
                                         protected-element)))))
-            (loophole--add-protected-keymap merger-map-variable
-                                            prefix-key
-                                            entry)))))
+            (if (or (null (lookup-key (symbol-value merger-map-variable)
+                                      prefix-key))
+                    (null (loophole--trace-key-to-find-non-keymap-entry
+                           prefix-key (symbol-value merger-map-variable))))
+                (loophole--add-protected-keymap-entry merger-map-variable
+                                                      prefix-key
+                                                      entry))))))
   (loophole-unregister map-variable)
   (run-hook-with-args 'loophole-after-merge-functions merger-map-variable))
 
@@ -2431,9 +2570,10 @@ with any prefix argument."
                                                  "Protected keymap element"
                                                  " is corrupted: %s")
                                                 protected-element)))))
-                    (loophole--add-protected-keymap duplicated-map-variable
-                                                    prefix-key
-                                                    entry)))))
+                    (loophole--add-protected-keymap-entry
+                     duplicated-map-variable
+                     prefix-key
+                     entry)))))
           (set-keymap-parent (symbol-value map-variable) parent)))
     (if (called-interactively-p 'interactive)
         (message "%s is duplicated to %s"
@@ -3123,6 +3263,15 @@ By default, KEY is bound in the currently editing keymap or
 generated new one.  If optional argument KEYMAP is non-nil,
 and it is registered to Loophole, KEYMAP is used instead.
 
+If ENTRY is a keymap object or a symbol whose function cell
+is a keymap object, this function checks a value of
+`loophole-protect-keymap-entry'.  If the value is non-nil,
+KEY and ENTRY is bound in a parent map to protect bound
+ENTRY.  Protected entries act as well as ordinary entries
+but they will never been overwritten.
+When some other new bindings shades protected bindings,
+they will be removed.
+
 When called interactively, this function decides
 obtaining method for ENTRY according to
 `loophole-bind-entry-order', prefix argument and
@@ -3146,11 +3295,10 @@ affects the timing of this `completing-read'."
                   keymap
                 (user-error "Invalid keymap: %s" keymap)))
           (loophole-ready-map)))
-  (if (and (keymapp entry) loophole-protect-keymap-entry)
-      (loophole--add-protected-keymap (loophole-map-variable-for-keymap keymap)
-                                      key
-                                      entry)
-    (define-key keymap key entry))
+  (let ((map-variable (loophole-map-variable-for-keymap keymap)))
+    (if (and (keymapp entry) loophole-protect-keymap-entry)
+        (loophole--add-protected-keymap-entry map-variable key entry)
+      (loophole--define-ordinary-entry map-variable key entry)))
   (run-hooks 'loophole-bind-hook))
 
 ;;;###autoload
@@ -3353,14 +3501,24 @@ affects the timing of this `completing-read'."
   (loophole-bind-entry key entry))
 
 (defun loophole-unset-key (key)
-  "Unset the temporary biding of KEY of `loophole-editing'."
+  "Unset the temporary binding of KEY of `loophole-editing'.
+When called interactively, KEY will be read by
+`loohpole-read-key'.  If called with prefix argument, KEY
+will be read by `loohpole-read-key-with-time-limit'.
+By using `loohpole-read-key-with-time-limit', prefix key as
+well as ordinary binding can be unset."
   (interactive (if (loophole-editing)
-                   (list (loophole-read-key "Unset temporarily set key: "))
+                   (list (funcall
+                          (if current-prefix-arg
+                              #'loophole-read-key-with-time-limit
+                            #'loophole-read-key)
+                          "Unset temporarily set key: "))
                  (user-error "There is no editing map")))
   (if (loophole-editing)
       (let ((map (symbol-value (loophole-editing))))
-        (if (lookup-key map key)
-            (loophole-bind-entry key nil map)))))
+        (when (lookup-key map key)
+          (loophole-bind-entry key nil map)
+          (message "Key %s is unset" (key-description key))))))
 
 ;;; Entry modifiers
 
