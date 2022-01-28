@@ -1073,7 +1073,7 @@ returned."
                   (cdr protected-keymap)))))
 
 (defun loophole--protected-keymap-prefix-key (keymap)
-  "Return prefix key of protected keymap element KEYMAP.
+  "Return prefix keys vector of protected keymap element KEYMAP.
 KEYMAP must be a keymap for binding keymap on protected
 region, i.e., looks like
   (keymap (KEY (keymap ... (KEY . SYMBOL)))) or
