@@ -1045,6 +1045,33 @@ returned."
                 (char-to-string basic-type)))
     event))
 
+(defun loophole--add-protected-keymap (map-variable key keymap)
+  "Add KEYMAP bound with KEY in protected region of MAP-VARIABLE."
+  (unless (keymapp keymap)
+    (signal 'wrong-type-argument (list 'keymapp keymap)))
+  (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
+    (unless protected-keymap
+      (setq protected-keymap (make-sparse-keymap))
+      (put map-variable :loophole-protected-keymap protected-keymap)
+      (let ((parent (keymap-parent (symbol-value map-variable))))
+        (cond ((null parent)
+               (set-keymap-parent (symbol-value map-variable) protected-keymap))
+              ((memq loophole-base-map parent)
+               (setcdr parent (cons protected-keymap (cdr parent))))
+              (t (set-keymap-parent (symbol-value map-variable)
+                                    (make-composed-keymap
+                                     (list protected-keymap parent)))))))
+    (setcdr protected-keymap
+            (cons (let ((map (make-sparse-keymap)))
+                    (define-key map key
+                      (if (symbolp keymap)
+                          keymap
+                        (let ((entry-map (make-sparse-keymap)))
+                          (set-keymap-parent entry-map keymap)
+                          entry-map)))
+                    map)
+                  (cdr protected-keymap)))))
+
 (defun loophole--erase-local-timers (map-variable)
   "Cancel and remove all local timers for MAP-VARIABLE .
 This function is intended to be used in `loophole-globalize'
@@ -2969,22 +2996,9 @@ affects the timing of this `completing-read'."
                 (user-error "Invalid keymap: %s" keymap)))
           (loophole-ready-map)))
   (if (and (keymapp entry) loophole-protect-keymap-entry)
-      (let* ((map-variable (loophole-map-variable-for-keymap keymap))
-             (protected-keymap (get map-variable :loophole-protected-keymap)))
-        (unless protected-keymap
-          (setq protected-keymap (make-sparse-keymap))
-          (put map-variable :loophole-protected-keymap protected-keymap)
-          (let ((parent (keymap-parent keymap)))
-            (cond ((null parent) (set-keymap-parent keymap protected-keymap))
-                  ((memq loophole-base-map parent)
-                   (setcdr parent (cons protected-keymap (cdr parent))))
-                  (t (set-keymap-parent keymap
-                                        (make-composed-keymap
-                                         (list protected-keymap parent)))))))
-        (setcdr protected-keymap (cons (let ((map (make-sparse-keymap)))
-                                      (define-key map key entry)
-                                      map)
-                                    (cdr protected-keymap))))
+      (loophole--add-protected-keymap (loophole-map-variable-for-keymap keymap)
+                                      key
+                                      entry)
     (define-key keymap key entry))
   (run-hooks 'loophole-bind-hook))
 
