@@ -185,6 +185,11 @@ write protected."
   :group 'loophole
   :type 'number)
 
+(defcustom loophole-force-overwrite-bound-variable t
+  "Flag if use bound variable and overwrite it without prompting."
+  :group 'loophole
+  :type 'boolean)
+
 (defcustom loophole-force-make-variable-buffer-local t
   "Flag if `make-variable-buffer-local' is done without prompting."
   :group 'loophole
@@ -1780,19 +1785,20 @@ If optional argument TAG is non-nil, tag string for the map
 is set as TAG; otherwise, initial character of MAP-NAME is
 used as tag string.
 Old MAP-VARIABLE and corresponding state-variable are
-initialized; their documentation is set as nil, they are
-unbound, their properties for Loophole are set as nil, they
-are removed from `loophole--map-alist'.
+manipulated as unregistered; their properties for Loophole
+are set as nil, they are removed from `loophole--map-alist'.
 
 If loophole-MAP-NAME-map or loophole-MAP-NAME-map-state have
-been already bound, this function signals `user-error'.
-Only unbound name can be used for MAP-NAME.
+been already bound, this function asks user if Loophole can
+use it anyway.
+These query can be skipped with yes by setting t to
+`loophole-force-overwrite-bound-variable'.
 
 Global or local behavior is also inherited.
 loophole-MAP-NAME-map-state is prepared by the same manner
 of `loophole-register'.
 If global or local property of loophole-MAP-NAME-map-state
-does not match with MAP-VARIABLE, this function ask user
+does not match with MAP-VARIABLE, this function asks user
 if Loophole can fit it.
 These query can be skipped with yes by setting t to
 `loophole-force-make-variable-buffer-local' and
@@ -1829,10 +1835,26 @@ string as TAG regardless of the value of prefix-argument."
          (tag (or tag (substring map-name 0 1))))
     (let ((named-map-variable (intern map-variable-name))
           (named-state-variable (intern state-variable-name)))
-      (let ((bound (seq-find #'boundp
-                             (list named-map-variable named-state-variable))))
-        (if bound
-            (user-error "Specified name %s has already been bound" bound)))
+      (if (loophole-registered-p named-map-variable)
+          (user-error "Specified name %s has already been used" map-name))
+      (if (boundp named-map-variable)
+          (unless (or loophole-force-overwrite-bound-variable
+                      (yes-or-no-p
+                       (format "%s has already been bound.  Use it anyway? "
+                               named-map-variable)))
+            (user-error "Abort naming.  Variable %s is preserved"))
+        (put named-map-variable 'variable-documentation
+             "Keymap for temporary use.
+Introduced by `loophole-name'."))
+      (if (boundp named-state-variable)
+          (unless (or loophole-force-overwrite-bound-variable
+                      (yes-or-no-p
+                       (format "%s has already been bound.  Use it anyway? "
+                               named-state-variable)))
+            (user-error "Abort naming.  Variable %s is preserved"))
+        (put named-state-variable 'variable-documentation
+             (format "State of `%s'.
+Introduced by `loophole-name'." named-map-variable)))
       (if (local-variable-if-set-p state-variable)
           (unless (local-variable-if-set-p named-state-variable)
             (if (or loophole-force-make-variable-buffer-local
@@ -1857,14 +1879,6 @@ string as TAG regardless of the value of prefix-argument."
               (user-error (concat "Abort naming."
                                   "  Local variable if set cannot be used"
                                   " for global state-variable")))))
-      (put named-map-variable 'variable-documentation
-           (format "Keymap for temporary use.
-Introduced by `loophole-name' for renaming %s
-which had been already unbound." map-variable))
-      (put named-state-variable 'variable-documentation
-           (format "State of `%s'.
-Introduced by `loophole-name' for renaming %s
-which had been already unbound." named-map-variable state-variable))
       (set named-map-variable (symbol-value map-variable))
       (if (not (local-variable-if-set-p named-state-variable))
           (set named-state-variable (symbol-value state-variable))
@@ -1901,10 +1915,6 @@ which had been already unbound." named-map-variable state-variable))
       (put map-variable :loophole-tag nil)
       (put state-variable :loophole-map-variable nil)
       (put map-variable :loophole-state-variable nil)
-      (makunbound state-variable)
-      (makunbound map-variable)
-      (put state-variable 'variable-documentation nil)
-      (put map-variable 'variable-documentation nil)
       (run-hook-with-args 'loophole-after-name-functions named-map-variable))))
 
 (defun loophole-tag (map-variable tag)
@@ -2530,10 +2540,26 @@ with any prefix argument."
                (tag (or tag (substring map-name 0 1)))
                (duplicated-state-variable (intern state-variable-name)))
           (setq duplicated-map-variable (intern map-variable-name))
-          (let ((bound (seq-find #'boundp (list duplicated-map-variable
-                                                duplicated-state-variable))))
-            (if bound
-                (user-error "Specified name %s has already been bound" bound)))
+          (if (loophole-registered-p duplicated-map-variable)
+              (user-error "Specified name %s has already been used" map-name))
+          (if (boundp duplicated-map-variable)
+              (unless (or loophole-force-overwrite-bound-variable
+                          (yes-or-no-p
+                           (format "%s has already been bound.  Use it anyway? "
+                                   duplicated-map-variable)))
+                (user-error "Abort duplicating.  Variable %s is preserved"))
+            (put duplicated-map-variable 'variable-documentation
+                 "Keymap for temporary use.
+Introduced by `loophole-duplicate'."))
+          (if (boundp duplicated-state-variable)
+              (unless (or loophole-force-overwrite-bound-variable
+                          (yes-or-no-p
+                           (format "%s has already been bound.  Use it anyway? "
+                                   duplicated-state-variable)))
+                (user-error "Abort duplicating.  Variable %s is preserved"))
+            (put duplicated-state-variable 'variable-documentation
+                 (format "State of `%s'.
+Introduced by `loophole-duplicate'." duplicated-map-variable)))
           (if (local-variable-if-set-p
                (get map-variable :loophole-state-variable))
               (unless (local-variable-if-set-p duplicated-state-variable)
