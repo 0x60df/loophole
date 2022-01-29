@@ -1003,10 +1003,11 @@ If there are no candidates after PREDICATE is applied to
 (defun loophole-map-variable-for-key-binding (key)
   "Return map variable for active KEY in `loophole--map-alist'."
   (get (car (seq-find (lambda (a)
-                        (let ((binding (lookup-key (cdr a) key)))
+                        (let ((binding (lookup-key (cdr a) key t)))
                           (and (symbol-value (car a))
                                binding
-                               (eq binding (key-binding key)))))
+                               (not (numberp binding))
+                               (eq binding (key-binding key t)))))
                       loophole--map-alist))
        :loophole-map-variable))
 
@@ -2366,6 +2367,8 @@ If TIME is negative, shorten timer."
                                        (format "\"%s\"" entry))
                                       ((vectorp entry)
                                        (format "[%s]" (key-description entry)))
+                                      ((or (numberp entry) (null entry))
+                                       "\\1")
                                       (t (format "%s" entry))))
                               (car assoc) t t))
                            assoc-list)))
@@ -3039,7 +3042,8 @@ Read key sequence with prompt in which KEY is embedded."
   (let ((binding (key-binding (loophole-read-key
                                (format
                                 "Set key %s to command bound for: "
-                                (key-description key))))))
+                                (key-description key)))
+                              t)))
     (message "%s" binding)
     binding))
 
@@ -3578,8 +3582,9 @@ well as ordinary binding can be unset."
                           "Unset temporarily set key: "))
                  (user-error "There is no editing map")))
   (if (loophole-editing)
-      (let ((map (symbol-value (loophole-editing))))
-        (when (lookup-key map key)
+      (let* ((map (symbol-value (loophole-editing)))
+             (entry (lookup-key map key)))
+        (when (and entry (not (numberp entry)))
           (loophole-bind-entry key nil map)
           (message "Key %s is unset" (key-description key))))))
 
@@ -3605,8 +3610,8 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key)))
-    (cond ((null entry)
+  (let ((entry (lookup-key (symbol-value map-variable) key t)))
+    (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (and (commandp entry)
                      (listp entry)
@@ -3651,10 +3656,10 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key)))
+  (let ((entry (lookup-key (symbol-value map-variable) key t)))
     (unless (featurep 'kmacro)
       (user-error "Bound entry cannot be kmacro, feature has not been loaded"))
-    (cond ((null entry)
+    (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (kmacro-p entry))
            (user-error "Bound entry is not kmacro: %s" entry)))
@@ -3698,8 +3703,8 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key)))
-    (cond ((null entry)
+  (let ((entry (lookup-key (symbol-value map-variable) key t)))
+    (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (or (vectorp entry) (stringp entry)))
            (user-error "Bound entry is not array: %s" entry)))
@@ -3735,8 +3740,8 @@ function to modify it."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key)))
-    (cond ((null entry)
+  (let ((entry (lookup-key (symbol-value map-variable) key t)))
+    (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
           ((and (commandp entry) (listp entry) (eq (car entry) 'lambda))
            (loophole-modify-lambda-form key map-variable))
