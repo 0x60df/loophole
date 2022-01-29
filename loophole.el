@@ -1153,8 +1153,9 @@ make KEYMAP accessible."
                        (error
                         "Key sequence %s starts with non-prefix key %s"
                         (key-description key)
-                        (key-description (seq-subseq
-                                          key 0 (- (length key-list))))))
+                        (key-description (vconcat
+                                          (butlast (append key nil)
+                                                   (length key-list))))))
                       ((assoc (car key-list) object #'eql)
                        (or (funcall existing-cell
                                     (cdr key-list)
@@ -1198,7 +1199,7 @@ they will be removed."
   (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
     (if (< 0 (length key))
         (let ((non-prefix-key (loophole--trace-key-to-find-non-keymap-entry
-                               (seq-subseq key 0 -1)
+                               (vconcat (butlast (append key nil) 1))
                                protected-keymap)))
           (if non-prefix-key
               (error "Key sequence %s starts with non-prefix key %s"
