@@ -1098,7 +1098,7 @@ returned."
                                            ((eq modifier 'alt) "A"))))
                            modifiers "")
                 (char-to-string basic-type)))
-    event))
+    (prin1-to-string event)))
 
 (defun loophole--protected-keymap-entry-list (protected-keymap)
   "Return list of protected keymap entry from raw PROTECTED-KEYMAP.
