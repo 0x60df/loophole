@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.7.7
+;; Version: 0.8.0
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -1095,6 +1095,36 @@ returned."
                 (char-to-string basic-type)))
     event))
 
+(defun loophole--protected-keymap-entry-list (protected-keymap)
+  "Return list of protected keymap entry from raw PROTECTED-KEYMAP.
+PROTECTED-KEYMAP is flatten keymap object stored in the each
+map-variable as symbol property :loohpole-protected-keymap.
+It looks like
+  (keymap (keymap ... body of entry1)
+          (keymap ... wall of entry1)
+          (keymap ... body of entry2)
+          (keymap ... wall of entry2)
+          ...).
+This function makes each entry grouped and return a list of
+them.  It looks like
+  (((keymap ... body of entry1) (keymap ... wall of entry1))
+   ((keymap ... body of entry2) (keymap ... wall of entry2))
+   ...)."
+  (if (and (keymapp protected-keymap)
+           (keymap-parent protected-keymap))
+      (error "Protected keymap is corrupted, it has parent keymap: %s"
+             protected-keymap))
+  (letrec ((entry-list
+            (lambda (current)
+              (cond ((null current) current)
+                    ((null (cdr current))
+                     (error
+                      "Protected keymap is corrupted, it has odd length: %s"
+                      protected-keymap))
+                    (t (cons (list (car current) (cadr current))
+                             (funcall entry-list (cddr current))))))))
+    (funcall entry-list (cdr protected-keymap))))
+
 (defun loophole--add-protected-keymap-entry (map-variable key keymap)
   "Add KEYMAP bound with KEY in protected region of MAP-VARIABLE.
 Protected keymap is set in keymap parent and symbol property
@@ -1148,15 +1178,16 @@ make KEYMAP accessible."
               (t (set-keymap-parent map (make-composed-keymap
                                          (list protected-keymap parent)))))))
     (setcdr protected-keymap
-            (cons (let ((element-map (make-sparse-keymap)))
-                    (define-key element-map key
-                      (if (symbolp keymap)
-                          keymap
-                        (let ((entry-map (make-sparse-keymap)))
-                          (set-keymap-parent entry-map keymap)
-                          entry-map)))
-                    element-map)
-                  (cdr protected-keymap)))))
+            (let ((body-map (make-sparse-keymap))
+                  (wall-map (make-sparse-keymap)))
+              (define-key body-map key
+                (if (symbolp keymap)
+                    keymap
+                  (let ((entry-map (make-sparse-keymap)))
+                    (set-keymap-parent entry-map keymap)
+                    entry-map)))
+              (define-key wall-map key 'undefined)
+              (cons body-map (cons wall-map (cdr protected-keymap)))))))
 
 (defun loophole--define-ordinary-entry (map-variable key entry)
   "Define KEY as ordinary ENTRY in MAP-VARIABLE.
@@ -1194,10 +1225,13 @@ they will be removed."
                        (funcall shadedp
                                 (cdr (assoc (car key-list) object #'eql))
                                 (cdr key-list)))))))
-      (dolist (shaded (seq-filter (lambda (protected-element)
-                                    (funcall shadedp protected-element
-                                             (append key nil)))
-                                  (cdr protected-keymap)))
+      (dolist (shaded (apply
+                       #'append
+                       (seq-filter (lambda (protected-element)
+                                     (funcall shadedp (car protected-element)
+                                              (append key nil)))
+                                   (loophole--protected-keymap-entry-list
+                                    protected-keymap))))
         (funcall delete-from-keymap shaded protected-keymap))
       (when (< (length protected-keymap) 2)
         (let* ((map (symbol-value map-variable))
@@ -2432,11 +2466,12 @@ from Loophole."
                  pseudo-merger-root-element nil))))
   (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
     (if protected-keymap
-        (dolist (protected-element (reverse (cdr protected-keymap)))
+        (dolist (protected-element (reverse
+                                    (loophole--protected-keymap-entry-list
+                                     protected-keymap)))
           (let* ((prefix-key (loophole--protected-keymap-prefix-key
-                              protected-element))
-                 (raw-entry (lookup-key protected-element
-                                        prefix-key))
+                              (car protected-element)))
+                 (raw-entry (lookup-key (car protected-element) prefix-key))
                  (entry (cond ((symbolp raw-entry) raw-entry)
                               ((and (keymapp raw-entry)
                                     (keymap-parent raw-entry))
@@ -2444,14 +2479,13 @@ from Loophole."
                               (t (error (concat
                                          "Protected keymap element"
                                          " is corrupted: %s")
-                                        protected-element)))))
-            (if (or (null (lookup-key (symbol-value merger-map-variable)
-                                      prefix-key))
+                                        protected-element))))
+                 (merger-keymap (symbol-value merger-map-variable)))
+            (if (or (null (lookup-key merger-keymap prefix-key))
                     (null (loophole--trace-key-to-find-non-keymap-entry
-                           prefix-key (symbol-value merger-map-variable))))
-                (loophole--add-protected-keymap-entry merger-map-variable
-                                                      prefix-key
-                                                      entry))))))
+                           prefix-key merger-keymap)))
+                (loophole--add-protected-keymap-entry
+                 merger-map-variable prefix-key entry))))))
   (loophole-unregister map-variable)
   (run-hook-with-args 'loophole-after-merge-functions merger-map-variable))
 
@@ -2557,10 +2591,12 @@ with any prefix argument."
                    ((and protected-keymap (eq parent protected-keymap)) nil)
                    (t parent)))
             (if protected-keymap
-                (dolist (protected-element (reverse (cdr protected-keymap)))
+                (dolist (protected-element
+                         (reverse (loophole--protected-keymap-entry-list
+                                   protected-keymap)))
                   (let* ((prefix-key (loophole--protected-keymap-prefix-key
-                                     protected-element))
-                         (raw-entry (lookup-key protected-element
+                                      (car protected-element)))
+                         (raw-entry (lookup-key (car protected-element)
                                                 prefix-key))
                          (entry (cond ((symbolp raw-entry) raw-entry)
                                       ((and (keymapp raw-entry)
@@ -2571,9 +2607,7 @@ with any prefix argument."
                                                  " is corrupted: %s")
                                                 protected-element)))))
                     (loophole--add-protected-keymap-entry
-                     duplicated-map-variable
-                     prefix-key
-                     entry)))))
+                     duplicated-map-variable prefix-key entry)))))
           (set-keymap-parent (symbol-value map-variable) parent)))
     (if (called-interactively-p 'interactive)
         (message "%s is duplicated to %s"
