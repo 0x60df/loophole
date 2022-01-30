@@ -1330,6 +1330,18 @@ evaluated occasionally in future."
                      (advice-remove 'loophole-bind-entry advice))))
     (advice-add 'loophole-bind-entry :around advice)))
 
+(defun loophole--valid-form (map-variable)
+  "Return list of valid stored form of MAP-VARIABLE.
+Invalid forms are removed by side effect."
+  (let ((valid-form (seq-filter (lambda (key-form)
+                                  (eq (lookup-key
+                                       (symbol-value map-variable)
+                                       (car key-form))
+                                      (eval (cdr key-form))))
+                                (get map-variable :loophole-form-storage))))
+    (put map-variable :loophole-form-storage valid-form)
+    valid-form))
+
 (defun loophole--erase-local-timers (map-variable)
   "Cancel and remove all local timers for MAP-VARIABLE .
 This function is intended to be used in `loophole-globalize'
@@ -2730,40 +2742,82 @@ FILE will be asked."
                                  nil))))
                           map-variable-list))
              (printed-map-list
-              (mapcar (lambda (map-variable)
-                        `(,map-variable
-                          ,(let ((keymap (copy-keymap
-                                          (symbol-value map-variable))))
-                             (set-keymap-parent keymap nil)
-                             keymap)
-                          :parent
-                          ,(let ((parent (keymap-parent
-                                          (symbol-value map-variable))))
-                             (cond ((eq parent loophole-base-map)
-                                    'loophole-base-map)
-                                   ((memq loophole-base-map parent)
-                                    (let ((grand-parent (keymap-parent parent)))
-                                      (set-keymap-parent parent nil)
-                                      (let ((others (remq loophole-base-map
-                                                          (cdr parent))))
-                                        `(make-composed-keymap
-                                          (append (quote ,others)
-                                                  (list loophole-base-map))
-                                          (quote ,grand-parent)))))
-                                   (t `(quote ,parent))))
-                          :documentation ,(get map-variable
-                                               'variable-documentation)
-                          :state-variable ,(get map-variable
-                                                :loophole-state-variable)
-                          :state-variable-documentation
-                          ,(get (get map-variable :loophole-state-variable)
-                                'variable-documentation)
-                          :tag ,(get map-variable :loophole-tag)
-                          :global ,(not (local-variable-if-set-p
-                                         (get map-variable
-                                              :loophole-state-variable)))
-                          :protected-keymap ,(get map-variable
-                                                  :loophole-protected-keymap)))
+              (mapcar
+               (lambda (map-variable)
+                 (let* ((valid-form (loophole--valid-form map-variable))
+                        (protected-keymap
+                         (get map-variable :loophole-protected-keymap))
+                        (protected-keymap-copy
+                         (let ((having-form
+                                (apply
+                                 #'append
+                                 (seq-filter
+                                  (lambda (protected-element)
+                                    (seq-find
+                                     (lambda (key-form)
+                                       (eq (lookup-key (cdr protected-element)
+                                                       (car key-form))
+                                           'undefined))
+                                     valid-form))
+                                  (loophole--protected-keymap-entry-list
+                                   protected-keymap)))))
+                           (seq-filter (lambda (element)
+                                         (not (memq element having-form)))
+                                       protected-keymap))))
+                   `(,map-variable
+                     ,(let ((keymap (copy-keymap
+                                     (symbol-value map-variable))))
+                        (set-keymap-parent keymap nil)
+                        (dolist (key-form valid-form)
+                          (let ((entry (lookup-key
+                                        keymap
+                                        (car key-form))))
+                            (if (and entry (not (numberp entry)))
+                                (define-key keymap (car key-form) nil))))
+                        keymap)
+                     :parent
+                     ,(let ((parent (keymap-parent
+                                     (symbol-value map-variable))))
+                        (cond ((eq parent loophole-base-map)
+                               'loophole-base-map)
+                              ((and protected-keymap
+                                    (eq parent protected-keymap))
+                               `(quote ,protected-keymap-copy))
+                              ((or (memq loophole-base-map parent)
+                                   (and protected-keymap
+                                        (memq protected-keymap parent)))
+                               (let* ((copy (copy-list parent))
+                                      (protected-cell
+                                       (and protected-keymap
+                                            (memq protected-keymap copy))))
+                                 (if protected-cell
+                                     (setcar protected-cell
+                                             protected-keymap-copy))
+                                 (if (memq loophole-base-map parent)
+                                     (let ((grand-parent
+                                            (keymap-parent copy)))
+                                       (set-keymap-parent copy nil)
+                                       (let ((others (remq loophole-base-map
+                                                           (cdr copy))))
+                                         `(make-composed-keymap
+                                           (append (quote ,others)
+                                                   (list loophole-base-map))
+                                           (quote ,grand-parent))))
+                                   `(quote ,copy))))
+                              (t `(quote ,parent))))
+                     :documentation ,(get map-variable
+                                          'variable-documentation)
+                     :state-variable ,(get map-variable
+                                           :loophole-state-variable)
+                     :state-variable-documentation
+                     ,(get (get map-variable :loophole-state-variable)
+                           'variable-documentation)
+                     :tag ,(get map-variable :loophole-tag)
+                     :global ,(not (local-variable-if-set-p
+                                    (get map-variable
+                                         :loophole-state-variable)))
+                     :protected-keymap ,protected-keymap-copy
+                     :form-storage ,valid-form)))
                       valid-map-variable-list)))
         (with-temp-file file
           (prin1 printed-map-list (current-buffer))))
@@ -2831,7 +2885,8 @@ FILE will be asked."
                   (plist-get plist :state-variable-documentation))
                  (tag (plist-get plist :tag))
                  (global (plist-get plist :global))
-                 (protected-keymap (plist-get plist :protected-keymap)))
+                 (protected-keymap (plist-get plist :protected-keymap))
+                 (form-storage (plist-get plist :form-storage)))
             (when (or (and (not (loophole-registered-p map-variable))
                            (not (boundp map-variable))
                            (not (boundp state-variable)))
@@ -2859,7 +2914,10 @@ FILE will be asked."
               (put state-variable 'variable-documentation
                    state-variable-documentation)
               (put map-variable :loophole-protected-keymap protected-keymap)
-              (loophole-register map-variable state-variable tag global t)))))
+              (loophole-register map-variable state-variable tag global t)
+              (dolist (key-form form-storage)
+                (loophole-bind-entry (car key-form) (eval (cdr key-form))
+                                     keymap))))))
     (message "File storage is not readable: %s" file)))
 
 ;;; Binding utilities
