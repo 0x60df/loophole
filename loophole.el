@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.8.0
+;; Version: 0.8.1
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -2484,7 +2484,8 @@ from Loophole."
                            (null (loophole--trace-key-to-find-non-keymap-entry
                                   key-sequence protected-keymap)))
                        element)))
-            element))))
+            element)))
+       (valid-form (loophole--valid-form map-variable)))
     (letrec ((merge-element
               (lambda (element merger-element reversal-key-list)
                 (if (and (keymapp (cdr element)) (keymapp (cdr merger-element)))
@@ -2496,26 +2497,49 @@ from Loophole."
                           (dolist (sub-element (cddr element))
                             (let ((merger-sub-element
                                    (assq (car-safe sub-element)
-                                         (cddr merger-element))))
-                              (if (and (listp sub-element)
-                                       (or (characterp (car sub-element))
-                                           (symbolp (car sub-element)))
-                                       (not (eq 'keymap (car sub-element)))
-                                       merger-sub-element)
+                                         (cddr merger-element)))
+                                  (key
+                                   (if (and (listp sub-element)
+                                            (or (characterp (car sub-element))
+                                                (symbolp (car sub-element)))
+                                            (not (eq 'keymap
+                                                     (car sub-element))))
+                                       (car sub-element))))
+                              (if (and key merger-sub-element)
                                   (funcall merge-element
                                            sub-element merger-sub-element
                                            (cons (car sub-element)
                                                  reversal-key-list))
                                 (unless (memq sub-element (cddr merger-element))
-                                  (let ((trimmed-sub-element
-                                         (funcall
-                                          trim-existing-on-protected
-                                          (vconcat (reverse reversal-key-list))
-                                          sub-element)))
+                                  (let* ((trimmed-sub-element
+                                          (funcall
+                                           trim-existing-on-protected
+                                           (vconcat (reverse reversal-key-list))
+                                           sub-element))
+                                         (key-vector
+                                          (if key
+                                              (vconcat
+                                               (vector key)
+                                               (reverse reversal-key-list)))))
                                     (if trimmed-sub-element
-                                        (setcdr (last merger-element)
-                                                (cons trimmed-sub-element
-                                                      nil))))))))
+                                        (if (and key-vector
+                                                 (assoc key-vector valid-form))
+                                            (if (equal (cdr trimmed-sub-element)
+                                                       (cdr sub-element))
+                                                (setcdr
+                                                 (last merger-element)
+                                                 (cons
+                                                  (cons key
+                                                        (eval
+                                                         (cdr (assoc
+                                                               key-vector
+                                                               valid-form))))
+                                                  nil))
+                                                (push key-vector
+                                                      key-list-for-form))
+                                          (setcdr (last merger-element)
+                                                  (cons trimmed-sub-element
+                                                        nil)))))))))
                         (set-keymap-parent (cdr merger-element) merger-parent)
                         (set-keymap-parent (cdr element) parent)))))))
       (let* ((map (copy-keymap (symbol-value map-variable)))
@@ -2632,13 +2656,19 @@ Introduced by `loophole-duplicate'." duplicated-map-variable)))
           (loophole-register duplicated-map-variable duplicated-state-variable
                              tag (loophole-global-p map-variable)))
       (setq duplicated-map-variable (loophole-generate)))
-    (let ((parent (keymap-parent (symbol-value map-variable))))
+    (let ((valid-form (loophole--valid-form map-variable))
+          (parent (keymap-parent (symbol-value map-variable))))
       (set-keymap-parent (symbol-value map-variable) nil)
       (unwind-protect
           (let ((protected-keymap (get map-variable :loophole-protected-keymap))
                 (duplicated-keymap (symbol-value duplicated-map-variable)))
             (setcdr duplicated-keymap
                     (cdr (copy-keymap (symbol-value map-variable))))
+            (dolist (key-form valid-form)
+              (let ((lookup (lookup-key duplicated-keymap (car key-form))))
+                (if (and lookup (not (numberp lookup)))
+                    (define-key duplicated-keymap (car key-form)
+                      (eval (cdr key-form))))))
             (set-keymap-parent
              duplicated-keymap
              (cond ((or (and protected-keymap
