@@ -3323,7 +3323,9 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method.  `loophole-decide-obtaining-method-after-read-key'
-affects the timing of this `completing-read'."
+affects the timing of this `completing-read'.
+
+Return map-variable on which KEY and ENTRY are bound."
   (interactive
    (loophole--arg-list loophole-bind-entry-order current-prefix-arg))
   (setq keymap
@@ -3337,8 +3339,9 @@ affects the timing of this `completing-read'."
   (let ((map-variable (loophole-map-variable-for-keymap keymap)))
     (if (and (keymapp entry) loophole-protect-keymap-entry)
         (loophole--add-protected-keymap-entry map-variable key entry)
-      (loophole--set-ordinary-entry map-variable key entry)))
-  (run-hooks 'loophole-bind-hook))
+      (loophole--set-ordinary-entry map-variable key entry))
+    (run-hooks 'loophole-bind-hook)
+    map-variable))
 
 ;;;###autoload
 (defun loophole-bind-command (key command &optional keymap)
@@ -3362,7 +3365,9 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method.  `loophole-decide-obtaining-method-after-read-key'
-affects the timing of this `completing-read'."
+affects the timing of this `completing-read'.
+
+Return map-variable on which KEY and COMMAND are bound."
   (interactive
    (loophole--arg-list loophole-bind-command-order current-prefix-arg))
   (if (commandp command)
@@ -3391,7 +3396,9 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method.  `loophole-decide-obtaining-method-after-read-key'
-affects the timing of this `completing-read'."
+affects the timing of this `completing-read'.
+
+Return map-variable on which KEY and KMACRO are bound."
   (interactive
    (loophole--arg-list loophole-bind-kmacro-order current-prefix-arg))
   (unless (featurep 'kmacro)
@@ -3405,7 +3412,9 @@ affects the timing of this `completing-read'."
 (defun loophole-bind-last-kmacro (key)
   "Bind KEY to the lastly accessed keyboard macro.
 Currently editing keymap or generated new one is used for
-binding."
+binding.
+
+Return map-variable on which KEY is bound."
   (interactive (list (loophole-read-key "Set key temporarily: ")))
   (unless (featurep 'kmacro)
     (user-error "Last kmacro is void, kmacro has not been loaded"))
@@ -3434,7 +3443,9 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method.  `loophole-decide-obtaining-method-after-read-key'
-affects the timing of this `completing-read'."
+affects the timing of this `completing-read'.
+
+Return map-variable on which KEY and ARRAY are bound."
   (interactive
    (loophole--arg-list loophole-bind-array-order current-prefix-arg))
   (if (or (vectorp array) (stringp array))
@@ -3466,7 +3477,9 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method.  `loophole-decide-obtaining-method-after-read-key'
-affects the timing of this `completing-read'."
+affects the timing of this `completing-read'.
+
+Return map-variable on which KEY and KEYMAP are bound."
   (interactive
    (loophole--arg-list loophole-bind-keymap-order current-prefix-arg))
   (if (keymapp keymap)
@@ -3497,7 +3510,9 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method.  `loophole-decide-obtaining-method-after-read-key'
-affects the timing of this `completing-read'."
+affects the timing of this `completing-read'.
+
+Return map-variable on which KEY and SYMBOL are bound."
   (interactive
    (loophole--arg-list loophole-bind-symbol-order current-prefix-arg))
   (letrec ((inspect-function-cell
@@ -3535,7 +3550,9 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method.  `loophole-decide-obtaining-method-after-read-key'
-affects the timing of this `completing-read'."
+affects the timing of this `completing-read'.
+
+Return map-variable on which KEY is set."
   (interactive (loophole--arg-list loophole-set-key-order current-prefix-arg t))
   (loophole-bind-entry key entry))
 
@@ -3545,7 +3562,10 @@ When called interactively, KEY will be read by
 `loohpole-read-key'.  If called with prefix argument, KEY
 will be read by `loohpole-read-key-with-time-limit'.
 By using `loohpole-read-key-with-time-limit', prefix key as
-well as ordinary binding can be unset."
+well as ordinary binding can be unset.
+
+When KEY is successfully unset, return map-variable on which
+KEY is unset; otherwise return nil."
   (interactive (if (loophole-editing)
                    (list (funcall
                           (if current-prefix-arg
