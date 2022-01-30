@@ -200,14 +200,6 @@ write protected."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-force-overwrite-parent-map nil
-  "Flag if `set-keymap-parent' is done without prompting.
-If parent of the keymap which is about to be
-`set-keymap-parent' is nil, parent is set without prompt
-regardless of the value of this user option."
-  :group 'loophole
-  :type 'boolean)
-
 (defcustom loophole-make-register-always-read-tag 'infer
   "Flag if interactive `loophole-register' always reads tag string.
 If non-nil, `loophole-register' always reads tag string,
@@ -1245,7 +1237,9 @@ they will be removed."
                (parent (keymap-parent map)))
           (cond ((eq parent protected-keymap) (set-keymap-parent map nil))
                 ((memq protected-keymap parent)
-                 (funcall delete-from-keymap protected-keymap parent)))
+                 (funcall delete-from-keymap protected-keymap parent)
+                 (if (= (length parent) 2)
+                     (set-keymap-parent map (cadr parent)))))
           (put map-variable :loophole-protected-keymap nil))))))
 
 (defun loophole--protected-keymap-prefix-key (keymap)
@@ -1434,11 +1428,8 @@ These query can be skipped with yes by setting t to
 Unless WITHOUT-BASE-MAP is non-nil, `loophole-base-map' is
 set as parent keymap for MAP-VARIABLE.
 If parent of keymap of MAP-VARIABLE is non-nil when setting
-parent keymap, this function ask user if it is overwritten
-by composed keymap of existing keymap and
-`loophole-base-map'.
-This query also can be skipped with yes by setting t to
-`loophole-force-overwrite-parent-map'.
+parent keymap, composed keymap is made from exisiting parent
+and `loophole-base-map'.
 Because `loophole-unregister' assumes that a keymap parent
 has a form described above, if other feature modifies keymap
 parent, `loophole-unregister' cannot remove
@@ -1514,14 +1505,6 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
          (user-error
           "Specified map-variable holds keymap which is already used: %s"
           map-variable)))
-  (if (and (not without-base-map)
-           (keymap-parent (symbol-value map-variable)))
-      (unless (or loophole-force-overwrite-parent-map
-                  (yes-or-no-p
-                   (format
-                    "%s has a parent map.  Overwrite it by a composed map? "
-                    map-variable)))
-        (setq without-base-map t)))
   (if global
       (if (local-variable-if-set-p state-variable)
           (if (or loophole-force-unintern
@@ -1560,23 +1543,12 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
        (setq loophole--map-alist
              (cons `(,state-variable . ,(symbol-value map-variable))
                    loophole--map-alist))))
-  (unless without-base-map
-    (let ((parent (keymap-parent (symbol-value map-variable))))
-      (cond ((null parent)
-             (set-keymap-parent (symbol-value map-variable) loophole-base-map)
-             (put map-variable :loophole-protected-keymap nil))
-            ((and (get map-variable :loophole-protected-keymap)
-                  (memq (get map-variable :loophole-protected-keymap)
-                        parent))
-             (let ((grand-parent (keymap-parent parent)))
-               (set-keymap-parent parent nil)
-               (setcdr (last parent) (cons loophole-base-map nil))
-               (set-keymap-parent parent grand-parent)))
-            (t (unless (eq (get map-variable :loophole-protected-keymap) parent)
-                 (put map-variable :loophole-protected-keymap nil))
-               (set-keymap-parent (symbol-value map-variable)
-                                  (make-composed-keymap
-                                   (list parent loophole-base-map)))))))
+  (let ((parent (keymap-parent (symbol-value map-variable))))
+    (unless (and parent
+                 (or (eq parent (get map-variable :loophole-protected-keymap))
+                     (memq (get map-variable :loophole-protected-keymap)
+                           parent)))
+      (put map-variable :loophole-protected-keymap nil)))
   (when (and (listp loophole--buffer-list)
              (not global))
     (dolist (buffer (buffer-list))
@@ -1586,6 +1558,19 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
           (force-mode-line-update))))
     (add-variable-watcher state-variable
                           #'loophole--follow-adding-local-variable))
+  (unless without-base-map
+    (let ((parent (keymap-parent (symbol-value map-variable))))
+      (cond ((null parent)
+             (set-keymap-parent (symbol-value map-variable) loophole-base-map))
+            ((and (get map-variable :loophole-protected-keymap)
+                  (memq (get map-variable :loophole-protected-keymap) parent))
+             (let ((grand-parent (keymap-parent parent)))
+               (set-keymap-parent parent nil)
+               (setcdr (last parent) (cons loophole-base-map nil))
+               (set-keymap-parent parent grand-parent)))
+            (t (set-keymap-parent (symbol-value map-variable)
+                                  (make-composed-keymap
+                                   (list parent loophole-base-map)))))))
   (run-hook-with-args 'loophole-after-register-functions map-variable))
 
 (defun loophole-unregister (map-variable)
