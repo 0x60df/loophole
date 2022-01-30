@@ -1093,6 +1093,13 @@ returned."
                 (char-to-string basic-type)))
     (prin1-to-string event)))
 
+(defun loophole--symbol-function-recursively (symbol)
+  "`symbol-function' SYMBOL recursively."
+  (let ((function (symbol-function symbol)))
+    (cond ((eq function symbol) function)
+          ((not (symbolp function)) function)
+          (t (loophole--symbol-function-recursively function)))))
+
 (defun loophole--protected-keymap-entry-list (protected-keymap)
   "Return list of protected keymap element from raw PROTECTED-KEYMAP.
 PROTECTED-KEYMAP is flatten keymap object stored in the each
@@ -1280,6 +1287,48 @@ otherwise, return nil."
                        (funcall find-non-keymap-entry (cdr reversal-key-list)))
                       (t (vconcat (reverse reversal-key-list))))))))
     (funcall find-non-keymap-entry (reverse (append key-sequence nil)))))
+
+(defun loophole-toss-binding-form (key form)
+  "Try to store FORM in a Loophole map of the next binding.
+This function adds advice which try to add cons cell of KEY
+and FORM to the symbol property :loophole-form-storage of
+map-variable which is returned from subsequent
+`loophole-bind-entry' if it successfully binds KEY and entry
+derived from FORM.
+
+Regardless of the binding result, advice is removed.
+
+Some Loophole functions use stored forms to keep KEY bound
+with appropriate object,  typically, a keymap object.
+For example, when `loophole-save' saves Loophole map who
+have a binding for keymap object, it will be printed in a
+storage file and link for the object is lost.  If a form for
+getting that keymap object is stored, `loophole-save' also
+saves this form in a file, and `loophole-load' reproduce the
+link to the keymap object.
+
+Usually, obtaining methods who obtain keymap object may call
+this function.
+
+Be careful when FORM has a side effect, because FORM is
+evaluated occasionally in future."
+  (let ((advice (make-symbol "loophole-one-time-advice")))
+    (fset advice (lambda (bind-entry binding-key binding-entry
+                                     &optional binding-keymap)
+                   (unwind-protect
+                       (let ((map-variable
+                              (apply bind-entry
+                                     binding-key binding-entry binding-keymap)))
+                         (if (and (loophole-key-equal key binding-key)
+                                  (eq (eval form) binding-entry))
+                             (put map-variable
+                                  :loophole-form-storage
+                                  (cons (cons key form)
+                                        (get map-variable
+                                             :loophole-form-storage))))
+                         map-variable)
+                     (advice-remove 'loophole-bind-entry advice))))
+    (advice-add 'loophole-bind-entry :around advice)))
 
 (defun loophole--erase-local-timers (map-variable)
   "Cancel and remove all local timers for MAP-VARIABLE .
@@ -3207,59 +3256,50 @@ Read string with prompt in which KEY is embedded ."
 (defun loophole-obtain-keymap-by-read-keymap-variable (key)
   "Return keymap obtained by reading keymap variable.
 Read keymap variable with prompt in which KEY is embedded."
-  (symbol-value
-   (intern
-    (completing-read
-     (format "Set key %s to keymap bound to symbol: " (key-description key))
-     obarray
-     (lambda (s)
-       (and (boundp s)
-            (not (keywordp s))
-            (keymapp (symbol-value s))))
-     t))))
+  (let ((variable (intern
+                   (completing-read (format
+                                     "Set key %s to keymap bound to symbol: "
+                                     (key-description key))
+                                    obarray
+                                    (lambda (s)
+                                      (and (boundp s)
+                                           (not (keywordp s))
+                                           (keymapp (symbol-value s))))
+                                    t))))
+    (loophole-toss-binding-form key variable)
+    (symbol-value variable)))
 
 (defun loophole-obtain-keymap-by-read-keymap-function (key)
   "Return keymap obtained by reading keymap function.
 Read keymap function with prompt in which KEY is embedded.
 Keymap function is a symbol whose function cell is a keymap
 or a symbol whose function cell is ultimately a keymap."
-  (letrec ((symbol-function-recursively
-            (lambda (s)
-              (let ((f (symbol-function s)))
-                (cond ((eq f s) f)
-                      ((not (symbolp f)) f)
-                      (t (funcall symbol-function-recursively f)))))))
-    (funcall symbol-function-recursively
-             (intern
-              (completing-read
-               (format "Set key %s to keymap fbound to symbol: "
-                       (key-description key))
-               obarray
-               (lambda (s)
-                 (let ((f (funcall symbol-function-recursively s)))
-                   (keymapp f)))
-               t)))))
+  (let ((symbol (intern
+                 (completing-read
+                  (format "Set key %s to keymap fbound to symbol: "
+                          (key-description key))
+                  obarray
+                  (lambda (s)
+                    (let ((f (loophole--symbol-function-recursively s)))
+                      (keymapp f)))
+                  t))))
+    (loophole-toss-binding-form key `(loophole--symbol-function-recursively
+                                      ',symbol))
+    (loophole--symbol-function-recursively symbol)))
 
 (defun loophole-obtain-symbol-by-read-keymap-function (key)
   "Return symbol obtained by reading keymap function.
 Read keymap function with prompt in which KEY is embedded.
 Keymap function is a symbol whose function cell is a keymap
 or a symbol whose function cell is ultimately a keymap."
-  (letrec ((symbol-function-recursively
-            (lambda (s)
-              (let ((f (symbol-function s)))
-                (cond ((eq f s) f)
-                      ((not (symbolp f)) f)
-                      (t (funcall symbol-function-recursively f)))))))
-    (intern
-     (completing-read
-      (format "Set key %s to symbol whose function cell is keymap: "
-              (key-description key))
-      obarray
-      (lambda (s)
-        (let ((f (funcall symbol-function-recursively s)))
-          (keymapp f)))
-      t))))
+  (intern (completing-read
+           (format "Set key %s to symbol whose function cell is keymap: "
+                   (key-description key))
+           obarray
+           (lambda (s)
+             (let ((f (loophole--symbol-function-recursively s)))
+               (keymapp f)))
+           t)))
 
 (defun loophole-obtain-symbol-by-read-command (key)
   "Return symbol obtained by reading command symbol.
@@ -3273,21 +3313,14 @@ Read command with prompt in which KEY is embedded."
 Read array function with prompt in which KEY is embedded.
 Array function is a symbol whose function cell is an array
 or a symbol whose function cell is ultimately an array."
-  (letrec ((symbol-function-recursively
-            (lambda (s)
-              (let ((f (symbol-function s)))
-                (cond ((eq f s) f)
-                      ((not (symbolp f)) f)
-                      (t (funcall symbol-function-recursively f)))))))
-    (intern
-     (completing-read
-      (format "Set key %s to symbol whose function cell is array: "
-              (key-description key))
-      obarray
-      (lambda (s)
-        (let ((f (funcall symbol-function-recursively s)))
-          (or (vectorp f) (stringp f))))
-      t))))
+  (intern (completing-read
+           (format "Set key %s to symbol whose function cell is array: "
+                   (key-description key))
+           obarray
+           (lambda (s)
+             (let ((f (loophole--symbol-function-recursively s)))
+               (or (vectorp f) (stringp f))))
+           t)))
 
 ;;; Binding commands
 
