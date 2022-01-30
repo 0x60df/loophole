@@ -2688,9 +2688,8 @@ FILE will be asked."
                              (set-keymap-parent keymap nil)
                              keymap)
                           :parent
-                          ,(let* ((keymap (copy-keymap
-                                           (symbol-value map-variable)))
-                                  (parent (keymap-parent keymap)))
+                          ,(let ((parent (keymap-parent
+                                          (symbol-value map-variable))))
                              (cond ((eq parent loophole-base-map)
                                     'loophole-base-map)
                                    ((memq loophole-base-map parent)
@@ -2713,7 +2712,9 @@ FILE will be asked."
                           :tag ,(get map-variable :loophole-tag)
                           :global ,(not (local-variable-if-set-p
                                          (get map-variable
-                                              :loophole-state-variable)))))
+                                              :loophole-state-variable)))
+                          :protected-keymap ,(get map-variable
+                                                  :loophole-protected-keymap)))
                       valid-map-variable-list)))
         (with-temp-file file
           (prin1 printed-map-list (current-buffer))))
@@ -2780,7 +2781,8 @@ FILE will be asked."
                  (state-variable-documentation
                   (plist-get plist :state-variable-documentation))
                  (tag (plist-get plist :tag))
-                 (global (plist-get plist :global)))
+                 (global (plist-get plist :global))
+                 (protected-keymap (plist-get plist :protected-keymap)))
             (when (or (and (not (loophole-registered-p map-variable))
                            (not (boundp map-variable))
                            (not (boundp state-variable)))
@@ -2807,6 +2809,7 @@ FILE will be asked."
               (set state-variable nil)
               (put state-variable 'variable-documentation
                    state-variable-documentation)
+              (put map-variable :loophole-protected-keymap protected-keymap)
               (loophole-register map-variable state-variable tag global t)))))
     (message "File storage is not readable: %s" file)))
 
