@@ -1094,7 +1094,7 @@ returned."
     (prin1-to-string event)))
 
 (defun loophole--protected-keymap-entry-list (protected-keymap)
-  "Return list of protected keymap entry from raw PROTECTED-KEYMAP.
+  "Return list of protected keymap element from raw PROTECTED-KEYMAP.
 PROTECTED-KEYMAP is flatten keymap object stored in the each
 map-variable as symbol property :loohpole-protected-keymap.
 It looks like
@@ -1179,12 +1179,7 @@ make KEYMAP accessible."
     (setcdr protected-keymap
             (let ((body-map (make-sparse-keymap))
                   (wall-map (make-sparse-keymap)))
-              (define-key body-map key
-                (if (symbolp keymap)
-                    keymap
-                  (let ((entry-map (make-sparse-keymap)))
-                    (set-keymap-parent entry-map keymap)
-                    entry-map)))
+              (define-key body-map key keymap)
               (define-key wall-map key 'undefined)
               (cons body-map (cons wall-map (cdr protected-keymap)))))))
 
@@ -1242,30 +1237,35 @@ they will be removed."
                      (set-keymap-parent map (cadr parent)))))
           (put map-variable :loophole-protected-keymap nil))))))
 
-(defun loophole--protected-keymap-prefix-key (keymap)
-  "Return prefix keys vector of protected keymap element KEYMAP.
-KEYMAP must be a keymap for binding keymap on protected
-region, i.e., looks like
-  (keymap (KEY (keymap ... (KEY . SYMBOL)))) or
-  (keymap (KEY (keymap ... (KEY . (keymap . (keymap ...)))))).
+(defun loophole--protected-keymap-prefix-key (protected-element)
+  "Return prefix keys vector of PROTECTED-ELEMENT.
+PROTECTED-ELEMENT must be a list object representing
+protected keymap entry, i.e., looks like
+  ((keymap (KEY (keymap ... (KEY . SYMBOL))))
+   (keymap (KEY (keymap ... (KEY . undefined)))))
+or
+  ((keymap (KEY (keymap ... (KEY . (keymap ...)))))
+   (keymap (KEY (keymap ... (KEY . undefined))))).
 First one is for a symbol whose function cell is a keymap.
 Second one is for a keymap object.
 The portion (KEY (keymap ... (KEY ...))) is a prefix key,
-and SYMBOL and last (keymap ...) is an entry."
+and SYMBOL and last (keymap ...) is an entry.
+
+Actually, this function searches the symbol undefined in
+the cadr of PROTECTED-ELEMENT and return found keys vector."
   (letrec ((prefix-key-list
             (lambda (object)
-              (cond ((or (symbolp object)
-                         (and (keymapp object)
-                              (keymap-parent object)))
+              (cond ((eq object 'undefined)
                      nil)
                     ((or (not (consp (cdr object)))
                          (not (= (length object) 2))
                          (not (eventp (caadr object)))
-                         (not (keymapp (cdadr object))))
+                         (not (or (keymapp (cdadr object))
+                                  (eq 'undefined (cdadr object)))))
                      (error "KEYMAP is not an element of protected keymap"))
                     (t (cons (caadr object)
                              (funcall prefix-key-list (cdadr object))))))))
-    (vconcat (funcall prefix-key-list keymap))))
+    (vconcat (funcall prefix-key-list (cadr protected-element)))))
 
 (defun loophole--trace-key-to-find-non-keymap-entry (key-sequence keymap)
   "Trace KEY-SEQUENCE in KEYMAP to find non-keymap entry.
@@ -2469,16 +2469,8 @@ from Loophole."
                                     (loophole--protected-keymap-entry-list
                                      protected-keymap)))
           (let* ((prefix-key (loophole--protected-keymap-prefix-key
-                              (car protected-element)))
-                 (raw-entry (lookup-key (car protected-element) prefix-key))
-                 (entry (cond ((symbolp raw-entry) raw-entry)
-                              ((and (keymapp raw-entry)
-                                    (keymap-parent raw-entry))
-                               (keymap-parent raw-entry))
-                              (t (error (concat
-                                         "Protected keymap element"
-                                         " is corrupted: %s")
-                                        protected-element))))
+                              protected-element))
+                 (entry (lookup-key (car protected-element) prefix-key))
                  (merger-keymap (symbol-value merger-map-variable)))
             (if (or (null (lookup-key merger-keymap prefix-key))
                     (null (loophole--trace-key-to-find-non-keymap-entry
@@ -2610,17 +2602,9 @@ Introduced by `loophole-duplicate'." duplicated-map-variable)))
                          (reverse (loophole--protected-keymap-entry-list
                                    protected-keymap)))
                   (let* ((prefix-key (loophole--protected-keymap-prefix-key
-                                      (car protected-element)))
-                         (raw-entry (lookup-key (car protected-element)
-                                                prefix-key))
-                         (entry (cond ((symbolp raw-entry) raw-entry)
-                                      ((and (keymapp raw-entry)
-                                            (keymap-parent raw-entry))
-                                       (keymap-parent raw-entry))
-                                      (t (error (concat
-                                                 "Protected keymap element"
-                                                 " is corrupted: %s")
-                                                protected-element)))))
+                                      protected-element))
+                         (entry (lookup-key (car protected-element)
+                                                prefix-key)))
                     (loophole--add-protected-keymap-entry
                      duplicated-map-variable prefix-key entry)))))
           (set-keymap-parent (symbol-value map-variable) parent)))
