@@ -1183,11 +1183,11 @@ make KEYMAP accessible."
               (define-key wall-map key 'undefined)
               (cons body-map (cons wall-map (cdr protected-keymap)))))))
 
-(defun loophole--define-ordinary-entry (map-variable key entry)
-  "Define KEY as ordinary ENTRY in MAP-VARIABLE.
+(defun loophole--set-ordinary-entry (map-variable key entry)
+  "Set KEY as ordinary ENTRY in MAP-VARIABLE.
 This function `define-key' KEY and ENTRY in a keymap bound
 with MAP-VARIABLE with taking care of protected keymap
-entry.  When KEY shaeds existing protected keymap entry,
+entry.  When KEY shades existing protected keymap entry,
 they will be removed."
   (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
     (if (< 0 (length key))
@@ -3337,7 +3337,7 @@ affects the timing of this `completing-read'."
   (let ((map-variable (loophole-map-variable-for-keymap keymap)))
     (if (and (keymapp entry) loophole-protect-keymap-entry)
         (loophole--add-protected-keymap-entry map-variable key entry)
-      (loophole--define-ordinary-entry map-variable key entry)))
+      (loophole--set-ordinary-entry map-variable key entry)))
   (run-hooks 'loophole-bind-hook))
 
 ;;;###autoload
