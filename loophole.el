@@ -3675,7 +3675,8 @@ affects the timing of this `completing-read'.
 
 Return map-variable on which KEY is set."
   (interactive (loophole--arg-list loophole-set-key-order current-prefix-arg t))
-  (loophole-bind-entry key entry))
+  (loophole-bind-entry key entry)
+  entry)
 
 (defun loophole-unset-key (key)
   "Unset the temporary binding of KEY of `loophole-editing'.
@@ -3694,12 +3695,12 @@ KEY is unset; otherwise return nil."
                             #'loophole-read-key)
                           "Unset temporarily set key: "))
                  (user-error "There is no editing map")))
-  (if (loophole-editing)
-      (let* ((map (symbol-value (loophole-editing)))
-             (entry (lookup-key map key)))
-        (when (and entry (not (numberp entry)))
-          (loophole-bind-entry key nil map)
-          (message "Key %s is unset" (key-description key))))))
+  (let ((map (symbol-value (loophole-editing))))
+    (when map
+      (loophole-bind-entry key nil map)
+      (if (called-interactively-p 'interactive)
+          (message "Key %s is unset" (key-description key)))
+      nil)))
 
 ;;; Entry modifiers
 
