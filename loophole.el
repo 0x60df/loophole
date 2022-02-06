@@ -3059,7 +3059,8 @@ FILE will be asked."
               (loophole-register map-variable state-variable tag global t)
               (dolist (key-form form-storage)
                 (loophole-bind-entry (car key-form) (eval (cdr key-form))
-                                     keymap))))))
+                                     keymap))
+              (put map-variable :loophole-form-storage form-storage)))))
     (message "File storage is not readable: %s" file)))
 
 ;;; Binding utilities
