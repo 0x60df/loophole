@@ -2787,9 +2787,15 @@ Introduced by `loophole-duplicate'." duplicated-map-variable)))
                     (cdr (copy-keymap (symbol-value map-variable))))
             (dolist (key-form valid-form)
               (let ((lookup (lookup-key duplicated-keymap (car key-form))))
-                (if (and lookup (not (numberp lookup)))
-                    (define-key duplicated-keymap (car key-form)
-                      (eval (cdr key-form))))))
+                (when (and lookup (not (numberp lookup)))
+                  (define-key duplicated-keymap (car key-form)
+                    (eval (cdr key-form)))
+                  (put duplicated-map-variable
+                       :loophole-form-storage
+                       (cons (cons (car key-form)
+                                   (cdr key-form))
+                             (get duplicated-map-variable
+                                  :loophole-form-storage))))))
             (set-keymap-parent
              duplicated-keymap
              (cond ((or (and protected-keymap
@@ -2816,9 +2822,15 @@ Introduced by `loophole-duplicate'." duplicated-map-variable)))
                   (let* ((prefix-key (loophole--protected-keymap-prefix-key
                                       protected-element))
                          (entry (lookup-key (car protected-element)
-                                                prefix-key)))
+                                            prefix-key))
+                         (form (cdr (assoc prefix-key valid-form))))
                     (loophole--add-protected-keymap-entry
-                     duplicated-map-variable prefix-key entry)))))
+                     duplicated-map-variable prefix-key entry)
+                    (if form
+                        (put duplicated-map-variable :loophole-form-storage
+                             (cons (cons prefix-key form)
+                                   (get duplicated-map-variable
+                                        :loophole-form-storage))))))))
           (set-keymap-parent (symbol-value map-variable) parent)))
     (if (called-interactively-p 'interactive)
         (message "%s is duplicated to %s"
