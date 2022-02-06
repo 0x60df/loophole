@@ -4,7 +4,7 @@
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; Created: 30 Aug 2020
-;; Version: 0.8.1
+;; Version: 0.8.2
 ;; Keywords: convenience
 ;; URL: https://github.com/0x60df/loophole
 ;; Package-Requires: ((emacs "27.1"))
@@ -292,25 +292,33 @@ This is used by `loophole-obtain-kmacro-by-read-key'."
   :group 'loophole
   :type 'key-sequence)
 
-(defvar loophole-kmacro-by-recursive-edit-map
+(define-obsolete-variable-alias 'loophole-kmacro-by-recursive-edit-map
+  'loophole-defining-kmacro-map "27.1")
+(defvar loophole-defining-kmacro-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c[" #'loophole-end-kmacro)
     (define-key map "\C-c\\" #'loophole-abort-kmacro)
     map)
-  "Keymap for `loophole-obtain-kmacro-by-recursive-edit'.
+  "Keymap for defining kmacro with Loophole utilities.
 This map is enabled temporarily during
-`loophole-obtain-kmacro-by-recursive-edit',
-and activity of this map is controled by
-`loophole-kmacro-by-recursive-edit-map-flag'.")
+`loophole-obtain-kmacro-by-recursive-edit', and
+`loophole-obtain-kmacro-on-top-level' to offer some bindings
+which is helpful for defining kmacro.
+Activity of this map is controled by
+`loophole-defining-kmacro-map-flag'.")
 
-(defcustom loophole-kmacro-by-recursive-edit-map-flag t
-  "Non-nil means `loophole-kmacro-by-recursive-edit-map' is enabled."
+(define-obsolete-variable-alias 'loophole-kmacro-by-recursive-edit-map-flag
+  'loophole-defining-kmacro-map-flag "27.1")
+(defcustom loophole-defining-kmacro-map-flag t
+  "Non-nil means `loophole-defining-kmacro-map' is enabled."
   :group 'loophole
   :type 'boolean)
 
-(defcustom loophole-kmacro-by-recursive-edit-map-tag
+(define-obsolete-variable-alias 'loophole-kmacro-by-recursive-edit-map-tag
+  'loophole-defining-kmacro-map-tag "27.1")
+(defcustom loophole-defining-kmacro-map-tag
   "kmacro[End: \\[loophole-end-kmacro], Abort: \\[loophole-abort-kmacro]]"
-  "Tag string for `loophole-kmacro-by-recursive-edit-map'."
+  "Tag string for `loophole-defining-kmacro-map'."
   :group 'loophole
   :type 'string)
 
@@ -3324,23 +3332,99 @@ finished by calling `loophole-end-kmacro' which is bound to
 \\[loophole-end-kmacro].
 Besides, Definition can be aborted by calling
 `loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro].
-\\<loophole-kmacro-by-recursive-edit-map>
-If `loophole-kmacro-by-recursive-edit-map-flag' is non-nil,
-special keymap `loophole-kmacro-by-recursive-edit-map' is
+\\<loophole-defining-kmacro-map>
+If `loophole-defining-kmacro-map-flag' is non-nil,
+special keymap `loophole-defining-kmacro-map' is
 enabled only during recursive edit.
-Actually, `loophole-kmacro-by-recursive-edit-map' is
+Actually, `loophole-defining-kmacro-map' is
 registered to Loophole as a gloabl map, and unregistered
 after recursive edit is ended.
 In this case, `loophole-end-kmacro' is bound to \\[loophole-end-kmacro].
 and `loophole-abort-kmacro' is bound to \\[loophole-abort-kmacro]."
-  (loophole-register 'loophole-kmacro-by-recursive-edit-map
-                     'loophole-kmacro-by-recursive-edit-map-flag
-                      loophole-kmacro-by-recursive-edit-map-tag
+  (loophole-register 'loophole-defining-kmacro-map
+                     'loophole-defining-kmacro-map-flag
+                      loophole-defining-kmacro-map-tag
                       t)
   (unwind-protect
       (loophole-start-kmacro)
-    (loophole-unregister 'loophole-kmacro-by-recursive-edit-map))
+    (loophole-unregister 'loophole-defining-kmacro-map))
   (kmacro-lambda-form (kmacro-ring-head)))
+
+(defun loophole-obtain-kmacro-on-top-level (key &optional keymap)
+  "Exit binidng command once and bind kmacro after defining it.
+Be careful to use this method, because this function does
+not return value but emit signal and exit binding command
+to avoid using `recursive-edit'.
+This method is a counterpart of
+`loophole-obtain-kmacro-by-recursive-edit'.
+\\<loophole-mode-map>
+When this method is invoked, keyboard macro defining session
+is activated, and binidng command is exited, then controll
+is completely returned to user.  User can define keyboard
+macro in ordinary environment.
+Definition can be finished by calling
+`loophole-end-kmacro' which is bound to \\[loophole-end-kmacro],
+then defined keyboard macro is bound to KEY.
+Besides, Definition can be aborted by calling
+`loophole-abort-kmacro' which is bound to \\[loophole-abort-kmacro],
+or more simply, `keyboard-quit' (\\[keyboard-quit]) abort definition
+properly.
+\\<loophole-defining-kmacro-map>
+If `loophole-defining-kmacro-map-flag' is non-nil,
+special keymap `loophole-defining-kmacro-map' is
+enabled only during keyboard macro defining session.
+Actually, `loophole-defining-kmacro-map' is
+registered to Loophole as a gloabl map, and unregistered
+after defining session is ended.
+In this case, `loophole-end-kmacro' is bound to \\[loophole-end-kmacro].
+and `loophole-abort-kmacro' is bound to \\[loophole-abort-kmacro].
+
+If optional argument KEYMAP is non-nil, KEY and keyboard
+macro are bound on KEYMAP."
+  (let* ((end (make-symbol "loophole-kmacro-on-top-level-end"))
+         (abort (make-symbol "loophole-kmacro-on-top-level-abort"))
+         (clean (lambda ()
+                  (advice-remove 'loophole-end-kmacro end)
+                  (advice-remove 'loophole-abort-kmacro abort)
+                  (if (loophole-registered-p
+                       'loophole-defining-kmacro-map)
+                      (loophole-unregister
+                       'loophole-defining-kmacro-map)))))
+    (fset end (lambda ()
+                (interactive)
+                (unwind-protect
+                    (when defining-kbd-macro
+                      (kmacro-end-macro nil)
+                      (loophole-bind-entry
+                       key
+                       (kmacro-lambda-form (kmacro-ring-head))
+                       keymap))
+                  (funcall clean))))
+    (fset abort (lambda ()
+                  (interactive)
+                  (unwind-protect
+                      (if defining-kbd-macro (keyboard-quit))
+                    (funcall clean))))
+    (loophole-register 'loophole-defining-kmacro-map
+                       'loophole-defining-kmacro-map-flag
+                       loophole-defining-kmacro-map-tag
+                       t)
+    (advice-add 'loophole-end-kmacro :override end)
+    (advice-add 'loophole-abort-kmacro :override abort)
+    (let ((setup (make-symbol "loophole-one-time-hook-function"))
+          (follow (make-symbol "loophole-transient-hook-function")))
+      (fset setup (lambda ()
+                    (unwind-protect
+                        (funcall-interactively #'loophole-start-kmacro)
+                      (add-hook 'post-command-hook follow)
+                      (remove-hook 'post-command-hook setup))))
+      (fset follow (lambda ()
+                     (unless defining-kbd-macro
+                       (unwind-protect
+                           (funcall clean)
+                         (remove-hook 'post-command-hook follow)))))
+      (add-hook 'post-command-hook setup))
+    (signal 'quit nil)))
 
 (defun loophole-obtain-kmacro-by-recall-record (key &optional _keymap)
   "Return kmacro obtained by recalling record.
