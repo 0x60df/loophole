@@ -1441,13 +1441,14 @@ evaluated occasionally in future."
 
 (defun loophole--valid-form (map-variable)
   "Return list of valid stored form of MAP-VARIABLE.
-Invalid forms are removed by side effect."
-  (let ((valid-form (seq-filter (lambda (key-form)
-                                  (eq (lookup-key
-                                       (symbol-value map-variable)
-                                       (car key-form))
-                                      (eval (cdr key-form))))
-                                (get map-variable :loophole-form-storage))))
+Invalid and duplicated forms are removed by side effect."
+  (let ((valid-form (seq-uniq
+                     (seq-filter (lambda (key-form)
+                                   (eq (lookup-key
+                                        (symbol-value map-variable)
+                                        (car key-form))
+                                       (eval (cdr key-form))))
+                                 (get map-variable :loophole-form-storage)))))
     (put map-variable :loophole-form-storage valid-form)
     valid-form))
 
