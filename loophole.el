@@ -2632,23 +2632,25 @@ from Loophole."
                                           (if key
                                               (vconcat
                                                (vector key)
-                                               (reverse reversal-key-list)))))
+                                               (reverse reversal-key-list))))
+                                         (form
+                                          (cdr (assoc key-vector valid-form))))
                                     (if trimmed-sub-element
-                                        (if (and key-vector
-                                                 (assoc key-vector valid-form))
-                                            (if (equal (cdr trimmed-sub-element)
-                                                       (cdr sub-element))
-                                                (setcdr
-                                                 (last merger-element)
-                                                 (cons
-                                                  (cons key
-                                                        (eval
-                                                         (cdr (assoc
-                                                               key-vector
-                                                               valid-form))))
-                                                  nil))
-                                                (push key-vector
-                                                      key-list-for-form))
+                                        (if (and key-vector form)
+                                            (when (equal
+                                                   (cdr trimmed-sub-element)
+                                                   (cdr sub-element))
+                                              (setcdr
+                                               (last merger-element)
+                                               (cons (cons key (eval form))
+                                                     nil))
+                                              (put
+                                               merger-map-variable
+                                               :loophole-form-storage
+                                               (cons
+                                                (cons key-vector form)
+                                                (get merger-map-variable
+                                                     :loophole-form-storage))))
                                           (setcdr (last merger-element)
                                                   (cons trimmed-sub-element
                                                         nil)))))))))
@@ -2660,7 +2662,8 @@ from Loophole."
              (pseudo-merger-root-element (cons nil merger-map)))
         (funcall merge-element pseudo-root-element
                  pseudo-merger-root-element nil))))
-  (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
+  (let ((protected-keymap (get map-variable :loophole-protected-keymap))
+        (valid-form (loophole--valid-form map-variable)))
     (if protected-keymap
         (dolist (protected-element (reverse
                                     (loophole--protected-keymap-entry-list
@@ -2668,12 +2671,18 @@ from Loophole."
           (let* ((prefix-key (loophole--protected-keymap-prefix-key
                               protected-element))
                  (entry (lookup-key (car protected-element) prefix-key))
-                 (merger-keymap (symbol-value merger-map-variable)))
-            (if (or (null (lookup-key merger-keymap prefix-key))
+                 (merger-keymap (symbol-value merger-map-variable))
+                 (form (cdr (assoc prefix-key valid-form))))
+            (when (or (null (lookup-key merger-keymap prefix-key))
                     (null (loophole--trace-key-to-find-non-keymap-entry
                            prefix-key merger-keymap)))
-                (loophole--add-protected-keymap-entry
-                 merger-map-variable prefix-key entry))))))
+              (loophole--add-protected-keymap-entry
+               merger-map-variable prefix-key entry)
+              (if form
+                  (put merger-map-variable :loophole-form-storage
+                       (cons
+                        (cons prefix-key form)
+                        (get merger-map-variable :loophole-form-storage)))))))))
   (loophole-unregister map-variable)
   (run-hook-with-args 'loophole-after-merge-functions merger-map-variable))
 
