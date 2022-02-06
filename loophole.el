@@ -36,10 +36,9 @@
 
 ;;; Code:
 
-(if (version< emacs-version "28")
-    (declare-function describe-keymap nil))
-
-(declare-function seq-uniq "seq")
+(when (version< emacs-version "28")
+  (declare-function describe-keymap nil)
+  (declare-function seq-uniq "seq"))
 
 (defvar kmacro-ring)
 (declare-function kmacro-loop-setup-function "kmacro")
