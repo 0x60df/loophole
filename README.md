@@ -430,9 +430,14 @@ It also can be customized by the same way.
 Elements of these `loophole-bind-*-order` may contain `:keymap` property in
 addition to `:key` property.
 It looks like `(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP)`.
-`OBTAIN-KEYMAP` is a function which takes two arguments the
-key and entry to be bound, and returns keymap object on
-which key and entry are bound; this overrides editing loophole map.
+`OBTAIN-KEYMAP` is a function which takes one argument the key to be bound,
+and returns keymap object on which key and entry are bound;
+this overrides editing loophole map.
+When using `:keymap` property, OBTAIN-ENTRY takes two arguments the key and
+the keymap.
+If you use your own obtaining method for `loophole-set-key` and
+`loophole-bind-*`, it should takes one normal argument the key and one optional
+argument the keymap.
 
 ### Key bindings for Loophole commands
 

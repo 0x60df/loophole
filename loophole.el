@@ -185,6 +185,27 @@ write protected."
   :group 'loophole
   :type 'number)
 
+(defcustom loophole-read-buffer-inhibit-recursive-edit nil
+  "Flag if `recursive-edit' is inhibited on `loophole-read-buffer'.
+Instead of it, `loophole-read-buffer' set up some utilities
+and `signal' quit.  One of the utilities is a binidng
+`loophole-read-buffer-finish-key' with a command which calls
+CALLBACK with one argument a read form.
+By these utilities, user can work with the buffer as well as
+using `recursive-edit' while released from `recursive-edit'."
+  :group 'loophole
+  :type 'boolean)
+
+(defcustom loophole-read-buffer-finish-key [?\C-c ?\C-c]
+  "Key for finishing `loophole-read-buffer'."
+  :group 'loophole
+  :type 'key-sequence)
+
+(defcustom loophole-read-buffer-abort-key [?\C-c ?\C-k]
+  "Key for aborting `loophole-read-buffer'."
+  :group 'loophole
+  :type 'key-sequence)
+
 (defcustom loophole-force-overwrite-bound-variable t
   "Flag if use bound variable and overwrite it without prompting."
   :group 'loophole
@@ -249,14 +270,6 @@ This should be set before `loophole-use-idle-save' to take
 effect."
   :group 'loophole
   :type 'number)
-
-(defvar loophole-write-lisp-mode-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map emacs-lisp-mode-map)
-    (define-key map "\C-c\C-c" #'loophole-finish-writing-lisp)
-    (define-key map "\C-c\C-k" #'loophole-abort-writing-lisp)
-    map)
-  "Keymap for `loophole-write-lisp-mode'.")
 
 (defcustom loophole-command-by-lambda-form-format
   (concat "(lambda (&optional arg)\n"
@@ -985,6 +998,126 @@ If there are no candidates after PREDICATE is applied to
       (if (null map-variable-list)
           (user-error "There are no suitable loophole maps")))))
 
+(defmacro loophole--with-current-buffer-other-window (buffer-or-name &rest body)
+  "Execute BODY with BUFFER-OR-NAME displayed in other window.
+The buffer specified by BUFFER-OR-NAME is transiently
+displayed in other window, and immediately after body is
+executed, original window configuration is recovered."
+  (declare (debug t) (indent 1))
+  `(let ((window (selected-window))
+         (frame (selected-frame))
+         other-window)
+     (unwind-protect
+         (progn
+           (switch-to-buffer-other-window (get-buffer-create ,buffer-or-name) t)
+           (setq other-window (selected-window))
+           ,@body)
+       (if (window-prev-buffers)
+           (progn
+             (switch-to-prev-buffer other-window)
+             (if (frame-live-p frame) (select-frame-set-input-focus frame t))
+             (if (window-live-p window) (select-window window t)))
+         (if (= 1 (length (window-list)))
+             (delete-frame nil t)
+           (delete-window))))))
+
+(defun loophole-read-buffer (callback &optional buffer)
+  "Read Lisp object from current buffer after user modifies it.
+
+This function usually starts `recursive-edit', to give user
+an environment for writing Lisp form on a buffer.
+Typing `loophole-read-buffer-finish-key' finishes writing
+form, and the first form is read and returned.
+Typing `loophole-read-buffer-abort-key' aborts it.
+
+If user option `loophole-read-buffer-inhibit-recursive-edit'
+is non-nil, this function set up some utilities and `signal'
+quit.  One of the utilities is a binidng
+`loophole-read-buffer-finish-key' with a command which calls
+CALLBACK with one argument a read form.
+By these utilities, user can use the buffer as well as using
+`recursive-edit' while released from `recursive-edit'.
+To allow user to choose inhibiting `recursive-edit',
+CALLBACK must be defined.
+
+If optional argument BUFFER is non-nil and is an alive
+buffer, use it instead of current buffer."
+  (setq buffer (or (if (buffer-live-p buffer) buffer)
+                   (current-buffer)))
+  (with-current-buffer buffer
+    (let* ((mode major-mode)
+           (clean-buffer (lambda ()
+                           (if (buffer-live-p buffer)
+                               (with-current-buffer buffer
+                                 (setq header-line-format nil)
+                                 (use-local-map emacs-lisp-mode-map)
+                                 (funcall mode))))))
+      (emacs-lisp-mode)
+      (use-local-map (let ((map (make-sparse-keymap)))
+                       (set-keymap-parent map emacs-lisp-mode-map)
+                       map))
+      (setq header-line-format
+            `(""
+              mode-line-front-space
+              ,(format "Writing lisp form.  finish `%s', Abort `%s'."
+                       (key-description loophole-read-buffer-finish-key)
+                       (key-description loophole-read-buffer-abort-key))))
+      (if loophole-read-buffer-inhibit-recursive-edit
+          (let* ((window (selected-window))
+                 (frame (selected-frame))
+                 (clean-window (lambda ()
+                                 (if (window-prev-buffers)
+                                     (progn
+                                       (switch-to-prev-buffer nil t)
+                                       (if (frame-live-p frame)
+                                           (select-frame-set-input-focus frame
+                                                                         t))
+                                       (if (window-live-p window)
+                                           (select-window window t)))
+                                   (if (= 1 (length (window-list)))
+                                       (delete-frame nil t)
+                                     (delete-window)))))
+                 (hook-function (make-symbol
+                                 "loophole-one-time-hook-function")))
+            (define-key (current-local-map) loophole-read-buffer-finish-key
+              (lambda ()
+                (interactive)
+                (funcall clean-buffer)
+                (if (functionp callback)
+                    (save-excursion
+                      (goto-char 1)
+                      (funcall callback (read (current-buffer)))))
+                (funcall clean-window)))
+            (define-key (current-local-map) loophole-read-buffer-abort-key
+              (lambda ()
+                (interactive)
+                (funcall clean-buffer)
+                (funcall clean-window)))
+            (fset hook-function
+                  (lambda ()
+                    (unwind-protect
+                        (progn
+                          (switch-to-buffer-other-window buffer)
+                          (message nil))
+                      (remove-hook 'post-command-hook hook-function))))
+            (add-hook 'post-command-hook hook-function)
+            (signal 'quit nil))
+        (define-key (current-local-map) loophole-read-buffer-finish-key
+          (lambda ()
+            (interactive)
+            (funcall clean-buffer)
+            (exit-recursive-edit)))
+        (define-key (current-local-map) loophole-read-buffer-abort-key
+          (lambda ()
+            (interactive)
+            (funcall clean-buffer)
+            (abort-recursive-edit)))
+        (loophole--with-current-buffer-other-window buffer
+          (recursive-edit)
+          (save-excursion
+            (goto-char 1)
+            (read (current-buffer))))))))
+
 (defun loophole-map-variable-for-keymap (keymap)
   "Return map variable whose value is KEYMAP."
   (let* ((state-variable (car (rassq keymap loophole--map-alist)))
@@ -1037,38 +1170,6 @@ Otherwise, this macro does BODY on all existing buffers."
                           loophole--buffer-list
                         (buffer-list)))
        (with-current-buffer ,buffer ,@body))))
-
-(defmacro loophole--with-current-buffer-other-window (buffer-or-name &rest body)
-  "Execute BODY with BUFFER-OR-NAME displayed in other window.
-The buffer specified by BUFFER-OR-NAME is transiently
-displayed in other window, and immediately after body is
-executed, original window configuration is recovered."
-  (declare (debug t) (indent 1))
-  (let ((buffer (make-symbol "buffer"))
-        (window (make-symbol "window"))
-        (frame (make-symbol "frame"))
-        (configuration-list (make-symbol "configuration-list"))
-        (workspace (make-symbol "workspace")))
-    `(let ((,buffer (current-buffer))
-           (,window (selected-window))
-           (,frame (selected-frame))
-           (,configuration-list (mapcar #'current-window-configuration
-                                          (frame-list))))
-       (unwind-protect
-           (let ((,workspace (get-buffer-create ,buffer-or-name)))
-             (switch-to-buffer-other-window ,workspace t)
-             ,@body)
-         (let ((configuration
-                (seq-find (lambda (c)
-                            (eq (selected-frame)
-                                (window-configuration-frame c)))
-                          ,configuration-list)))
-           (if configuration
-               (set-window-configuration configuration)
-             (delete-frame)))
-         (if (frame-live-p ,frame) (select-frame-set-input-focus ,frame t))
-         (if (window-live-p ,window) (select-window ,window t))
-         (if (buffer-live-p ,buffer) (switch-to-buffer ,buffer t t))))))
 
 (defun loophole--char-read-syntax (event)
   "Return printed representation of EVENT by question mark format.
@@ -2952,46 +3053,6 @@ FILE will be asked."
 
 ;;; Binding utilities
 
-(define-derived-mode loophole-write-lisp-mode emacs-lisp-mode
-  "Loophole Write Lisp"
-  "Auxiliary major mode for writing Lisp form in Loophole.
-Calling this major mode in Lisp program offers
-`emacs-lisp-mode' like environment with few key bindings and
-recursive edit.
-After finish or abort writing, caller can get written
-forms by `buffer-string'.
-If writing is finished, forms following calling this
-function will be evaluated.
-In order to do something even for abort case, call this
-function in body form of `unwind-protect' and write follow
-up forms in unwind forms."
-  :group 'loophole
-  (setq header-line-format
-        `(""
-          mode-line-front-space
-          ,(substitute-command-keys
-            (concat "\\<loophole-write-lisp-mode-map>"
-                    "Writing lisp form.  "
-                    "finish `\\[loophole-finish-writing-lisp]', "
-                    "Abort `\\[loophole-abort-writing-lisp]'."))))
-  (recursive-edit))
-
-(defun loophole-finish-writing-lisp ()
-  "Finish writing Lisp form in `loophole-write-lisp-mode' buffer."
-  (interactive)
-  (unless (zerop (recursion-depth))
-    (if (eq major-mode 'loophole-write-lisp-mode)
-        (emacs-lisp-mode))
-    (exit-recursive-edit)))
-
-(defun loophole-abort-writing-lisp ()
-  "Abort writing Lisp form in `loophole-write-lisp-mode' buffer."
-  (interactive)
-  (unless (zerop (recursion-depth))
-    (if (eq major-mode 'loophole-write-lisp-mode)
-        (emacs-lisp-mode))
-    (abort-recursive-edit)))
-
 (defun loophole-start-kmacro ()
   "Start defining keyboard macro.
 Definition can be finished by calling `loophole-end-kmacro'."
@@ -3122,30 +3183,31 @@ key and binding only."
           (setq obtain-keymap-function
                 (unless without-keymap
                   (funcall get-obtain-keymap-function obtaining-method-spec))))
-        (let* ((arg-entry (funcall obtain-entry-function arg-key))
-               (arg-keymap (if (and (not without-keymap)
+        (let* ((arg-keymap (if (and (not without-keymap)
                                     obtain-keymap-function)
                                (funcall obtain-keymap-function
-                                        arg-key
-                                        arg-entry))))
+                                        arg-key)))
+               (arg-entry (if arg-keymap
+                              (funcall obtain-entry-function arg-key arg-keymap)
+                            (funcall obtain-entry-function arg-key))))
           (if without-keymap
               (list arg-key arg-entry)
             (list arg-key arg-entry arg-keymap)))))))
 
 ;;; Obtaining methods
 
-(defun loophole-obtain-object (key)
+(defun loophole-obtain-object (key &optional _keymap)
   "Return any Lisp object.
 Object is obtained as return value of `eval-minibuffer'.
 Read minibuffer with prompt in which KEY is embedded."
   (eval-minibuffer (format "Set key %s to entry: " (key-description key))))
 
-(defun loophole-obtain-command-by-read-command (key)
+(defun loophole-obtain-command-by-read-command (key &optional _keymap)
   "Return command obtained by reading command symbol.
 Read command with prompt in which KEY is embedded."
   (read-command (format "Set key %s to command: " (key-description key))))
 
-(defun loophole-obtain-command-by-key-sequence (key)
+(defun loophole-obtain-command-by-key-sequence (key &optional _keymap)
   "Return command obtained by key sequence lookup.
 Read key sequence with prompt in which KEY is embedded."
   (let ((binding (key-binding (loophole-read-key
@@ -3156,31 +3218,53 @@ Read key sequence with prompt in which KEY is embedded."
     (message "%s" binding)
     binding))
 
-(defun loophole-obtain-command-by-lambda-form (_key)
+(defun loophole-obtain-command-by-lambda-form (key &optional keymap)
   "Return command obtained by writing lambda form.
 This function provides work space for writing lambda form as
 a temporary buffer.
 Actually, any Lisp forms can be written in a temporary
 buffer, and if return value of evaluating first form is
-valid lambda command, this function return it."
-  (loophole--with-current-buffer-other-window "*Loophole*"
-    (erase-buffer)
-    (insert ";; For obtaining lambda form.\n\n")
-    (insert loophole-command-by-lambda-form-format)
-    (if (search-backward "(#)" nil t) (delete-region (point) (+ (point) 3)))
-    (setq buffer-undo-list nil)
-    (deactivate-mark t)
-    (loophole-write-lisp-mode)
-    (goto-char 1)
-    (let ((lambda-form (eval (read (current-buffer)))))
-      (if (and (commandp lambda-form)
-               (listp lambda-form)
-               (eq (car lambda-form) 'lambda))
-          lambda-form
-        (user-error "Obtained Lisp object is not valid lambda command: %s"
-                    lambda-form)))))
+valid lambda command, this function return it.
 
-(defun loophole-obtain-kmacro-by-read-key (key)
+Because this function uses `loophole-read-buffer' to give
+user a workspace, if user option
+`loophole-read-buffer-inhibit-recursive-edit' is non-nil,
+a binding command who calls this function is quit, and
+workspace is remained with transient local binidngs whose
+entry binds KEY and obtained lambda form.
+If optional argument KEYMAP is non-nil, they are bound on
+KEYMAP."
+  (let ((binding-buffer (current-buffer))
+        (writing-buffer (get-buffer-create "*Loophole*")))
+    (with-current-buffer writing-buffer
+      (erase-buffer)
+      (insert ";; For obtaining lambda form.\n\n")
+      (insert loophole-command-by-lambda-form-format)
+      (if (search-backward "(#)" nil t) (delete-region (point) (+ (point) 3)))
+      (setq buffer-undo-list nil)
+      (deactivate-mark t))
+    (let* ((test-and-return
+            (lambda (form)
+              (let ((lambda-form (eval form)))
+                (if (and (commandp lambda-form)
+                         (listp lambda-form)
+                         (eq (car lambda-form) 'lambda))
+                    lambda-form
+                  (user-error
+                   "Obtained Lisp object is not valid lambda command: %s"
+                   lambda-form)))))
+           (test-and-bind
+            (lambda (form)
+              (if (buffer-live-p binding-buffer)
+                  (with-current-buffer binding-buffer
+                    (loophole-bind-entry key (funcall test-and-return form)
+                                         (if keymap
+                                             keymap
+                                           (loophole-ready-map))))))))
+      (funcall test-and-return (loophole-read-buffer test-and-bind
+                                                     writing-buffer)))))
+
+(defun loophole-obtain-kmacro-by-read-key (key &optional _keymap)
   "Return kmacro obtained by reading key.
 This function `read-key' recursively with prompt in which
 KEY is embedded.  When you finish keyboard macro, type
@@ -3231,7 +3315,7 @@ you can finish definition of kmacro by new finish key, and
           (setq last-kbd-macro macro)
           (kmacro-lambda-form (kmacro-ring-head)))))))
 
-(defun loophole-obtain-kmacro-by-recursive-edit (_key)
+(defun loophole-obtain-kmacro-by-recursive-edit (_key &optional _keymap)
   "Return kmacro obtained by recursive edit.
 \\<loophole-mode-map>
 This function starts recursive edit in order to offer
@@ -3258,7 +3342,7 @@ and `loophole-abort-kmacro' is bound to \\[loophole-abort-kmacro]."
     (loophole-unregister 'loophole-kmacro-by-recursive-edit-map))
   (kmacro-lambda-form (kmacro-ring-head)))
 
-(defun loophole-obtain-kmacro-by-recall-record (key)
+(defun loophole-obtain-kmacro-by-recall-record (key &optional _keymap)
   "Return kmacro obtained by recalling record.
 Completing read record with prompt in which KEY is embedded."
   (unless (featurep 'kmacro)
@@ -3289,7 +3373,7 @@ Completing read record with prompt in which KEY is embedded."
                                   alist nil t)))
       (kmacro-lambda-form (cdr (assoc read alist))))))
 
-(defun loophole-obtain-array-by-read-key (key)
+(defun loophole-obtain-array-by-read-key (key &optional _keymap)
   "Return array obtained by reading key.
 This function `read-key' recursively with prompt in which
 KEY is embedded.  When you finish inputting key sequence,
@@ -3336,12 +3420,12 @@ takes effect as quit."
                       (t (funcall read-arbitrary-key-sequence k-v)))))))
         (funcall read-arbitrary-key-sequence [])))))
 
-(defun loophole-obtain-array-by-read-string (key)
+(defun loophole-obtain-array-by-read-string (key &optional _keymap)
   "Return array obtained by `read-string'.
 Read string with prompt in which KEY is embedded ."
   (read-string (format "Set key %s to array: " (key-description key))))
 
-(defun loophole-obtain-keymap-by-read-keymap-variable (key)
+(defun loophole-obtain-keymap-by-read-keymap-variable (key &optional _keymap)
   "Return keymap obtained by reading keymap variable.
 Read keymap variable with prompt in which KEY is embedded."
   (let ((variable (intern
@@ -3357,7 +3441,7 @@ Read keymap variable with prompt in which KEY is embedded."
     (loophole-toss-binding-form key variable)
     (symbol-value variable)))
 
-(defun loophole-obtain-keymap-by-read-keymap-function (key)
+(defun loophole-obtain-keymap-by-read-keymap-function (key &optional _keymap)
   "Return keymap obtained by reading keymap function.
 Read keymap function with prompt in which KEY is embedded.
 Keymap function is a symbol whose function cell is a keymap
@@ -3375,7 +3459,7 @@ or a symbol whose function cell is ultimately a keymap."
                                       ',symbol))
     (loophole--symbol-function-recursively symbol)))
 
-(defun loophole-obtain-symbol-by-read-keymap-function (key)
+(defun loophole-obtain-symbol-by-read-keymap-function (key &optional _keymap)
   "Return symbol obtained by reading keymap function.
 Read keymap function with prompt in which KEY is embedded.
 Keymap function is a symbol whose function cell is a keymap
@@ -3389,14 +3473,14 @@ or a symbol whose function cell is ultimately a keymap."
                (keymapp f)))
            t)))
 
-(defun loophole-obtain-symbol-by-read-command (key)
+(defun loophole-obtain-symbol-by-read-command (key &optional _keymap)
   "Return symbol obtained by reading command symbol.
 Read command with prompt in which KEY is embedded."
   (read-command
    (format "Set key %s to symbol whose function cell is command: "
            (key-description key))))
 
-(defun loophole-obtain-symbol-by-read-array-function (key)
+(defun loophole-obtain-symbol-by-read-array-function (key &optional _keymap)
   "Return symbol obtained by reading array function.
 Read array function with prompt in which KEY is embedded.
 Array function is a symbol whose function cell is an array
@@ -3713,7 +3797,14 @@ and read it back when modifying is finished.
 In contrast with `loophole-obtain-command-by-lambda-form',
 this function does not evaluate the form but just read it.
 If temporary buffer contains multiple forms when finished,
-the first one will be read."
+the first one will be read.
+
+Because this function uses `loophole-read-buffer' to give
+user a workspace, if user option
+`loophole-read-buffer-inhibit-recursive-edit' is non-nil,
+this command is quit, and temporary buffer is remained with
+transient local binidngs whose entry binds KEY and modified
+lambda form."
   (interactive (list (loophole-read-key "Modify lambda form for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
@@ -3724,28 +3815,30 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key t)))
+  (let ((entry (lookup-key (symbol-value map-variable) key t))
+        (buffer (get-buffer-create "*Loophole*")))
     (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (and (commandp entry)
                      (listp entry)
                      (eq (car entry) 'lambda)))
            (user-error "Bound entry is not lambda form: %s" entry)))
-    (loophole--with-current-buffer-other-window "*Loophole*"
+    (with-current-buffer buffer
       (erase-buffer)
       (insert ";; For modifying lambda form.\n\n")
       (pp entry (current-buffer))
       (setq buffer-undo-list nil)
-      (deactivate-mark t)
-      (loophole-write-lisp-mode)
-      (goto-char 1)
-      (let ((lambda-form (read (current-buffer))))
-        (if (and (commandp lambda-form)
-                 (listp lambda-form)
-                 (eq (car lambda-form) 'lambda))
-            (loophole-bind-entry key lambda-form (symbol-value map-variable))
-          (user-error "Modified Lisp object is not valid lambda command: %s"
-                      lambda-form))))))
+      (deactivate-mark t))
+    (let ((test-and-bind
+           (lambda (form)
+             (if (and (commandp form)
+                      (listp form)
+                      (eq (car form) 'lambda))
+                 (loophole-bind-entry key form (symbol-value map-variable))
+               (user-error
+                "Modified Lisp object is not valid lambda command: %s"
+                form)))))
+      (funcall test-and-bind (loophole-read-buffer test-and-bind buffer)))))
 
 (defun loophole-modify-kmacro (key &optional map-variable)
   "Modify kmacro bound to KEY in MAP-VARIABLE.
@@ -3759,7 +3852,14 @@ Raw form of kmacro consists of basic keyboard macro which is
 a string or a vector, counter integer, and counter format.
 
 If temporary buffer contains multiple forms when finished,
-the first one will be read."
+the first one will be read.
+
+Because this function uses `loophole-read-buffer' to give
+user a workspace, if user option
+`loophole-read-buffer-inhibit-recursive-edit' is non-nil,
+this command is quit, and temporary buffer is remained with
+transient local binidngs whose entry binds KEY and modified
+lambda form."
   (interactive (list (loophole-read-key "Modify kmacro for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
@@ -3770,14 +3870,15 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key t)))
+  (let ((entry (lookup-key (symbol-value map-variable) key t))
+        (buffer (get-buffer-create "*Loophole*")))
     (unless (featurep 'kmacro)
       (user-error "Bound entry cannot be kmacro, feature has not been loaded"))
     (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (kmacro-p entry))
            (user-error "Bound entry is not kmacro: %s" entry)))
-    (loophole--with-current-buffer-other-window "*Loophole*"
+    (with-current-buffer buffer
       (erase-buffer)
       (insert ";; For modifying kmacro.\n\n")
       (let ((extracted (kmacro-extract-lambda entry)))
@@ -3790,13 +3891,16 @@ the first one will be read."
                     "\n")
           (pp extracted (current-buffer))))
       (setq buffer-undo-list nil)
-      (deactivate-mark t)
-      (loophole-write-lisp-mode)
-      (goto-char 1)
-      (let ((kmacro (kmacro-lambda-form (read (current-buffer)))))
-        (if (kmacro-p kmacro)
-            (loophole-bind-entry key kmacro (symbol-value map-variable))
-          (user-error "Modified Lisp object is not kmacro: %s" kmacro))))))
+      (deactivate-mark t))
+    (let ((test-and-bind
+           (lambda (form)
+             (let ((kmacro (kmacro-lambda-form form)))
+               (if (kmacro-p kmacro)
+                   (loophole-bind-entry key kmacro
+                                        (symbol-value map-variable))
+                 (user-error "Modified Lisp object is not kmacro: %s"
+                             kmacro))))))
+      (funcall test-and-bind (loophole-read-buffer test-and-bind buffer)))))
 
 (defun loophole-modify-array (key &optional map-variable)
   "Modify array bound to KEY in MAP-VARIABLE.
@@ -3806,7 +3910,14 @@ This function print bound array to temporary buffer, and
 read it back when modifying is finished.
 This function does not evaluate the form but just read it.
 If temporary buffer contains multiple forms when finished,
-the first one will be read."
+the first one will be read.
+
+Because this function uses `loophole-read-buffer' to give
+user a workspace, if user option
+`loophole-read-buffer-inhibit-recursive-edit' is non-nil,
+this command is quit, and temporary buffer is remained with
+transient local binidngs whose entry binds KEY and modified
+lambda form."
   (interactive (list (loophole-read-key "Modify array for key: ")
                      (if current-prefix-arg
                          (loophole-read-map-variable "Lookup: "))))
@@ -3817,12 +3928,13 @@ the first one will be read."
     (unless map-variable
       (user-error "No entry found in loophole maps for key: %s"
                   (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key t)))
+  (let ((entry (lookup-key (symbol-value map-variable) key t))
+        (buffer (get-buffer-create "*Loophole*")))
     (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
           ((not (or (vectorp entry) (stringp entry)))
            (user-error "Bound entry is not array: %s" entry)))
-    (loophole--with-current-buffer-other-window "*Loophole*"
+    (with-current-buffer buffer
       (erase-buffer)
       (insert ";; For modifying array.\n\n")
       (insert ";; Key description: " (key-description entry) "\n")
@@ -3830,13 +3942,15 @@ the first one will be read."
           (insert "[" (mapconcat #'loophole--char-read-syntax entry " ") "]\n")
         (pp entry (current-buffer)))
       (setq buffer-undo-list nil)
-      (deactivate-mark t)
-      (loophole-write-lisp-mode)
-      (goto-char 1)
-      (let ((array (read (current-buffer))))
-        (if (or (vectorp array) (stringp array))
-            (loophole-bind-entry key array (symbol-value map-variable))
-          (user-error "Modified Lisp object is not array: %s" array))))))
+      (deactivate-mark t))
+    (let ((test-and-bind (lambda (form)
+                           (if (or (vectorp form) (stringp form))
+                               (loophole-bind-entry
+                                key form (symbol-value map-variable))
+                             (user-error
+                              "Modified Lisp object is not array: %s"
+                              form)))))
+      (funcall test-and-bind (loophole-read-buffer test-and-bind buffer)))))
 
 (defun loophole-modify-entry (key &optional map-variable)
   "Modify entry bound to KEY in MAP-VARIABLE.
