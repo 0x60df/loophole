@@ -2816,7 +2816,7 @@ FILE will be asked."
                               ((or (memq loophole-base-map parent)
                                    (and protected-keymap
                                         (memq protected-keymap parent)))
-                               (let* ((copy (copy-list parent))
+                               (let* ((copy (copy-sequence parent))
                                       (protected-cell
                                        (and protected-keymap
                                             (memq protected-keymap copy))))
