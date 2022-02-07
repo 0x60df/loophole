@@ -108,10 +108,6 @@ all local values and default value of `loophole--map-alist'.")
 If `loophole-use-idle-save' is set t, idle timer is kept in
 this variable.
 Idle timer do `loophole-save'.")
-
-(defvar loophole--read-map-variable-help-condition
-  '((index . 0) (last))
-  "Condition of help for `loophole-read-map-variable'.")
 
 ;;; User options
 
@@ -966,46 +962,39 @@ non-nil if that map variable should be used for candidates.
 If there are no candidates after PREDICATE is applied to
 `loophole-map-variable-list', this function finally signals
 `user-error'."
-  (let ((map-variable-list
-         (if predicate
-             (seq-filter predicate (loophole-map-variable-list))
-           (loophole-map-variable-list)))
-        (minibuffer-help-form
-         '(let ((completions (all-completions
-                              (minibuffer-contents)
-                              minibuffer-completion-table
-                              minibuffer-completion-predicate))
-                (index (cdr
-                        (assq 'index
-                              loophole--read-map-variable-help-condition)))
-                (last (cdr
-                       (assq 'last
-                             loophole--read-map-variable-help-condition))))
-            (if completions
-                (progn
-                  (if (equal completions last)
-                      (push `(index . ,(if (< index (- (length completions) 1))
-                                           (1+ index)
-                                         0))
-                            loophole--read-map-variable-help-condition)
-                    (push '(index . 0)
-                          loophole--read-map-variable-help-condition)
-                    (push `(last . ,completions)
-                          loophole--read-map-variable-help-condition))
-                  (let* ((i (cdr (assq
-                                  'index
-                                  loophole--read-map-variable-help-condition)))
-                         (map-variable (intern (elt completions i))))
-                    (if map-variable (loophole-describe map-variable))))
-              (push '(index . 0)
-                    loophole--read-map-variable-help-condition)
-              (push `(last . ,completions)
-                    loophole--read-map-variable-help-condition)))))
-    (unwind-protect
-        (intern (completing-read prompt map-variable-list nil t))
-      (setq loophole--read-map-variable-help-condition '((index . 0) (last)))
-      (if (null map-variable-list)
-          (user-error "There are no suitable loophole maps")))))
+  (let* ((map-variable-list
+          (if predicate
+              (seq-filter predicate (loophole-map-variable-list))
+            (loophole-map-variable-list)))
+         (help-condition '((index . 0) (last)))
+         (minibuffer-help-form
+          `(funcall
+            #',(lambda ()
+                 (let ((completions (all-completions
+                                     (minibuffer-contents)
+                                     minibuffer-completion-table
+                                     minibuffer-completion-predicate))
+                       (index (cdr (assq 'index help-condition)))
+                       (last (cdr (assq 'last help-condition))))
+                   (if completions
+                       (progn
+                         (if (equal completions last)
+                             (push `(index
+                                     .
+                                     ,(if (< index (- (length completions) 1))
+                                          (1+ index)
+                                        0))
+                                   help-condition)
+                           (push '(index . 0) help-condition)
+                           (push `(last . ,completions) help-condition))
+                         (let* ((i (cdr (assq 'index help-condition)))
+                                (map-variable (intern (elt completions i))))
+                           (if map-variable (loophole-describe map-variable))))
+                     (push '(index . 0) help-condition)
+                     (push `(last . ,completions) help-condition)))))))
+    (unless map-variable-list
+      (user-error "There are no suitable loophole maps"))
+    (intern (completing-read prompt map-variable-list nil t))))
 
 (defmacro loophole--with-current-buffer-other-window (buffer-or-name &rest body)
   "Execute BODY with BUFFER-OR-NAME displayed in other window.
