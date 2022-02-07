@@ -4066,7 +4066,7 @@ lambda form."
   "Modify entry bound to KEY in MAP-VARIABLE.
 If MAP-VARIABLE is nil, lookup all active Loophole maps.
 
-This function checks entry bound to KEY and call properly
+This function checks entry bound to KEY and call proper
 function to modify it."
   (interactive (list (loophole-read-key "Modify entry for key: ")
                      (if current-prefix-arg
@@ -4081,9 +4081,9 @@ function to modify it."
   (let ((entry (lookup-key (symbol-value map-variable) key t)))
     (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
+          ((kmacro-p entry) (loophole-modify-kmacro key map-variable))
           ((and (commandp entry) (listp entry) (eq (car entry) 'lambda))
            (loophole-modify-lambda-form key map-variable))
-          ((kmacro-p entry) (loophole-modify-kmacro key map-variable))
           ((or (vectorp entry) (stringp entry))
            (loophole-modify-array key map-variable))
           (t (message "%s is bound to unmodifiable entry: %s" key entry)))))
