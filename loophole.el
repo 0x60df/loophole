@@ -738,7 +738,21 @@ If nil, ordinary key event is printed as raw integer."
   :type 'string)
 
 (defcustom loophole-mode-lighter-use-face nil
-  "Flag if lighter use face."
+  "Flag if lighter use face.
+Even if this value is non-nil, mode-line lighter of Loophole
+may stay having no face with default `mode-line-format',
+because `minor-mode-alist' in default `mode-line-format',
+and `mode-line-modes' may be already propertized with some
+text properties.  To show `loophole-mode-lighter' with face,
+`mode-line-format' have to be modified by something like the
+following customization form.  Note that the following form
+eliminates help echos and clickable buttons.
+  (setq mode-line-modes
+        \\='(\"%[\" \"(\"
+          mode-name
+          mode-line-process
+          minor-mode-alist
+          \"%n\" \")\" \"%]\" \" \"))"
   :group 'loophole
   :type 'boolean)
 
