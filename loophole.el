@@ -243,23 +243,9 @@ This option takes effect with Emacs 28 or later."
   :type 'number)
 
 (defcustom loophole-idle-prioritize-time (* 60 15)
-  "Idle time to run idle prioritize."
+  "Idle time in seconds to run idle prioritize."
   :group 'loophole
   :type 'number)
-
-(defcustom loophole-idle-prioritize-list #'loophole-idle-prioritize-named-list
-  "List of map-variables for idle prioritize.
-The value of this user option also can be a function which
-returns a list of map variables.
-Entries which are not registered to Loophole is omitted.
-
-Map variables will be prioritized when
-`loophole-idle-prioritize-time' is spent.
-First entry of this list will be placed at the head of
-`loophole--map-alist'."
-  :group 'loophole
-  :type '(choice (repeat symbol)
-                 (function)))
 
 (defcustom loophole-idle-save-time (* 60 30)
   "Idle time to run idle save.
@@ -4533,10 +4519,20 @@ Remove hooks added by `loophole-turn-on-auto-editing-timer'."
   (remove-hook 'loophole-after-localize-editing-functions
                (lambda (_) (loophole-start-editing-timer))))
 
-(defun loophole-turn-on-idle-prioritize ()
+(defun loophole-turn-on-idle-prioritize (&optional target)
   "Turn on idle prioritize as user customization.
 Start idle timer for prioritizing Loophole maps according to
-`loophole-idle-prioritize-list'.
+TARGET.
+If TARGET is a list, listed map-variables are prioritized.
+If TARGET is a function, it should return a list of
+map-variable, and returned map-variables are prioritized.
+nIf TARGET is any other object, the function
+`loophole-idle-prioritize-named-list' is used instead.
+
+Entries which are not registered to Loophole is omitted.
+First entry of the list will be placed at the head of
+`loophole--map-alist'.
+
 Idle timer is set in `loophole--idle-prioritize-timer'."
   (if (timerp loophole--idle-prioritize-timer)
       (cancel-timer loophole--idle-prioritize-timer))
@@ -4545,13 +4541,13 @@ Idle timer is set in `loophole--idle-prioritize-timer'."
          loophole-idle-prioritize-time
          t
          (lambda ()
-           (let ((object (if (functionp loophole-idle-prioritize-list)
-                             (funcall loophole-idle-prioritize-list)
-                           loophole-idle-prioritize-list)))
+           (let ((object (cond ((functionp target) (funcall target))
+                               ((listp target) target)
+                               (t (loophole-idle-prioritize-named-list)))))
              (unless (listp object)
                (user-error
-                (concat "Idle prioritize failed.  "
-                        "loophole-idle-prioritize-list does not derive list")))
+                (format "Idle prioritize failed.  %s does not derive list"
+                        target)))
              (let ((map-variable-list
                     (seq-filter (lambda (map-variable)
                                   (and (symbolp map-variable)
@@ -4685,6 +4681,21 @@ For more detailed customization, see documentation string of
 
 (defcustom loophole-use-idle-prioritize nil
   "Flag if prioritize Loophole map when idle.
+When non-nil, idle prioritization is enabled and the value
+is passed to `loophole-turn-on-idle-prioritize'.
+Thus, if the value is a list, listed map-variables are
+prioritized.
+If the value is a function, it should return a list of
+map-variable, and returned map-variables are prioritized.
+If the value is other non-nil object, the function
+`loophole-idle-prioritize-named-list' is used.
+
+Entries which are not registered to Loophole is omitted.
+First entry of the list will be placed at the head of
+`loophole--map-alist'.
+
+Map variables will be prioritized when
+`loophole-idle-prioritize-time' is spent.
 
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
@@ -4696,7 +4707,7 @@ They setup idle timer."
   :set (lambda (symbol value)
          (set-default symbol value)
          (if value
-             (loophole-turn-on-idle-prioritize)
+             (loophole-turn-on-idle-prioritize value)
            (loophole-turn-off-idle-prioritize))))
 
 (defcustom loophole-use-idle-save nil
