@@ -294,7 +294,77 @@ the commands prefixed by `loophole-bind-` may be convenient.
 
 ## Customization
 
-### Automation
+Default settings of Loophole is conservative to follow convention and keep
+behavior analogous to bare Emacs.
+The following example violates
+[key binding convention](https://www.gnu.org/software/emacs/manual/html_node/elisp/Key-Binding-Conventions.html)
+and makes behavior Loophole original, but reduces key inputs and makes the
+feature more convenient.
+Subsequent section describes details of customization.
+See also documentation strings of user options and commands.
+
+### Example
+
+``` emacs-lisp
+(custom-set-variables
+ '(loophole-read-buffer-inhibit-recursive-edit t)
+ '(loophole-make-load-overwrite-map t)
+ '(loophole-use-auto-timer t)
+ '(loophole-use-auto-editing-timer t)
+ '(loophole-use-idle-prioritize t)
+ '(loophole-use-idle-save t)
+ '(loophole-kmacro-by-read-key-finish-key (kbd "C-]"))
+ '(loophole-array-by-read-key-finish-key (kbd "C-]"))
+ '(loophole-defining-kmacro-map-tag
+   "<End: \\[loophole-end-kmacro], Abort: \\[loophole-abort-kmacro]>")
+ '(loophole-set-key-order
+   '(loophole-obtain-command-by-key-sequence
+     loophole-obtain-kmacro-on-top-level
+     (loophole-obtain-command-by-read-command
+      :key loophole-read-key-with-time-limit)
+     (loophole-obtain-kmacro-by-read-key
+      :key loophole-read-key-for-kmacro-by-read-key)
+     loophole-obtain-command-by-lambda-form
+     loophole-obtain-kmacro-by-recall-record
+     loophole-obtain-symbol-by-read-keymap-function
+     loophole-obtain-keymap-by-read-keymap-variable
+     (loophole-obtain-array-by-read-key
+      :key loophole-read-key-for-array-by-read-key)
+     (loophole-obtain-object :key loophole-read-key-with-time-limit)
+
+     loophole-obtain-array-by-read-string
+     loophole-obtain-symbol-by-read-array-function
+
+     loophole-obtain-kmacro-by-recursive-edit
+     loophole-obtain-symbol-by-read-command
+     loophole-obtain-keymap-by-read-keymap-function)))
+
+(loophole-mode)
+
+(loophole-load)
+(add-hook 'kill-emacs-hook #'loophole-save)
+
+(global-set-key (kbd "C-]") #'loophole-set-key)
+(global-set-key (kbd "M-]") #'loophole-unset-key)
+
+(global-set-key (kbd "C-}") #'loophole-disable-latest)
+(global-set-key (kbd "C-{") #'loophole-stop-editing)
+
+(define-key loophole-mode-map (kbd "C-c [") nil)
+(define-key loophole-mode-map (kbd "C-c \\") nil)
+(define-key loophole-mode-map (kbd "C-c ] [") #'loophole-start-editing)
+(define-key loophole-mode-map (kbd "C-c ] ]") #'loophole-enable)
+
+(define-key loophole-defining-kmacro-map (kbd "C-c [") nil)
+(define-key loophole-defining-kmacro-map (kbd "C-c \\") nil)
+(define-key loophole-defining-kmacro-map (kbd "C-]") #'loophole-end-kmacro)
+(define-key loophole-defining-kmacro-map (kbd "C-}") #'loophole-abort-kmacro)
+(define-key loophole-defining-kmacro-map (kbd "C-c ] k a") #'undefined)
+```
+
+### Details
+
+#### Automation
 
 Loophole offers some customization functions for automation.
 These functions setup some hooks and timers.
@@ -324,9 +394,9 @@ If you want to prevent these calls, modify your init file as follows.
 ```
 
 
-### Prefix arguments table of key binding commands
+#### Prefix arguments table of key binding commands
 
-#### Basics
+##### Basics
 
 As mentioned above, `loophole-set-key` refers prefix arguments table
 to decide how to obtain the entry of key bindings.
@@ -417,7 +487,7 @@ binding commands are called with `negative-argument`.
 (setq loophole-decide-obtaining-method-after-read-key nil)
 ```
 
-#### Table for alternative binding commands
+##### Table for alternative binding commands
 
 Some other binding commands (`loophole-bind-entry`, `loophole-bind-command`,
 `loophole-bind-kmacro`, `loophole-bind-array`, `loophole-bind-keymap`,
@@ -439,7 +509,7 @@ If you use your own obtaining method for `loophole-set-key` and
 `loophole-bind-*`, it should takes one normal argument the key and one optional
 argument the keymap.
 
-### Key bindings for Loophole commands
+#### Key bindings for Loophole commands
 
 By default, Loophole uses some key sequences for Loophole commands.
 They are defined in `loophole-mode-map`, `loophole-write-lisp-mode-map`,
@@ -455,7 +525,7 @@ To clear them out, use the following line.
 (setcdr loophole-mode-map nil)
 ```
 
-### Mode line format
+#### Mode line format
 
 Loophole shows its status on mode-line dynamically.
 By default, it shows `loophole-mode-lighter-base`,
@@ -480,7 +550,7 @@ If you want to use your own format,
 it can be set directly to `loophole-mode-lighter`.
 Any mode-line construct is valid.
 
-### Finish key for defining keyboard macro and array
+#### Finish key for defining keyboard macro and array
 
 When defining keyboard macro by recursive `read-key`,
 the finish key is the key sequence for `keyboard-quit`.
@@ -494,9 +564,9 @@ They can be changed by the following line.
 (setq loophole-array-by-read-key-finish-key (kbd "C-c C-c"))
 ```
 
-### Other considerable user options
+#### Other considerable user options
 
-#### loophole-temporary-map-max
+##### loophole-temporary-map-max
 
 Maximum number of temporary keymap.
 Keymaps will be stored temporarily up to `loophole-temporary-map-max`,
@@ -516,7 +586,7 @@ which may be `C-g`.
 
 Default value of this user option is `t`.
 
-### Defining Loophole map
+#### Defining Loophole map
 
 You can use existing or your own keymap as Loophole map, with a variable which
 represents activation state of the map.
