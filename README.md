@@ -344,15 +344,12 @@ See also documentation strings of user options and commands.
 (loophole-load)
 (add-hook 'kill-emacs-hook #'loophole-save)
 
-(global-set-key (kbd "C-]") #'loophole-set-key)
-(global-set-key (kbd "M-]") #'loophole-unset-key)
-
-(global-set-key (kbd "C-}") #'loophole-disable-latest)
-(global-set-key (kbd "C-{") #'loophole-stop-editing)
-
+(define-key loophole-mode-map (kbd "C-]") #'loophole-set-key)
+(define-key loophole-mode-map (kbd "M-]") #'loophole-unset-key)
+(define-key loophole-mode-map (kbd "C-}") #'loophole-disable-latest)
+(define-key loophole-mode-map (kbd "C-{") #'loophole-stop-editing)
 (define-key loophole-mode-map (kbd "C-c [") nil)
 (define-key loophole-mode-map (kbd "C-c \\") nil)
-(define-key loophole-mode-map (kbd "C-c ] [") #'loophole-start-editing)
 (define-key loophole-mode-map (kbd "C-c ] ]") #'loophole-enable)
 
 (define-key loophole-defining-kmacro-map (kbd "C-c [") nil)
