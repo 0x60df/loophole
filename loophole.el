@@ -248,7 +248,7 @@ This option takes effect with Emacs 28 or later."
   :type 'number)
 
 (defcustom loophole-idle-save-time (* 60 30)
-  "Idle time to run idle save.
+  "Idle time in seconds to run idle save.
 This should be set before `loophole-use-idle-save' to take
 effect."
   :group 'loophole
@@ -4713,14 +4713,14 @@ They setup idle timer."
 (defcustom loophole-use-idle-save nil
   "Flag if save Loophole maps when idle.
 
+The value of this user option is passed to `loophole-save'
+as an argument TARGET through `loophople-turn-on-idle-save'.
+
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
 `loophole-turn-on-idle-save' or
 `loophole-turn-off-idle-save' manually.
-They setup idle timer.
-
-The value of this user option is passed to `loophole-save'
-as an argument TARGET through `loophople-turn-on-idle-save'."
+They setup idle timer."
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
