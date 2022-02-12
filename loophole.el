@@ -4554,40 +4554,46 @@ Idle timer is set in `loophole-idle-prioritize-timer'."
          time
          t
          (lambda ()
-           (let ((object (cond ((eq target 'normal)
-                                (seq-filter
-                                 (lambda (map-variable)
-                                   (let ((name (symbol-name map-variable)))
-                                     (string-match "^loophole-.+-map$" name)))
-                                 (mapcar (lambda (e)
-                                           (get (car e) :loophole-map-variable))
-                                         (default-value 'loophole--map-alist))))
-                               ((functionp target) (funcall target))
-                               ((consp target) target)
-                               (t
-                                (seq-filter
-                                 (lambda (map-variable)
-                                   (let ((name (symbol-name map-variable)))
-                                     (and
-                                      (string-match "^loophole-.+-map$" name)
-                                      (not (string-match "^loophole-[0-9]+-map$"
-                                                         name)))))
-                                 (mapcar (lambda (e)
-                                           (get (car e) :loophole-map-variable))
-                                         (default-value
-                                           'loophole--map-alist)))))))
-             (unless (listp object)
-               (user-error
-                (format "Idle prioritize failed.  %s does not derive list"
+           (let ((get-list
+                  (cond ((eq target 'normal)
+                         (lambda ()
+                           (seq-filter
+                            (lambda (map-variable)
+                              (let ((name (symbol-name map-variable)))
+                                (string-match "^loophole-.+-map$" name)))
+                            (loophole-map-variable-list))))
+                        ((functionp target) target)
+                        ((consp target) (lambda () target))
+                        (t
+                         (lambda ()
+                           (seq-filter
+                            (lambda (map-variable)
+                              (let ((name (symbol-name map-variable)))
+                                (and (string-match "^loophole-.+-map$" name)
+                                     (not (string-match "^loophole-[0-9]+-map$"
+                                                        name)))))
+                            (loophole-map-variable-list))))))
+                 (test-and-filter
+                  (lambda (map-variable-list)
+                    (unless (listp map-variable-list)
+                      (user-error
+                       (format
+                        "Idle prioritize failed.  %s does not derive list"
                         target)))
-             (let ((map-variable-list
                     (seq-filter (lambda (map-variable)
                                   (and (symbolp map-variable)
                                        (loophole-registered-p map-variable)))
-                                object)))
-               (dolist (map-variable (reverse map-variable-list))
-                 (loophole--do-with-current-buffer
-                  (loophole-prioritize map-variable)))))))))
+                                map-variable-list))))
+             (loophole--do-with-current-buffer
+              (if (local-variable-p 'loophole--map-alist)
+                  (dolist (map-variable
+                           (reverse
+                            (funcall test-and-filter (funcall get-list))))
+                    (loophole-prioritize map-variable 'local))))
+             (with-temp-buffer
+               (dolist (map-variable
+                        (reverse (funcall test-and-filter (funcall get-list))))
+                 (loophole-prioritize map-variable 'default))))))))
 
 (defun loophole-turn-off-idle-prioritize ()
   "Turn off idle prioritization as user customization.
