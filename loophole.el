@@ -743,18 +743,18 @@ eliminates help echos and clickable buttons.
                                           'face 'loophole-editing)
                             tag)))))
             (:eval
-             (let ((l (seq-filter (lambda (a) (symbol-value (car a)))
-                                  loophole--map-alist)))
+             (let ((l (seq-filter #'symbol-value
+                                  (loophole-state-variable-list))))
                (if (zerop (length l))
                    ""
                  (concat loophole-tag-sign
                          (mapconcat
-                          (lambda (a)
+                          (lambda (state-variable)
                             (let ((e (replace-regexp-in-string
                                       "%" "%%"
                                       (substitute-command-keys
                                        (let ((tag (get
-                                                   (get (car a)
+                                                   (get state-variable
                                                         :loophole-map-variable)
                                                    :loophole-tag)))
                                          (if (stringp tag)
@@ -776,10 +776,8 @@ eliminates help echos and clickable buttons.
                (:eval (if (loophole-editing)
                           loophole-mode-lighter-editing-sign))
                (:eval (let ((n (length
-                                (delq nil
-                                      (mapcar
-                                       (lambda (e) (symbol-value (car e)))
-                                       loophole--map-alist)))))
+                                (seq-filter #'symbol-value
+                                            (loophole-state-variable-list)))))
                         (if (zerop n)
                             ""
                           (concat ":"
