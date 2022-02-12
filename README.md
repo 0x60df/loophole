@@ -44,10 +44,10 @@ You can see editing status on the mode-line as
 `loophole-mode-lighter-editing-sign` (is "+" by default).
 
 When you are done your operation with temporary key bindings,
-call `loophole-disable-latest-map` to abandon that one.
+call `loophole-disable-latest` to abandon that one.
 Note that even after disabling the keymap,
 it is stored in `loophole-n-map` for a while. (`n` is something integer.)
-You can reactivate it by `loophole-enable-map`,
+You can reactivate it by `loophole-enable`,
 and can use multiple temporary keymaps at the same time.
 
 ### Example
@@ -62,7 +62,7 @@ which save your left little finger.
 * `C-c [` `b` `scroll-down-command`
 
 When you are finished reading the buffer,
-type `C-c \` (`loophole-disable-latest-map`) to abandon the key bindings above.
+type `C-c \` (`loophole-disable-latest`) to abandon the key bindings above.
 Then, your keymap environment stays clean.
 
 ### Details
@@ -80,7 +80,7 @@ They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
 Second one is `loophole-base-map` which will be inherited to most Loophole maps.
 This keymap offers the place for binding which can be used commonly when
 any of Loophole map is activated.
-For example, binding `C-q` to `loophole-disable-latest-map` on
+For example, binding `C-q` to `loophole-disable-latest` on
 `loophole-base-map` reduces keystroke against `C-c \`.
 After all Loophole maps are disabled,
 original binding of `C-q` to `quoted-insert` is recoverd.
@@ -189,10 +189,10 @@ in currently active keymaps.
 Setup temporary buffer with template for writing lambda form and start
 recursive edit.
 When you finish writing lambda form,
-type `C-c C-c` (`loophole-complete-writing-lisp`).
+type `C-c C-c` (`loophole-read-buffer-finish-key`).
 Then, buffer contents will be read and evaluated,
 and returned object will be bound.
-When you want to abort, type `C-c C-k` (`loophole-abort-writing-lisp`).
+When you want to abort, type `C-c C-k` (`loophole-read-buffer-abort-key`).
 
 Actually, buffer contents can be any lisp forms other than sole lambda form.
 If returned value is a valid lambda object, it will be bound anyway.
@@ -200,9 +200,9 @@ If returned value is a valid lambda object, it will be bound anyway.
 Note that while you are in recursive edit, it looks like top-level of Emacs
 and you may feel that the control is returned to you,
 but actually you are still in the command.
-For that reason, it is recommended to call either
-`loophole-complete-writing-lisp` or `loophole-abort-writing-lisp`, which can
-properly end recursive edit.
+For that reason, it is recommended to call commands bound to either
+`loophole-read-buffer-finish-key` or `loophole-read-buffer-abort-key`,
+which can properly end recursive edit.
 
 ##### kmacro by recursive edit
 
@@ -509,8 +509,7 @@ argument the keymap.
 #### Key bindings for Loophole commands
 
 By default, Loophole uses some key sequences for Loophole commands.
-They are defined in `loophole-mode-map`, `loophole-write-lisp-mode-map`,
-`loophole-kmacro-by-recursive-edit-map`.
+They are defined in `loophole-mode-map`, and `loophole-defining-kmacro-map`.
 They are all customizable.
 If the default key sequences does not suit with your environment,
 Modify these user options.
