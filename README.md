@@ -74,8 +74,7 @@ Loophole uses three layers of keymaps.
 First one is keymaps for temporary key bindings.
 I call them as "Loophole map".
 They are mainly generated automatically,
-and listed in `loophole--map-alist`.
-They take effect by adding `loophole--map-alist` to `emulation-mode-map-alists`.
+and added to `emulation-mode-map-alists`.
 
 Second one is `loophole-base-map` which will be inherited to most Loophole maps.
 This keymap offers the place for binding which can be used commonly when
@@ -112,7 +111,7 @@ it goes out of range of automatic keymap generation and is never overwritten.
 `loophole-mode` is the minor mode for managing temporary key bindings.
 
 When `loophole-mode` is enabled,
-`loophole--map-alist` is added to the head of `emulation-mode-map-alists`,
+Loophole maps are added to the head of `emulation-mode-map-alists`,
 and thus temporary key bindings are activated.
 Furthermore, you can use `loophole-mode-map` for binding Loophole commands.
 
@@ -120,7 +119,7 @@ Even while `loophole-mode` is enabled, whole temporary key bindings can be
 deactivated temporarily by calling `loophole-suspend`,
 which keeps state of each Loophole map.
 `loophole-resume` restores suspended temporary key bindings.
-These functions realize suspension by removing and adding `loophole--map-alist`
+These functions realize suspension by removing and adding Loophole maps
 in `emulation-mode-map-alists`.
 
 Note that disabling `loophole-mode` also calls `loophole-suspend` and keeps
