@@ -95,19 +95,6 @@ Default value holds timers for global Loophole map.")
   "Timer for stopping editing loophole map.
 By default, local timers are used.
 If editing session is globalized, default value is used.")
-
-(defvar loophole--idle-prioritize-timer nil
-  "Idle timer for prioritize.
-If `loophole-use-idle-prioritize' is set t, idle timer is
-kept in this variable.
-Idle timer prioritizes `loophole-idle-prioritize-list' for
-all local values and default value of `loophole--map-alist'.")
-
-(defvar loophole--idle-save-timer nil
-  "Idle timer for save.
-If `loophole-use-idle-save' is set t, idle timer is kept in
-this variable.
-Idle timer do `loophole-save'.")
 
 ;;; User options
 
@@ -239,18 +226,6 @@ This option takes effect with Emacs 28 or later."
 
 (defcustom loophole-editing-timer-default-time (* 60 5)
   "Default time in seconds for auto stopping editing timer."
-  :group 'loophole
-  :type 'number)
-
-(defcustom loophole-idle-prioritize-time (* 60 15)
-  "Idle time in seconds to run idle prioritize."
-  :group 'loophole
-  :type 'number)
-
-(defcustom loophole-idle-save-time (* 60 30)
-  "Idle time in seconds to run idle save.
-This should be set before `loophole-use-idle-save' to take
-effect."
   :group 'loophole
   :type 'number)
 
@@ -1502,20 +1477,6 @@ This function is intended to be used in `loophole-name'."
                             (loophole-disable map-variable)
                             (force-mode-line-update))))
                     (list new-map-variable (current-buffer)))))))))))
-
-(defun loophole-idle-prioritize-named-list ()
-  "Return list of named map variables.
-Map variables are ordered in accordance with a default value
-of `loophole--map-alist'.
-This function is intended to be used for
-`loophole-idle-prioritize-list'."
-  (seq-filter (lambda (map-variable)
-                (let ((name (symbol-name map-variable)))
-                  (and (string-match "^loophole-.+-map$" name)
-                       (not (string-match "^loophole-[0-9]+-map$" name)))))
-              (mapcar (lambda (e)
-                        (get (car e) :loophole-map-variable))
-                      (default-value 'loophole--map-alist))))
 
 (defun loophole--follow-adding-local-variable (_symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
@@ -2839,13 +2800,14 @@ buffer, window, frame...  will be omitted.
 
 If an optional argument TARGET is non-nil, saving target is
 changed according to the value of TARGET.
-When TARGET is a symbol named,  named Loophole map, i.e.,
+When TARGET is a symbol named, named Loophole map, i.e.,
 loophole-*-name but not loophole-n-map will be saved.
 When TARGET is a symbol all, all registered maps will be
 saved.
 When TARGET is a function, it will be used as a filter
 function who takes one argument, each map-variable of
 Loophole maps.
+When TARGET is a list, listed map-variables will be saved.
 Other than above, falls back on nil.
 
 If an optional argument FILE is non-nil, this function will
@@ -2870,6 +2832,8 @@ FILE will be asked."
                                                  name))))))
                     ((eq target 'all) (lambda (_) t))
                     ((functionp target) target)
+                    ((consp target) (lambda (map-variable)
+                                      (memq map-variable target)))
                     (t (lambda (map-variable)
                          (let ((name (symbol-name map-variable)))
                            (string-match "^loophole-.+-map$" name))))))
@@ -4217,6 +4181,19 @@ Followings are the key bindings for Loophole commands.
 
 ;;; Customization helpers
 
+(defvar loophole-idle-prioritize-timer nil
+  "Idle timer for prioritization.
+If `loophole-use-idle-prioritize' is set non-nil, idle timer
+is kept in this variable.
+Idle timer prioritizes specified Loophole maps for all local
+values and default value of `loophole--map-alist'.")
+
+(defvar loophole-idle-save-timer nil
+  "Idle timer for saving.
+If `loophole-use-idle-save' is set non-nil, idle timer is
+kept in this variable.
+Idle timer do `loophole-save'.")
+
 (defun loophole-turn-on-auto-prioritize ()
   "Turn on auto prioritize as user customization.
 Add hooks to call `loophole-prioritize' for
@@ -4519,31 +4496,64 @@ Remove hooks added by `loophole-turn-on-auto-editing-timer'."
   (remove-hook 'loophole-after-localize-editing-functions
                (lambda (_) (loophole-start-editing-timer))))
 
-(defun loophole-turn-on-idle-prioritize (&optional target)
-  "Turn on idle prioritize as user customization.
-Start idle timer for prioritizing Loophole maps according to
-TARGET.
-If TARGET is a list, listed map-variables are prioritized.
-If TARGET is a function, it should return a list of
-map-variable, and returned map-variables are prioritized.
-nIf TARGET is any other object, the function
-`loophole-idle-prioritize-named-list' is used instead.
+(defun loophole-turn-on-idle-prioritize (&optional target time)
+  "Turn on idle prioritization as user customization.
+Start idle timer for prioritizing Loophole maps.
 
-Entries which are not registered to Loophole is omitted.
-First entry of the list will be placed at the head of
-`loophole--map-alist'.
+By default, named Loophole maps that look like
+loophole-*-map but not loophole-n-map will be prioritized
+after 900 seconds.
 
-Idle timer is set in `loophole--idle-prioritize-timer'."
-  (if (timerp loophole--idle-prioritize-timer)
-      (cancel-timer loophole--idle-prioritize-timer))
-  (setq loophole--idle-prioritize-timer
+Optional argument TARGET modifies prioritizing target.
+When TARGET is a symbol normal, normal Loophole maps which
+looks like loophole-*-map will be prioritized.
+When TARGET is a function, it should return a list of
+map-variable, and returned map-variables will be
+prioritized.
+When TARGET is a list, listed map-variables will be
+prioritized.
+Other than above, falls back on nil.
+
+When TARGET intermediately derives a list, entries which are
+not registered to Loophole is omitted, and first entry of the
+list gets highest priority.
+Otherwise, current order is preserved among prioritized
+Loophole maps.
+
+Optional argument TIME in seconds modifies duration time
+of idle timer.
+
+Idle timer is set in `loophole-idle-prioritize-timer'."
+  (setq time (if (numberp time) time (* 60 15)))
+  (if (timerp loophole-idle-prioritize-timer)
+      (cancel-timer loophole-idle-prioritize-timer))
+  (setq loophole-idle-prioritize-timer
         (run-with-idle-timer
-         loophole-idle-prioritize-time
+         time
          t
          (lambda ()
-           (let ((object (cond ((functionp target) (funcall target))
-                               ((listp target) target)
-                               (t (loophole-idle-prioritize-named-list)))))
+           (let ((object (cond ((eq target 'normal)
+                                (seq-filter
+                                 (lambda (map-variable)
+                                   (let ((name (symbol-name map-variable)))
+                                     (string-match "^loophole-.+-map$" name)))
+                                 (mapcar (lambda (e)
+                                           (get (car e) :loophole-map-variable))
+                                         (default-value 'loophole--map-alist))))
+                               ((functionp target) (funcall target))
+                               ((consp target) target)
+                               (t
+                                (seq-filter
+                                 (lambda (map-variable)
+                                   (let ((name (symbol-name map-variable)))
+                                     (and
+                                      (string-match "^loophole-.+-map$" name)
+                                      (not (string-match "^loophole-[0-9]+-map$"
+                                                         name)))))
+                                 (mapcar (lambda (e)
+                                           (get (car e) :loophole-map-variable))
+                                         (default-value
+                                           'loophole--map-alist)))))))
              (unless (listp object)
                (user-error
                 (format "Idle prioritize failed.  %s does not derive list"
@@ -4558,31 +4568,33 @@ Idle timer is set in `loophole--idle-prioritize-timer'."
                   (loophole-prioritize map-variable)))))))))
 
 (defun loophole-turn-off-idle-prioritize ()
-  "Turn off idle prioritize as user customization.
-Cancel timer `loophole--idle-prioritize-timer' and set nil
+  "Turn off idle prioritization as user customization.
+Cancel timer `loophole-idle-prioritize-timer' and set nil
 to it."
-  (if (timerp loophole--idle-prioritize-timer)
-      (cancel-timer loophole--idle-prioritize-timer))
-  (setq loophole--idle-prioritize-timer nil))
+  (if (timerp loophole-idle-prioritize-timer)
+      (cancel-timer loophole-idle-prioritize-timer))
+  (setq loophole-idle-prioritize-timer nil))
 
-(defun loophole-turn-on-idle-save (&optional target)
-  "Turn on idle save as user customization.
+(defun loophole-turn-on-idle-save (&optional target time)
+  "Turn on idle saving as user customization.
 Start idle timer for saving Loophole maps.
-Idle timer is set in `loophole--idle-save-timer'.
+Idle timer is set in `loophole-idle-save-timer'.
 
-Optional argument TARGET will be passed to `loophole-save'."
-  (if (timerp loophole--idle-save-timer)
-      (cancel-timer loophole--idle-save-timer))
-  (setq loophole--idle-save-timer
-        (run-with-idle-timer loophole-idle-save-time t
-                             #'loophole-save target)))
+Optional argument TARGET will be passed to `loophole-save',
+and TIME in seconds is used for duration time for idle timer
+whose default value is 1800 seconds."
+  (setq time (if (numberp time) time (* 60 30)))
+  (if (timerp loophole-idle-save-timer)
+      (cancel-timer loophole-idle-save-timer))
+  (setq loophole-idle-save-timer
+        (run-with-idle-timer time t #'loophole-save target)))
 
 (defun loophole-turn-off-idle-save ()
-  "Turn off idle save as user customization.
-Cancel timer `loophole--idle-save-timer' and set nil to it."
-  (if (timerp loophole--idle-save-timer)
-      (cancel-timer loophole--idle-save-timer))
-  (setq loophole--idle-save-timer nil))
+  "Turn off idle saving as user customization.
+Cancel timer `loophole-idle-save-timer' and set nil to it."
+  (if (timerp loophole-idle-save-timer)
+      (cancel-timer loophole-idle-save-timer))
+  (setq loophole-idle-save-timer nil))
 
 (defcustom loophole-use-auto-prioritize t
   "Flag if prioritize Loophole map automatically.
@@ -4680,22 +4692,27 @@ For more detailed customization, see documentation string of
            (loophole-turn-off-auto-editing-timer))))
 
 (defcustom loophole-use-idle-prioritize nil
-  "Flag if prioritize Loophole map when idle.
-When non-nil, idle prioritization is enabled and the value
-is passed to `loophole-turn-on-idle-prioritize'.
-Thus, if the value is a list, listed map-variables are
+  "Flag if prioritize Loophole maps when idle.
+When non-nil, idle prioritization is enabled by calling
+`loophole-turn-on-idle-prioritize'.
+
+If the value of this user option is a list, it is applied to
+`loophole-turn-on-idle-prioritize'.
+In that case, the value should be a list whose first element
+is a target specifier for prioritizing and second element is
+a duration time.
+
+When target specifier is a symbol normal, normal Loophole
+maps which looks like loophole-*-map will be prioritized.
+When target specifier is a function, it should return a list
+of map-variable, and returned map-variables will be
 prioritized.
-If the value is a function, it should return a list of
-map-variable, and returned map-variables are prioritized.
-If the value is other non-nil object, the function
-`loophole-idle-prioritize-named-list' is used.
+When target specifier is a list, listed map-variables will
+be prioritized.
+Other than above, named Loophole maps that look like
+loophole-*-map but not loophole-n-map will be prioritized.
 
-Entries which are not registered to Loophole is omitted.
-First entry of the list will be placed at the head of
-`loophole--map-alist'.
-
-Map variables will be prioritized when
-`loophole-idle-prioritize-time' is spent.
+Default duration time is 900 seconds.
 
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
@@ -4707,14 +4724,38 @@ They setup idle timer."
   :set (lambda (symbol value)
          (set-default symbol value)
          (if value
-             (loophole-turn-on-idle-prioritize value)
+             (if (listp value)
+                 (apply #'loophole-turn-on-idle-prioritize value)
+               (loophole-turn-on-idle-prioritize))
            (loophole-turn-off-idle-prioritize))))
 
 (defcustom loophole-use-idle-save nil
   "Flag if save Loophole maps when idle.
+When non-nil, idle saving is enabled by calling
+`loophole-turn-on-idle-save'.
 
-The value of this user option is passed to `loophole-save'
-as an argument TARGET through `loophople-turn-on-idle-save'.
+If the value of this user option is a list, it is applied to
+`loophole-turn-on-idle-save'.
+In that case, the value should be a list whose first element
+is a target specifier for saving and second element is
+a duration time.
+
+Target specifier is passed to `loophole-save' as an argument
+TARGET through `loophople-turn-on-idle-save'.
+Therefore, when  target specifier is a symbol named, named
+Loophole map, i.e., loophole-*-name but not loophole-n-map
+will be saved.
+When target specifier is a symbol all, all registered maps
+will be saved.
+When target specifier is a function, it will be used as
+a filter function who takes one argument, each map-variable
+of Loophole maps.
+When target specifier is a list, listed map-variables will
+be saved.
+Other than above, normal Loophole maps that look like
+loophole-*-map will be saved.
+
+Default duration time is 1800 seconds.
 
 Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
@@ -4726,7 +4767,9 @@ They setup idle timer."
   :set (lambda (symbol value)
          (set-default symbol value)
          (if value
-             (loophole-turn-on-idle-save value)
+             (if (listp value)
+                 (apply #'loophole-turn-on-idle-save value)
+               (loophole-turn-on-idle-save))
            (loophole-turn-off-idle-save))))
 
 ;;; A macro for defining keymap
