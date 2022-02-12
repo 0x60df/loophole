@@ -1518,8 +1518,18 @@ added to the hooks above."
   (let ((filter (lambda (buffer)
                   (and (buffer-live-p buffer)
                        (with-current-buffer buffer
-                         (seq-some #'local-variable-p
-                                     (loophole-local-variable-if-set-list)))))))
+                         (let ((no-local-variable
+                                (seq-some
+                                 #'local-variable-p
+                                 (loophole-local-variable-if-set-list))))
+                           (when no-local-variable
+                             (remove-hook
+                              'change-major-mode-hook
+                              #'loophole--follow-killing-local-variable t)
+                             (remove-hook
+                              'kill-buffer-hook
+                              #'loophole--follow-killing-local-variable t))
+                           no-local-variable))))))
     (if (listp loophole--buffer-list)
         (setq loophole--buffer-list (seq-filter filter loophole--buffer-list))
       (seq-filter filter (buffer-list)))))
@@ -1737,13 +1747,17 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                                #'loophole--follow-adding-local-variable)
       (dolist (buffer (loophole-buffer-list))
         (with-current-buffer buffer
-          (if (and (local-variable-p state-variable)
-                   (not (seq-some
-                         #'local-variable-p
-                         (remq state-variable
-                               (loophole-local-variable-if-set-list)))))
-              (setq loophole--buffer-list
-                    (delq buffer loophole--buffer-list))))))
+          (when (and (local-variable-p state-variable)
+                     (not (seq-some
+                           #'local-variable-p
+                           (remq state-variable
+                                 (loophole-local-variable-if-set-list)))))
+            (setq loophole--buffer-list
+                  (delq buffer loophole--buffer-list))
+            (remove-hook 'change-major-mode-hook
+                         #'loophole--follow-killing-local-variable t)
+            (remove-hook 'kill-buffer-hook
+                         #'loophole--follow-killing-local-variable t)))))
     (let ((parent (keymap-parent (symbol-value map-variable))))
       (cond ((eq parent loophole-base-map)
              (set-keymap-parent (symbol-value map-variable) nil))
@@ -1839,7 +1853,11 @@ a symbol default, only default value is modified."
            (unless (seq-some #'local-variable-p
                              (loophole-local-variable-if-set-list))
              (setq loophole--buffer-list
-                   (delq (current-buffer) loophole--buffer-list))))))
+                   (delq (current-buffer) loophole--buffer-list))
+             (remove-hook 'change-major-mode-hook
+                          #'loophole--follow-killing-local-variable t)
+             (remove-hook 'kill-buffer-hook
+                          #'loophole--follow-killing-local-variable t)))))
     (loophole--erase-local-timers map-variable)
     (run-hook-with-args 'loophole-after-globalize-functions map-variable)))
 
