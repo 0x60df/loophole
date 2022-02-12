@@ -1771,24 +1771,31 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
     (put map-variable :loophole-state-variable nil))
   (run-hook-with-args 'loophole-after-unregister-functions map-variable))
 
-(defun loophole-prioritize (map-variable)
+(defun loophole-prioritize (map-variable &optional only)
   "Give first priority to MAP-VARIABLE.
 This is done by move the entry in `loophole--map-alist' to
-the front."
+the front.
+
+This function modifies both local and default value of
+`loophole--map-alist'.  If optional argument ONLY is
+a symbol local, only local value is modified; or if ONLY is
+a symbol default, only default value is modified."
   (interactive (list (loophole-read-map-variable "Prioritize keymap: ")))
   (if (loophole-registered-p map-variable)
       (let ((state-variable (get map-variable :loophole-state-variable)))
-        (setq loophole--map-alist
-              (cons `(,state-variable . ,(symbol-value map-variable))
-                    (seq-filter (lambda (cell)
-                                  (not (eq (car cell) state-variable)))
-                                loophole--map-alist)))
-        (setq-default
-         loophole--map-alist
-         (cons `(,state-variable . ,(symbol-value map-variable))
-               (seq-filter (lambda (cell)
-                             (not (eq (car cell) state-variable)))
-                           (default-value 'loophole--map-alist))))
+        (unless (eq only 'default)
+          (setq loophole--map-alist
+                (cons `(,state-variable . ,(symbol-value map-variable))
+                      (seq-filter (lambda (cell)
+                                    (not (eq (car cell) state-variable)))
+                                  loophole--map-alist))))
+        (unless (eq only 'local)
+          (setq-default
+           loophole--map-alist
+           (cons `(,state-variable . ,(symbol-value map-variable))
+                 (seq-filter (lambda (cell)
+                               (not (eq (car cell) state-variable)))
+                             (default-value 'loophole--map-alist)))))
         (run-hook-with-args 'loophole-after-prioritize-functions map-variable))
     (user-error "Specified map-variable %s is not registered" map-variable)))
 
