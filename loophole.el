@@ -1117,6 +1117,12 @@ buffer, use it instead of current buffer."
                       loophole--map-alist))
        :loophole-map-variable))
 
+(defun loophole-priority-is-local-p ()
+  "Non-nil if priority of Loophole maps is local on current buffer.
+Technically, non-nil if `loophole--map-alist' has local
+value on `current-buffer'."
+  (local-variable-p 'loophole--map-alist))
+
 (defun loophole-global-p (map-variable)
   "Non-nil if MAP-VARIABLE is registered as global map."
   (and (loophole-registered-p map-variable)
@@ -1139,16 +1145,6 @@ buffer local value."
   (if (get 'loophole--editing :loophole-global)
       (default-value 'loophole--editing)
     loophole--editing))
-
-(defmacro loophole--do-with-current-buffer (&rest body)
-  "Execute BODY for each Loophole buffer as setting it current buffer.
-Loophole buffers are buffers returned by
-`loophole-buffer-list', i.e., buffers on which Loophole
-variables have local value."
-  (declare (debug t))
-  (let ((buffer (make-symbol "buffer")))
-    `(dolist (,buffer (loophole-buffer-list))
-       (with-current-buffer ,buffer ,@body))))
 
 (defun loophole--char-read-syntax (event)
   "Return printed representation of EVENT by question mark format.
@@ -1427,15 +1423,16 @@ Invalid and duplicated forms are removed by side effect."
   "Cancel and remove all local timers for MAP-VARIABLE .
 This function is intended to be used in `loophole-globalize'
 and `loophole-unregister'."
-  (loophole--do-with-current-buffer
-   (when (local-variable-p 'loophole--timer-alist)
-     (let ((timer (cdr (assq map-variable loophole--timer-alist))))
-       (if (timerp timer) (cancel-timer timer)))
-     (setq loophole--timer-alist
-           (seq-filter (lambda (cell) (not (eq (car cell) map-variable)))
-                       loophole--timer-alist))
-     (if (null loophole--timer-alist)
-         (kill-local-variable 'loophole--timer-alist)))))
+  (dolist (buffer (loophole-buffer-list))
+    (with-current-buffer buffer
+      (when (local-variable-p 'loophole--timer-alist)
+        (let ((timer (cdr (assq map-variable loophole--timer-alist))))
+          (if (timerp timer) (cancel-timer timer)))
+        (setq loophole--timer-alist
+              (seq-filter (lambda (cell) (not (eq (car cell) map-variable)))
+                          loophole--timer-alist))
+        (if (null loophole--timer-alist)
+            (kill-local-variable 'loophole--timer-alist))))))
 
 (defun loophole--erase-global-timer (map-variable)
   "Cancel and remove global timer for MAP-VARIABLE.
@@ -1467,22 +1464,23 @@ This function is intended to be used in `loophole-name'."
                      (loophole-disable map-variable)
                      (force-mode-line-update t)))
                  (list new-map-variable))))))
-    (loophole--do-with-current-buffer
-     (if (local-variable-p 'loophole--timer-alist)
-         (let ((cell (assq map-variable loophole--timer-alist)))
-           (when cell
-             (setcar cell new-map-variable)
-             (let ((timer (cdr cell)))
-               (if (timerp timer)
-                   (timer-set-function
-                    timer
-                    (lambda (map-variable buffer)
-                      (if (and (loophole-registered-p map-variable)
-                               (buffer-live-p buffer))
-                          (with-current-buffer buffer
-                            (loophole-disable map-variable)
-                            (force-mode-line-update))))
-                    (list new-map-variable (current-buffer)))))))))))
+    (dolist (replacing-buffer (loophole-buffer-list))
+      (with-current-buffer replacing-buffer
+        (if (local-variable-p 'loophole--timer-alist)
+            (let ((cell (assq map-variable loophole--timer-alist)))
+              (when cell
+                (setcar cell new-map-variable)
+                (let ((timer (cdr cell)))
+                  (if (timerp timer)
+                      (timer-set-function
+                       timer
+                       (lambda (map-variable buffer)
+                         (if (and (loophole-registered-p map-variable)
+                                  (buffer-live-p buffer))
+                             (with-current-buffer buffer
+                               (loophole-disable map-variable)
+                               (force-mode-line-update))))
+                       (list new-map-variable (current-buffer))))))))))))
 
 (defun loophole--follow-adding-local-variable (_symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
@@ -1687,11 +1685,12 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (setq-default loophole--map-alist
                 (cons `(,state-variable . ,(symbol-value map-variable))
                       (default-value 'loophole--map-alist)))
-  (loophole--do-with-current-buffer
-   (if (local-variable-p 'loophole--map-alist)
-       (setq loophole--map-alist
-             (cons `(,state-variable . ,(symbol-value map-variable))
-                   loophole--map-alist))))
+  (dolist (buffer (loophole-buffer-list))
+    (with-current-buffer buffer
+      (if (local-variable-p 'loophole--map-alist)
+          (setq loophole--map-alist
+                (cons `(,state-variable . ,(symbol-value map-variable))
+                      loophole--map-alist)))))
   (let ((parent (keymap-parent (symbol-value map-variable))))
     (unless (and parent
                  (or (eq parent (get map-variable :loophole-protected-keymap))
@@ -1735,12 +1734,13 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
         (loophole-stop-editing-timer)
         (loophole-stop-editing)
         (force-mode-line-update t))
-    (loophole--do-with-current-buffer
-     (when (and (local-variable-p 'loophole--editing)
-                (eq loophole--editing map-variable))
-       (loophole-stop-editing-timer)
-       (loophole-stop-editing)
-       (force-mode-line-update))))
+    (dolist (buffer (loophole-buffer-list))
+      (with-current-buffer buffer
+        (when (and (local-variable-p 'loophole--editing)
+                   (eq loophole--editing map-variable))
+          (loophole-stop-editing-timer)
+          (loophole-stop-editing)
+          (force-mode-line-update)))))
   (let ((state-variable (get map-variable :loophole-state-variable)))
     (when (listp loophole--buffer-list)
       (remove-variable-watcher state-variable
@@ -1771,11 +1771,13 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                          (make-composed-keymap others grand-parent))
                         ((zerop (length others)) nil)
                         (t (car others)))))))))
-    (loophole--do-with-current-buffer
-     (if (local-variable-p 'loophole--map-alist)
-         (setq loophole--map-alist
-               (seq-filter (lambda (cell) (not (eq (car cell) state-variable)))
-                           loophole--map-alist))))
+    (dolist (buffer (loophole-buffer-list))
+      (with-current-buffer buffer
+        (if (local-variable-p 'loophole--map-alist)
+            (setq loophole--map-alist
+                  (seq-filter
+                   (lambda (cell) (not (eq (car cell) state-variable)))
+                   loophole--map-alist)))))
     (setq-default loophole--map-alist
                   (seq-filter (lambda (cell)
                                 (not (eq (car cell) state-variable)))
@@ -1845,19 +1847,20 @@ a symbol default, only default value is modified."
       (put map-variable :loophole-state-variable globalized-state-variable)
       (let ((cell (assq state-variable (default-value 'loophole--map-alist))))
         (if (consp cell) (setcar cell globalized-state-variable)))
-      (loophole--do-with-current-buffer
-       (if (local-variable-p 'loophole--map-alist)
-           (let ((cell (assq state-variable loophole--map-alist)))
-             (if (consp cell) (setcar cell globalized-state-variable))))
-       (if (listp loophole--buffer-list)
-           (unless (seq-some #'local-variable-p
-                             (loophole-local-variable-if-set-list))
-             (setq loophole--buffer-list
-                   (delq (current-buffer) loophole--buffer-list))
-             (remove-hook 'change-major-mode-hook
-                          #'loophole--follow-killing-local-variable t)
-             (remove-hook 'kill-buffer-hook
-                          #'loophole--follow-killing-local-variable t)))))
+      (dolist (buffer (loophole-buffer-list))
+        (with-current-buffer buffer
+          (if (local-variable-p 'loophole--map-alist)
+              (let ((cell (assq state-variable loophole--map-alist)))
+                (if (consp cell) (setcar cell globalized-state-variable))))
+          (if (listp loophole--buffer-list)
+              (unless (seq-some #'local-variable-p
+                                (loophole-local-variable-if-set-list))
+                (setq loophole--buffer-list
+                      (delq (current-buffer) loophole--buffer-list))
+                (remove-hook 'change-major-mode-hook
+                             #'loophole--follow-killing-local-variable t)
+                (remove-hook 'kill-buffer-hook
+                             #'loophole--follow-killing-local-variable t))))))
     (loophole--erase-local-timers map-variable)
     (run-hook-with-args 'loophole-after-globalize-functions map-variable)))
 
@@ -2033,9 +2036,10 @@ Introduced by `loophole-name'." named-map-variable)))
       (if (not (local-variable-if-set-p named-state-variable))
           (set named-state-variable (symbol-value state-variable))
         (set-default named-state-variable nil)
-        (loophole--do-with-current-buffer
-         (if (local-variable-p state-variable)
-             (set named-state-variable (symbol-value state-variable)))))
+        (dolist (buffer (loophole-buffer-list))
+          (with-current-buffer buffer
+            (if (local-variable-p state-variable)
+                (set named-state-variable (symbol-value state-variable))))))
       (put named-map-variable :loophole-state-variable named-state-variable)
       (put named-state-variable :loophole-map-variable named-map-variable)
       (put named-map-variable :loophole-tag tag)
@@ -2045,19 +2049,21 @@ Introduced by `loophole-name'." named-map-variable)))
                                 #'loophole--follow-adding-local-variable))
       (let ((cell (assq state-variable (default-value 'loophole--map-alist))))
         (if (consp cell) (setcar cell named-state-variable)))
-      (loophole--do-with-current-buffer
-       (if (local-variable-p 'loophole--map-alist)
-           (let ((cell (assq state-variable loophole--map-alist)))
-             (if (consp cell) (setcar cell named-state-variable)))))
+      (dolist (buffer (loophole-buffer-list))
+        (with-current-buffer buffer
+          (if (local-variable-p 'loophole--map-alist)
+              (let ((cell (assq state-variable loophole--map-alist)))
+                (if (consp cell) (setcar cell named-state-variable))))))
       (if (get 'loophole--editing :loophole-global)
           (progn
             (setq-default loophole--editing named-map-variable)
             (force-mode-line-update t))
-        (loophole--do-with-current-buffer
-         (when (and (local-variable-p 'loophole--editing)
-                  (eq map-variable loophole--editing))
-           (setq loophole--editing named-map-variable)
-           (force-mode-line-update))))
+        (dolist (buffer (loophole-buffer-list))
+          (with-current-buffer buffer
+            (when (and (local-variable-p 'loophole--editing)
+                       (eq map-variable loophole--editing))
+              (setq loophole--editing named-map-variable)
+              (force-mode-line-update)))))
       (loophole--replace-map-variable-of-timer map-variable named-map-variable)
       (if (listp loophole--buffer-list)
           (remove-variable-watcher state-variable
@@ -2114,13 +2120,14 @@ Introduced by `loophole-name'." named-map-variable)))
   (if (get 'loophole--editing :loophole-global)
       (message "Editing session is already global")
     (let ((editing (loophole-editing)))
-      (loophole--do-with-current-buffer
-       (when (local-variable-p 'loophole--editing-timer)
-         (loophole-stop-editing-timer)
-         (kill-local-variable 'loophole--editing-timer))
-       (when (local-variable-p 'loophole--editing)
-         (loophole-stop-editing)
-         (kill-local-variable 'loophole--editing)))
+      (dolist (buffer (loophole-buffer-list))
+        (with-current-buffer buffer
+          (when (local-variable-p 'loophole--editing-timer)
+            (loophole-stop-editing-timer)
+            (kill-local-variable 'loophole--editing-timer))
+          (when (local-variable-p 'loophole--editing)
+            (loophole-stop-editing)
+            (kill-local-variable 'loophole--editing))))
       (put 'loophole--editing :loophole-global t)
       (if (loophole-registered-p editing)
           (loophole-start-editing editing))
@@ -2230,12 +2237,13 @@ Generated by `loophole-generate'." map-variable)))
       (if (loophole-global-p map-variable)
           (loophole-localize map-variable)
         (make-variable-buffer-local state-variable)))
-    (loophole--do-with-current-buffer
-     (when (and (local-variable-p state-variable)
-                (boundp state-variable)
-                (symbol-value state-variable))
-       (set state-variable nil)
-       (force-mode-line-update)))
+    (dolist (buffer (loophole-buffer-list))
+      (with-current-buffer buffer
+        (when (and (local-variable-p state-variable)
+                   (boundp state-variable)
+                   (symbol-value state-variable))
+          (set state-variable nil)
+          (force-mode-line-update))))
     (if (loophole-registered-p map-variable state-variable)
         (loophole-unregister map-variable))
     (loophole-register map-variable state-variable tag)
@@ -4108,9 +4116,10 @@ unless `loophole--map-alist' is a member of
 Disable the all keymaps, stop editing, and turn off
 Loophole mode."
   (interactive)
-  (loophole--do-with-current-buffer
-   (loophole-disable-all)
-   (loophole-stop-editing))
+  (dolist (buffer (loophole-buffer-list))
+    (with-current-buffer buffer
+      (loophole-disable-all)
+      (loophole-stop-editing)))
   (loophole-mode 0)
   (force-mode-line-update t))
 
@@ -4602,12 +4611,13 @@ Idle timer is set in `loophole-idle-prioritize-timer'."
                                   (and (symbolp map-variable)
                                        (loophole-registered-p map-variable)))
                                 map-variable-list))))
-             (loophole--do-with-current-buffer
-              (if (local-variable-p 'loophole--map-alist)
-                  (dolist (map-variable
-                           (reverse
-                            (funcall test-and-filter (funcall get-list))))
-                    (loophole-prioritize map-variable 'local))))
+             (dolist (buffer (loophole-buffer-list))
+               (with-current-buffer buffer
+                 (if (loophole-priority-is-local-p)
+                     (dolist (map-variable
+                              (reverse
+                               (funcall test-and-filter (funcall get-list))))
+                       (loophole-prioritize map-variable 'local)))))
              (with-temp-buffer
                (dolist (map-variable
                         (reverse (funcall test-and-filter (funcall get-list))))
