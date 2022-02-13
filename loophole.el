@@ -717,11 +717,11 @@ text properties.  To show `loophole-mode-lighter' with face,
 following customization form.  Note that the following form
 eliminates help echos and clickable buttons.
   (setq mode-line-modes
-        \\='(\"%[\" \"(\"
-          mode-name
-          mode-line-process
-          minor-mode-alist
-          \"%n\" \")\" \"%]\" \" \"))"
+        (list \"%[\" \"(\"
+              \\='mode-name
+              \\='mode-line-process
+              \\='minor-mode-alist
+              \"%n\" \")\" \"%]\" \" \"))"
   :group 'loophole
   :type 'boolean)
 
