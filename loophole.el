@@ -904,9 +904,10 @@ keys will be prompetd."
     (let ((timer (run-with-idle-timer
                   loophole-read-key-limit-time
                   t
-                  (lambda () (if read-keys (throw 'read-keys read-keys))))))
+                  (lambda ()
+                    (if read-keys (throw 'loophole-read-keys read-keys))))))
       (unwind-protect
-          (let ((key (catch 'read-keys
+          (let ((key (catch 'loophole-read-keys
                        (setq read-keys (vector (read-key prompt)))
                        (while t
                          (if (and loophole-allow-keyboard-quit
