@@ -1337,11 +1337,11 @@ Actually, this function searches the symbol undefined in
 the cadr of PROTECTED-ELEMENT and return found keys vector."
   (letrec ((prefix-key-list
             (lambda (object)
-              (cond ((eq object 'undefined)
-                     nil)
+              (cond ((eq object 'undefined) nil)
                     ((or (not (consp (cdr object)))
                          (not (= (length object) 2))
-                         (not (eventp (caadr object)))
+                         (not (or (characterp (caadr object))
+                                  (symbolp (caadr object))))
                          (not (or (keymapp (cdadr object))
                                   (eq 'undefined (cdadr object)))))
                      (error "KEYMAP is not an element of protected keymap"))
