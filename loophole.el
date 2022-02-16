@@ -1216,7 +1216,6 @@ make KEYMAP accessible."
   (let* ((map (symbol-value map-variable))
          (parent (keymap-parent map))
          (protected-keymap (get map-variable :loophole-protected-keymap)))
-    (set-keymap-parent map nil)
     (let ((lookup (lookup-key protected-keymap key))
           (trace (loophole--trace-key-to-find-non-keymap-entry
                   key protected-keymap)))
@@ -1224,6 +1223,7 @@ make KEYMAP accessible."
         (error "Key sequence %s starts with non-prefix key %s"
                (key-description key)
                (key-description trace))))
+    (set-keymap-parent map nil)
     (unwind-protect
         (letrec
             ((existing-cell
@@ -1713,8 +1713,9 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                   (memq (get map-variable :loophole-protected-keymap) parent))
              (let ((grand-parent (keymap-parent parent)))
                (set-keymap-parent parent nil)
-               (setcdr (last parent) (cons loophole-base-map nil))
-               (set-keymap-parent parent grand-parent)))
+               (unwind-protect
+                   (setcdr (last parent) (cons loophole-base-map nil))
+                 (set-keymap-parent parent grand-parent))))
             (t (set-keymap-parent (symbol-value map-variable)
                                   (make-composed-keymap
                                    (list parent loophole-base-map)))))))
@@ -1763,13 +1764,18 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
             ((memq loophole-base-map parent)
              (let ((grand-parent (keymap-parent parent)))
                (set-keymap-parent parent nil)
-               (let ((others (remq loophole-base-map (cdr parent))))
-                 (set-keymap-parent
-                  (symbol-value map-variable)
-                  (cond ((or grand-parent (< 1 (length others)))
-                         (make-composed-keymap others grand-parent))
-                        ((zerop (length others)) nil)
-                        (t (car others)))))))))
+               (unwind-protect
+                   (let ((others (remq loophole-base-map (cdr parent))))
+                     (set-keymap-parent
+                      (symbol-value map-variable)
+                      (cond ((or grand-parent (< 1 (length others)))
+                             (make-composed-keymap others grand-parent))
+                            ((zerop (length others)) nil)
+                            (t (car others)))))
+                 (if (and grand-parent
+                          (eq (keymap-parent (symbol-value map-variable))
+                              parent))
+                     (set-keymap-parent parent grand-parent)))))))
     (dolist (buffer (loophole-buffer-list))
       (with-current-buffer buffer
         (if (local-variable-p 'loophole--map-alist)
