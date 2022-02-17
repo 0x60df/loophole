@@ -1281,15 +1281,7 @@ they will be removed."
                      (key-description key)
                      (key-description non-prefix-key)))))
     (define-key (symbol-value map-variable) key entry)
-    (letrec ((delete-from-keymap
-              (lambda (target current-cell)
-                (cond ((null (cdr current-cell)))
-                      ((eq target (cadr current-cell))
-                       (setcdr current-cell (cddr current-cell))
-                       (funcall delete-from-keymap target current-cell))
-                      (t (funcall delete-from-keymap
-                                  target (cdr current-cell))))))
-             (shadedp
+    (letrec ((shadedp
               (lambda (object key-list)
                 (cond ((null key-list))
                       ((and (keymapp object)
@@ -1308,13 +1300,13 @@ they will be removed."
                                               (append key nil)))
                                    (loophole--protected-keymap-entry-list
                                     protected-keymap))))
-        (funcall delete-from-keymap shaded protected-keymap))
+        (setcdr protected-keymap (delq shaded (cdr protected-keymap))))
       (when (< (length protected-keymap) 2)
         (let* ((map (symbol-value map-variable))
                (parent (keymap-parent map)))
           (cond ((eq parent protected-keymap) (set-keymap-parent map nil))
                 ((memq protected-keymap parent)
-                 (funcall delete-from-keymap protected-keymap parent)
+                 (setcdr parent (delq protected-keymap (cdr parent)))
                  (if (= (length parent) 2)
                      (set-keymap-parent map (cadr parent)))))
           (put map-variable :loophole-protected-keymap nil))))))
