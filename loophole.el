@@ -2044,6 +2044,10 @@ Introduced by `loophole-name'." named-map-variable)))
                (listp loophole--buffer-list))
           (add-variable-watcher named-state-variable
                                 #'loophole--follow-adding-local-variable))
+      (put named-map-variable :loophole-protected-keymap
+           (get map-variable :loophole-protected-keymap))
+      (put named-map-variable :loophole-form-storage
+           (get map-variable :loophole-form-storage))
       (let ((cell (assq state-variable (default-value 'loophole--map-alist))))
         (if (consp cell) (setcar cell named-state-variable)))
       (dolist (buffer (loophole-buffer-list))
