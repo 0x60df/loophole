@@ -3027,7 +3027,11 @@ FILE will be asked."
                      :form-storage ,valid-form)))
                       valid-map-variable-list)))
         (with-temp-file file
-          (prin1 printed-map-list (current-buffer))))
+          (insert (format ";;; -*- mode: %s -*-\n\n"
+                          (if (version< emacs-version "28")
+                              'emacs-lisp
+                            'lisp-data)))
+          (pp printed-map-list (current-buffer))))
     (message "File storage is not writable: %s" file)))
 
 (defun loophole-load (&optional target file)
