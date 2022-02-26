@@ -894,10 +894,10 @@ Otherwise, \\[keyboard-quit] will be returned as it is read."
     key))
 
 (defun loophole-read-key-with-time-limit (prompt)
-  "Read arbitrary key sequence with time limit, and return read keys.
+  "Read keys with time limit, and return read key sequence.
 PROMPT is a prompt string displayed at the first time for
-reading key.  A second or later time for reading key, read
-keys will be prompetd."
+reading key.  For a second or later time for reading key,
+read keys will be shown in echo area."
   (let ((menu-prompting nil)
         (quit (vconcat (where-is-internal 'keyboard-quit nil t)))
         (read-keys nil))
@@ -913,7 +913,7 @@ keys will be prompetd."
                          (if (and loophole-allow-keyboard-quit
                                   (not (zerop (length quit)))
                                   (loophole-key-equal
-                                   (seq-take read-keys (length quit))
+                                   (seq-take (reverse read-keys) (length quit))
                                    quit))
                              (keyboard-quit))
                          (setq read-keys
