@@ -224,13 +224,14 @@ It stops defining keyboard macro, but it does not abort recursive edit.
 
 `read-key` recursively, and read keys will be the keyboard macro.
 When you are finished, type finish key which may be `C-g`.
-Finish key is specified by customizable variable
-`loophole-kmacro-by-read-key-finish-key`,
+Reading key is operated by `loophole-read-key-until-termination-key` and finish
+key is specified by customizable variable
+`loophole-read-key-termination-key`,
 whose default value is key sequence for `keyboard-quit`.
 By default, you can only finish and cannot abort definition.
-Once you set another key sequence to `loophole-kmacro-by-read-key-finish-key`,
-you can finish by your finish key,
-and can abort by the key sequence bound to `keyboard-quit`.
+Once you set another key sequence to `loophole-read-key-termination-key`,
+and `loophole-allow-keyboard-quit` ia non-nil,
+you can abort by the key sequence bound to `keyboard-quit`.
 
 ##### kmacro by recall record
 
@@ -312,8 +313,7 @@ See also documentation strings of user options and commands.
  '(loophole-use-auto-editing-timer t)
  '(loophole-use-idle-prioritize t)
  '(loophole-use-idle-save t)
- '(loophole-kmacro-by-read-key-finish-key (kbd "C-]"))
- '(loophole-array-by-read-key-finish-key (kbd "C-]"))
+ '(loophole-read-key-termination-key (kbd "C-]"))
  '(loophole-defining-kmacro-map-tag
    "<End: \\[loophole-end-kmacro], Abort: \\[loophole-abort-kmacro]>")
  '(loophole-set-key-order
@@ -321,14 +321,12 @@ See also documentation strings of user options and commands.
      loophole-obtain-kmacro-on-top-level
      (loophole-obtain-command-by-read-command
       :key loophole-read-key-with-time-limit)
-     (loophole-obtain-kmacro-by-read-key
-      :key loophole-read-key-for-kmacro-by-read-key)
+     loophole-obtain-kmacro-by-read-key
      loophole-obtain-command-by-lambda-form
      loophole-obtain-kmacro-by-recall-record
      loophole-obtain-symbol-by-read-keymap-function
      loophole-obtain-keymap-by-read-keymap-variable
-     (loophole-obtain-array-by-read-key
-      :key loophole-read-key-for-array-by-read-key)
+     loophole-obtain-array-by-read-key
      (loophole-obtain-object :key loophole-read-key-with-time-limit)
 
      loophole-obtain-array-by-read-string
@@ -418,8 +416,7 @@ Default value of `loophole-set-key-order` is
 (loophole-obtain-command-by-read-command
  loophole-obtain-kmacro-by-recursive-edit
  loophole-obtain-command-by-key-sequence
- (loophole-obtain-kmacro-by-read-key
-  :key loophole-read-key-for-kmacro-by-read-key)
+ loophole-obtain-kmacro-by-read-key
  loophole-obtain-command-by-lambda-form
  loophole-obtain-kmacro-by-recall-record
  loophole-obtain-object)
@@ -432,8 +429,7 @@ and you do not need some other obtaining method, use the following lines.
 ``` emacs-lisp
 (setq loophole-set-key-order
       '(loophole-obtain-command-by-key-sequence
-        (loophole-obtain-kmacro-by-read-key
-         :key loophole-read-key-for-kmacro-by-read-key)
+        loophole-obtain-kmacro-by-read-key
         loophole-obtain-command-by-read-command
         loophole-obtain-kmacro-by-recall-record))
 ```
@@ -452,8 +448,7 @@ Alternatively, if you prefer your own obtaining method with default
         loophole-obtain-key-and-command-by-read-command
         loophole-obtain-key-and-kmacro-by-recursive-edit
         loophole-obtain-key-and-command-by-key-sequence
-        (loophole-obtain-kmacro-by-read-key
-         :key loophole-read-key-for-kmacro-by-read-key)
+        loophole-obtain-kmacro-by-read-key
         loophole-obtain-key-and-command-by-lambda-form
         loophole-obtain-key-and-kmacro-by-recall-record
         loophole-obtain-key-and-object))
@@ -467,8 +462,7 @@ Furthermore, if you prefer builtin `read-key-sequence` to read key for
       '((loophole-obtain-command-by-read-command :key read-key-sequence)
         loophole-obtain-key-and-kmacro-by-recursive-edit
         loophole-obtain-key-and-command-by-key-sequence
-        (loophole-obtain-kmacro-by-read-key
-         :key loophole-read-key-for-kmacro-by-read-key)
+        loophole-obtain-kmacro-by-read-key
         loophole-obtain-key-and-command-by-lambda-form
         loophole-obtain-key-and-kmacro-by-recall-record
         loophole-obtain-key-and-object))
@@ -513,7 +507,7 @@ They are all customizable.
 If the default key sequences does not suit with your environment,
 Modify these user options.
 
-Especially, `loophole-mode-map` hols many key bindings.
+Especially, `loophole-mode-map` holds many key bindings.
 To clear them out, use the following line.
 
 ``` emacs-lisp
@@ -544,42 +538,6 @@ This might improve performance.
 If you want to use your own format,
 it can be set directly to `loophole-mode-lighter`.
 Any mode-line construct is valid.
-
-#### Finish key for defining keyboard macro and array
-
-When defining keyboard macro by recursive `read-key`,
-the finish key is the key sequence for `keyboard-quit`.
-The reason why `keyboard-quit` is employed is that
-built-in keyboard macro system treat the key sequence for `keyboard-quit`
-as just `keyboard-quit`, not the part of keyboard macro.
-They can be changed by the following line.
-
-``` emacs-lisp
-(setq loophole-kmacro-by-read-key-finish-key (kbd "C-c C-c"))
-(setq loophole-array-by-read-key-finish-key (kbd "C-c C-c"))
-```
-
-#### Other considerable user options
-
-##### loophole-temporary-map-max
-
-Maximum number of temporary keymap.
-Keymaps will be stored temporarily up to `loophole-temporary-map-max`,
-even if they are disabled.
-When the number of generated keymaps exceeds `loophole-temporary-map-max`
-and thereafter,
-newly generated keymap overwrites the oldest one and completely abandons it.
-
-Default value of this user option is `8`.
-
-#### loophole-allow-keyboard-quit
-
-The flag if Loophole allows `keyboard-quit` during reading key for binding.
-When `keyboard-quit` is allowed,
-Loophole cannot set key bindings for the key sequence of `keyboard-quit`,
-which may be `C-g`.
-
-Default value of this user option is `t`.
 
 #### Defining Loophole map
 
