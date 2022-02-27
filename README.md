@@ -454,12 +454,13 @@ Alternatively, if you prefer your own obtaining method with default
         loophole-obtain-key-and-object))
 ```
 
-Furthermore, if you prefer builtin `read-key-sequence` to read key for
+Furthermore, if you prefer `loophole-read-key-with-time-limit` to read key for
 `loophole-obtain-command-by-read-command`, use the following lines.
 
 ``` emacs-lisp
 (setq loophole-set-key-order
-      '((loophole-obtain-command-by-read-command :key read-key-sequence)
+      '((loophole-obtain-command-by-read-command
+         :key loophole-read-key-with-time-limit)
         loophole-obtain-key-and-kmacro-by-recursive-edit
         loophole-obtain-key-and-command-by-key-sequence
         loophole-obtain-kmacro-by-read-key
@@ -467,6 +468,12 @@ Furthermore, if you prefer builtin `read-key-sequence` to read key for
         loophole-obtain-key-and-kmacro-by-recall-record
         loophole-obtain-key-and-object))
 ```
+
+`loophole-read-key-with-time-limit` asks user keys recursively until some idle
+time (= 1.0 sec by default) is spent, and can read arbitrary key sequence.
+Loophole offers one more reading key function variant,
+`loophole-read-key-until-termination-key` which also can read arbitrary key
+sequence.
 
 To force using the setting for `:key` property even while binding commands are
 called with `negative-argument`, add the following line to your init file.
