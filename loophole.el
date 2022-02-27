@@ -633,6 +633,11 @@ is duplicated new map variable."
   :group 'loophole
   :type 'hook)
 
+(defcustom loophole-read-buffer-set-up-hook nil
+  "Hook run after the buffer for `loophole-read-buffer' is set up."
+  :group 'loophole
+  :type 'hook)
+
 (defcustom loophole-bind-hook nil
   "Hook for `loophole-bind-entry'.
 Because binding commands including `loophole-set-key' and
@@ -1120,6 +1125,7 @@ buffer, use it instead of current buffer."
                     (unwind-protect
                         (progn
                           (switch-to-buffer-other-window buffer)
+                          (run-hooks 'loophole-read-buffer-set-up-hook)
                           (message nil))
                       (remove-hook 'post-command-hook hook-function))))
             (add-hook 'post-command-hook hook-function)
@@ -1135,6 +1141,7 @@ buffer, use it instead of current buffer."
             (funcall clean-buffer)
             (abort-recursive-edit)))
         (loophole--with-current-buffer-other-window buffer
+          (run-hooks 'loophole-read-buffer-set-up-hook)
           (recursive-edit)
           (save-excursion
             (goto-char 1)
@@ -3894,6 +3901,41 @@ looked up."
                                    loophole--map-alist)))
               keys
               accept-default))
+
+(defun loophole-reset-key (key new-key)
+  "Reset the binding for KEY of `loophole-editing' with NEW-KEY.
+Actually, new binding for NEW-KEY is set and KEY will be
+unset.
+When called interactively, KEY and NEW-KEY will be read by
+`loohpole-read-key'.  If called with prefix argument, KEY
+and NEW-KEY will be read by
+`loohpole-read-key-with-time-limit'.
+By using `loohpole-read-key-with-time-limit', prefix key as
+well as ordinary binding can be reset."
+  (interactive (if (loophole-editing)
+                   (let ((old-key (funcall
+                                   (if current-prefix-arg
+                                       #'loophole-read-key-with-time-limit
+                                     #'loophole-read-key)
+                                   "Reset temporarily set key: ")))
+                     (list old-key
+                           (funcall
+                            (if current-prefix-arg
+                                #'loophole-read-key-with-time-limit
+                              #'loophole-read-key)
+                            (format "New key for %s: "
+                                    (key-description old-key)))))
+                 (user-error "There is no editing map")))
+  (let* ((map (symbol-value (loophole-editing)))
+         (entry (lookup-key map key)))
+    (when (and map entry (not (numberp entry)))
+      (loophole-bind-entry new-key entry map)
+      (loophole-bind-entry key nil map)
+      (if (called-interactively-p 'interactive)
+          (message "Key %s is reset to %s"
+                   (key-description key)
+                   (key-description new-key)))
+      entry)))
 
 ;;; Entry modifiers
 
@@ -4167,6 +4209,7 @@ Followings are the key bindings for Loophole commands.
             (define-key map "\C-c]h" #'loophole-describe)
             (define-key map "\C-c]s" #'loophole-set-key)
             (define-key map "\C-c]u" #'loophole-unset-key)
+            (define-key map "\C-c]r" #'loophole-reset-key)
             (define-key map "\C-c]e" #'loophole-enable)
             (define-key map "\C-c]d" #'loophole-disable)
             (define-key map "\C-c]D" #'loophole-disable-all)
