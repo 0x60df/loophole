@@ -3884,6 +3884,21 @@ KEY is unset; otherwise return nil."
       (if (called-interactively-p 'interactive)
           (message "Key %s is unset" (key-description key)))
       nil)))
+
+(defun loophole-key-binding (keys &optional accept-default)
+  "Return the binding for KEYS in currently active Loophole maps.
+KEYS should be a string or vector which represents key
+sequence.
+Optional argument ACCEPT-DEFAULT has same meaning as
+`lookup-key'.  When non-nil, default binidngs are also
+looked up."
+  (lookup-key (make-composed-keymap
+               (mapcar #'cdr
+                       (seq-filter (lambda (state-map)
+                                     (symbol-value (car state-map)))
+                                   loophole--map-alist)))
+              keys
+              accept-default))
 
 ;;; Entry modifiers
 
