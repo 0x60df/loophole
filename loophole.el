@@ -3854,9 +3854,7 @@ employed as obtaining method.
 Likewise \\[universal-argument] * n and C-[n] invoke the (n+1)th element.
 If `negative-argument' is used, `completing-read' obtaining
 method.  `loophole-decide-obtaining-method-after-read-key'
-affects the timing of this `completing-read'.
-
-Return map-variable on which KEY is set."
+affects the timing of this `completing-read'."
   (interactive (loophole--arg-list loophole-set-key-order current-prefix-arg t))
   (loophole-bind-entry key entry)
   entry)
@@ -3867,10 +3865,7 @@ When called interactively, KEY will be read by
 `loohpole-read-key'.  If called with prefix argument, KEY
 will be read by `loohpole-read-key-with-time-limit'.
 By using `loohpole-read-key-with-time-limit', prefix key as
-well as ordinary binding can be unset.
-
-When KEY is successfully unset, return map-variable on which
-KEY is unset; otherwise return nil."
+well as ordinary binding can be unset."
   (interactive (if (loophole-editing)
                    (list (funcall
                           (if current-prefix-arg
