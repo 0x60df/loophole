@@ -75,16 +75,19 @@ Instead of refering this variable directly, use the function
 `loophole-buffer-list' to safely get buffers which are live
 and having local variables.")
 
-(defvar-local loophole--editing nil
+(defvar-local loophole--editing t
   "Variable of keymap which is currently being edited.
 Loophole binds keys in this keymap.  When this value is nil,
 Loophole may generate new keymap and bind keys in it.
 
-If editing session is global, at that time, symbol property
-:loophole-global is non-nil, default value is used;
-otherwise, buffer local values are used.
+If default value of this variable is t, editing session is
+local, and buffer local values are used; otherwise, editing
+session is global, and default value is used.
 
-Use `loophole-editing' to get the value of this variable.")
+Use function `loophole-editing' to get the value of this
+variable.
+You should not set this variable directly, instead use
+`loophole-start-editing'.")
 
 (defvar loophole--suspended nil
   "Non-nil if Loophole is suspended manually.
@@ -1177,6 +1180,10 @@ value on `current-buffer'."
        (not (local-variable-if-set-p
              (get map-variable :loophole-state-variable)))))
 
+(defun loophole-global-editing-p ()
+  "Non-nil if editing session is global."
+  (not (eq (default-value 'loophole--editing) t)))
+
 (defun loophole-suspending-p ()
   "Non-nil during suspending Loophole.
 During suspension, `loophole--map-alist' is removed from
@@ -1190,9 +1197,11 @@ is preserved."
 If editing session is global, return default value of
 `loophole--editing'.  If editing session is local, return
 buffer local value."
-  (if (get 'loophole--editing :loophole-global)
-      (default-value 'loophole--editing)
-    loophole--editing))
+  (if (eq (default-value 'loophole--editing) t)
+      (if (local-variable-p 'loophole--editing)
+          loophole--editing
+        nil)
+    (default-value 'loophole--editing)))
 
 (defun loophole--char-read-syntax (event)
   "Return printed representation of EVENT by question mark format.
@@ -1770,7 +1779,7 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
   (if (loophole-global-p map-variable)
       (loophole--erase-global-timer map-variable)
     (loophole--erase-local-timers map-variable))
-  (if (get 'loophole--editing :loophole-global)
+  (if (loophole-global-editing-p)
       (progn
         (loophole-stop-editing-timer)
         (loophole-stop-editing)
@@ -2104,7 +2113,7 @@ Introduced by `loophole-name'." named-map-variable)))
           (if (local-variable-p 'loophole--map-alist)
               (let ((cell (assq state-variable loophole--map-alist)))
                 (if (consp cell) (setcar cell named-state-variable))))))
-      (if (get 'loophole--editing :loophole-global)
+      (if (loophole-global-editing-p)
           (progn
             (setq-default loophole--editing named-map-variable)
             (force-mode-line-update t))
@@ -2144,7 +2153,7 @@ Introduced by `loophole-name'." named-map-variable)))
   (interactive (list (loophole-read-map-variable "Start editing keymap: ")))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
-  (if (get 'loophole--editing :loophole-global)
+  (if (loophole-global-editing-p)
       (progn
         (setq-default loophole--editing map-variable)
         (force-mode-line-update t))
@@ -2156,7 +2165,7 @@ Introduced by `loophole-name'." named-map-variable)))
   "Stop keymap editing session."
   (interactive)
   (let ((map-variable (loophole-editing)))
-    (if (get 'loophole--editing :loophole-global)
+    (if (loophole-global-editing-p)
         (progn
           (setq-default loophole--editing nil)
           (force-mode-line-update t))
@@ -2167,7 +2176,7 @@ Introduced by `loophole-name'." named-map-variable)))
 (defun loophole-globalize-editing ()
   "Make editing session global."
   (interactive)
-  (if (get 'loophole--editing :loophole-global)
+  (if (loophole-global-editing-p)
       (message "Editing session is already global")
     (let ((editing (loophole-editing)))
       (dolist (buffer (loophole-buffer-list))
@@ -2178,9 +2187,7 @@ Introduced by `loophole-name'." named-map-variable)))
           (when (local-variable-p 'loophole--editing)
             (loophole-stop-editing)
             (kill-local-variable 'loophole--editing))))
-      (put 'loophole--editing :loophole-global t)
-      (if (loophole-registered-p editing)
-          (loophole-start-editing editing))
+      (setq-default loophole--editing editing)
       (force-mode-line-update t)
       (if (called-interactively-p 'interactive)
           (message "Editing session is globalized"))
@@ -2190,15 +2197,14 @@ Introduced by `loophole-name'." named-map-variable)))
 (defun loophole-localize-editing ()
   "Make editing session local."
   (interactive)
-  (if (not (get 'loophole--editing :loophole-global))
+  (if (not (loophole-global-editing-p))
       (message "Editing session is already local")
     (let ((editing (loophole-editing)))
       (loophole-stop-editing)
       (loophole-stop-editing-timer)
       (setq-default loophole--editing-timer nil)
-      (put 'loophole--editing :loophole-global nil)
-      (if (loophole-registered-p editing)
-          (loophole-start-editing editing))
+      (setq-default loophole--editing t)
+      (setq loophole--editing editing)
       (force-mode-line-update t)
       (if (called-interactively-p 'interactive)
           (message "Editing session is localized"))
@@ -2441,7 +2447,7 @@ is non-nil."
              (read-number "Time for stopping editing in sec: "
                           loophole-editing-timer-default-time))))
   (unless (integerp time) (setq time loophole-editing-timer-default-time))
-  (let ((timer (if (get 'loophole--editing :loophole-global)
+  (let ((timer (if (loophole-global-editing-p)
                    (default-value 'loophole--editing-timer)
                  loophole--editing-timer)))
     (if (timerp timer)
@@ -2450,7 +2456,7 @@ is non-nil."
           (if (or (timer--triggered timer)
                   (not (memq timer timer-list)))
               (timer-activate timer)))
-      (if (get 'loophole--editing :loophole-global)
+      (if (loophole-global-editing-p)
           (setq-default loophole--editing-timer
                         (run-with-timer time nil
                                         (lambda ()
@@ -2469,7 +2475,7 @@ is non-nil."
 (defun loophole-stop-editing-timer ()
   "Cancel timer for stopping editing session."
   (interactive)
-  (let ((timer (if (get 'loophole--editing :loophole-global)
+  (let ((timer (if (loophole-global-editing-p)
                    (default-value 'loophole--editing-timer)
                  loophole--editing-timer)))
     (if (and (timerp timer)
@@ -2489,7 +2495,7 @@ If TIME is negative, shorten timer."
    (list (read-number "Time to extend editing timer in sec: "
                       loophole-editing-timer-default-time)))
   (unless (integerp time) (error "Specified time is invalid: %s" time))
-  (let ((timer (if (get 'loophole--editing :loophole-global)
+  (let ((timer (if (loophole-global-editing-p)
                    (default-value 'loophole--editing-timer)
                  loophole--editing-timer)))
     (if (timerp timer)
