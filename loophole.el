@@ -1561,7 +1561,12 @@ added to the hooks above."
                #'loophole--follow-killing-local-variable t))
 
 (defun loophole-buffer-list ()
-  "Return buffer list on which Loophole variables have local value."
+  "Return buffer list on which Loophole variables have local value.
+This function sanitize orphan hooks by side effect.
+`loophole--follow-killing-local-variable' on
+`change-major-mode-hook' and `kill-buffer-hook' is removed,
+if certain Loophole buffer no longer has local Loophole
+variable."
   (let ((filter (lambda (buffer)
                   (and (buffer-live-p buffer)
                        (with-current-buffer buffer
