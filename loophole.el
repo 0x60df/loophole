@@ -3146,7 +3146,7 @@ FILE will be asked."
                                 "Overwrite it? ")
                         map-variable)))
               (if (loophole-registered-p map-variable)
-                  (loophole-unregister map-variablet t))
+                  (loophole-unregister map-variable t))
               (set map-variable keymap)
               (put map-variable 'variable-documentation documentation)
               (set-keymap-parent keymap parent)
