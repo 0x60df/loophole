@@ -133,16 +133,17 @@ effect."
   :type 'boolean)
 
 (defcustom loophole-decide-obtaining-method-after-read-key 'negative-argument
-  "Option for the timing when obtaining method is decided.
+  "Flag if obtaining method is decided after read-key.
 
-If this value is t, binding commands always decide
-obtaining method after reading key.
+If this value is non-nil, binding commands decide obtaining
+method after reading key.
 
-If this value is 'negative-argument, binding commands
-decide obtaining method after reading key only when
-they are called with `negative-argument'.
+If the value is 'negative-argument, a apecial case of
+non-nil, binding commands decide obtaining method after
+reading key only when they are called with
+`negative-argument'.
 
-Otherwise, binding commands always decide obtaining
+If the value is nil, binding commands decide obtaining
 method before reading key.
 
 The timing of decision affect to behavior of binding
@@ -159,9 +160,9 @@ Besides, if decision is after reading key, optional
 options like `loophole-set-key-order' will be omitted."
   :group 'loophole
   :type '(choice
-          (const :tag "Yes" t)
+          (const :tag "No" nil)
           (const :tag "Yes, only with negative-argument" negative-argument)
-          (other :tag "No" nil)))
+          (other :tag "Yes" t)))
 
 (defcustom loophole-protect-keymap-entry t
   "If non-nil, when keymap object is bound, it will be protected.
@@ -317,11 +318,11 @@ key and entry to be bound, and returns keymap object on
 which key and entry are bound; this overrides
 `loophole-editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is t,
-or while it is 'negative-argument and `loophole-bind-entry'
-is called with `negative-argument',
-:key property will be omitted and default
-`loophole-read-key' will be used for reading key."
+If `loophole-decide-obtaining-method-after-read-key' is
+non-nil other than 'negative-argument, or while it is
+'negative-argument and `loophole-bind-entry' is called with
+`negative-argument', :key property will be omitted and
+default `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat sexp))
@@ -348,8 +349,8 @@ key and command to be bound, and returns keymap object on
 which key and command are bound; this overrides
 `loophole-editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is t,
-or while it is 'negative-argument and
+If `loophole-decide-obtaining-method-after-read-key' is
+non-nil, or while it is 'negative-argument and
 `loophole-bind-command' is called with `negative-argument',
 :key property will be omitted and default
 `loophole-read-key' will be used for reading key."
@@ -380,11 +381,11 @@ key and kmacro to be bound, and returns keymap object on
 which key and kmacro are bound; this overrides
 `loophole-editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is t,
-or while it is 'negative-argument and `loophole-bind-kmacro'
-is called with `negative-argument',
-:key property will be omitted and default
-`loophole-read-key' will be used for reading key."
+If `loophole-decide-obtaining-method-after-read-key' is
+non-nil other than 'negative-argument, or while it is
+'negative-argument and `loophole-bind-kmacro' is called with
+`negative-argument', :key property will be omitted and
+default `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat sexp))
@@ -410,11 +411,11 @@ key and array to be bound, and returns keymap object on
 which key and array are bound; this overrides
 `loophole-editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is t,
-or while it is 'negative-argument and `loophole-bind-array'
-is called with `negative-argument',
-:key property will be omitted and default
-`loophole-read-key' will be used for reading key."
+If `loophole-decide-obtaining-method-after-read-key' is
+non-nil other than 'negative-argument, or while it is
+'negative-argument and `loophole-bind-array' is called with
+`negative-argument', :key property will be omitted and
+default `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat sexp))
@@ -441,11 +442,11 @@ arguments the key and keymap to be bound, and returns
 another-keymap object on which key and keymap are bound;
 this overrides `loophole-editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is t,
-or while it is 'negative-argument and `loophole-bind-keymap'
-is called with `negative-argument',
-:key property will be omitted and default
-`loophole-read-key' will be used for reading key."
+If `loophole-decide-obtaining-method-after-read-key' is
+non-nil other than 'negative-argument, or while it is
+'negative-argument and `loophole-bind-keymap' is called with
+`negative-argument', :key property will be omitted and
+default `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat sexp))
@@ -472,11 +473,11 @@ key and symbol to be bound, and returns keymap object on
 which key and symbol are bound; this overrides
 `loophole-editing'.
 
-If `loophole-decide-obtaining-method-after-read-key' is t,
-or while it is 'negative-argument and `loophole-bind-symbol'
-is called with `negative-argument',
-:key property will be omitted and default
-`loophole-read-key' will be used for reading key."
+If `loophole-decide-obtaining-method-after-read-key' is
+non-nil other than 'negative-argument, or while it is
+'negative-argument and `loophole-bind-symbol' is called with
+`negative-argument', :key property will be omitted and
+default `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat sexp))
@@ -503,11 +504,11 @@ a property :key.  It looks like
 READ-KEY is a function which takes no arguments and returns
 key sequence to be bound.
 
-If `loophole-decide-obtaining-method-after-read-key' is t,
-or while it is 'negative-argument and `loophole-set-key' is
-called with `negative-argument',
-:key property will be omitted and default
-`loophole-read-key' will be used for reading key."
+If `loophole-decide-obtaining-method-after-read-key' is
+non-nil other than 'negative-argument, or while it is
+'negative-argument and `loophole-set-key' is called with
+`negative-argument', :key property will be omitted and
+default `loophole-read-key' will be used for reading key."
   :risky t
   :group 'loophole
   :type '(repeat sexp))
@@ -3273,10 +3274,10 @@ key and binding only."
           read-key-function
           obtain-entry-function
           obtain-keymap-function)
-      (unless (or (eq loophole-decide-obtaining-method-after-read-key t)
-                  (and (eq loophole-decide-obtaining-method-after-read-key
-                           'negative-argument)
-                       (< n 0)))
+      (when (or (null loophole-decide-obtaining-method-after-read-key)
+                (and (eq loophole-decide-obtaining-method-after-read-key
+                         'negative-argument)
+                     (not (< n 0))))
         (setq obtaining-method-spec (funcall decide-obtaining-method n))
         (setq read-key-function
               (funcall get-read-key-function obtaining-method-spec))
@@ -3288,10 +3289,10 @@ key and binding only."
       (let ((arg-key
              (funcall (or read-key-function #'loophole-read-key)
                       "Set key temporarily: ")))
-        (when (or (eq loophole-decide-obtaining-method-after-read-key t)
-                  (and (eq loophole-decide-obtaining-method-after-read-key
-                           'negative-argument)
-                       (< n 0)))
+        (unless (or (null loophole-decide-obtaining-method-after-read-key)
+                    (and (eq loophole-decide-obtaining-method-after-read-key
+                             'negative-argument)
+                         (not (< n 0))))
           (setq obtaining-method-spec (funcall decide-obtaining-method n))
           (setq obtain-entry-function
                 (funcall get-obtain-entry-function obtaining-method-spec))
