@@ -4297,7 +4297,7 @@ Followings are the key bindings for Loophole commands.
 ;;; Customization helpers
 
 (defvar loophole-auto-start-editing-for-existing-binding-advice nil
-  "Advicing function for auto start editing for existing bidning.
+  "Advice function for auto start editing for existing bidning.
 If `loophole-use-auto-start-editing-for-existing-binding' is
 set non-nil, advice for start editing is kept in this variable.")
 
@@ -4620,19 +4620,19 @@ Remove hooks added by `loophole-turn-on-auto-editing-timer'."
   "Turn on auto edit for existing key binidngs as user customization.
 
 Some Loophole commands edit existing key bindings.
-This function set up advises to start editing session
+This function set up advices to start editing session
 automatically with the keymap which holds concerned key
 binding.
 
 If optional argument ASK is non-nil, this function asks user
 if editing session should be started.
 
-This fuction add advise to `loophole-unset-key',
+This fuction add advice to `loophole-unset-key',
 `loophole-reset-key', `loophole-modify-lambda-form',
 `loophole-modify-kmacro', `loophole-modify-array' and
 `loophole-modify-entry'.
-All of advises are optional.
-Instead of using this function, user can pick some advises
+All of advices are optional.
+Instead of using this function, user can pick some advices
 from function defining from optimized customization."
   (if loophole-auto-start-editing-for-existing-binding-advice
       (loophole-turn-off-auto-start-editing-for-existing-binding))
@@ -4660,25 +4660,25 @@ from function defining from optimized customization."
                                   map-variable))
                            (message nil))))
                 (loophole-start-editing map-variable)))))
-  (let ((advise loophole-auto-start-editing-for-existing-binding-advice))
-    (advice-add 'loophole-unset-key :before advise)
-    (advice-add 'loophole-reset-key :before advise)
-    (advice-add 'loophole-modify-lambda-form :before advise)
-    (advice-add 'loophole-modify-kmacro :before advise)
-    (advice-add 'loophole-modify-array :before advise)
-    (advice-add 'loophole-modify-entry :before advise)))
+  (let ((advice loophole-auto-start-editing-for-existing-binding-advice))
+    (advice-add 'loophole-unset-key :before advice)
+    (advice-add 'loophole-reset-key :before advice)
+    (advice-add 'loophole-modify-lambda-form :before advice)
+    (advice-add 'loophole-modify-kmacro :before advice)
+    (advice-add 'loophole-modify-array :before advice)
+    (advice-add 'loophole-modify-entry :before advice)))
 
 (defun loophole-turn-off-auto-start-editing-for-existing-binding ()
   "Turn off auto edit for existing key binidngs as user customization.
-Remove advises added by
+Remove advices added by
 `loophole-turn-on-auto-start-editing-for-existing-binding'."
-  (let ((advise loophole-auto-start-editing-for-existing-binding-advice))
-    (advice-remove 'loophole-unset-key advise)
-    (advice-remove 'loophole-reset-key advise)
-    (advice-remove 'loophole-modify-lambda-form advise)
-    (advice-remove 'loophole-modify-kmacro advise)
-    (advice-remove 'loophole-modify-array advise)
-    (advice-remove 'loophole-modify-entry advise))
+  (let ((advice loophole-auto-start-editing-for-existing-binding-advice))
+    (advice-remove 'loophole-unset-key advice)
+    (advice-remove 'loophole-reset-key advice)
+    (advice-remove 'loophole-modify-lambda-form advice)
+    (advice-remove 'loophole-modify-kmacro advice)
+    (advice-remove 'loophole-modify-array advice)
+    (advice-remove 'loophole-modify-entry advice))
   (setq loophole-auto-start-editing-for-existing-binding-advice nil))
 
 (defun loophole-turn-on-idle-prioritize (&optional target time)
@@ -4852,7 +4852,7 @@ Because this option uses :set property, `setq' does not work
 for this variable.  Use `custom-set-variables' or call
 `loophole-turn-on-auto-timer' or
 `loophole-turn-off-auto-timer' manually.
-They setup some hooks and advice.
+They setup some hooks.
 
 For more detailed customization, see documentation string of
 `loophole-turn-on-auto-timer'."
@@ -4892,7 +4892,7 @@ for this variable.  Use `custom-set-variables' or call
 or
 `loophole-turn-off-auto-start-editing-for-existing-binding'
 manually.
-They setup some advises.
+They setup some advices.
 
 If the value of this user option is a list, it is applied to
 `loophole-turn-on-auto-start-editing-for-existing-binding'.
