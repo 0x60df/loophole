@@ -311,12 +311,11 @@ Each element optionally can be a list whose car is a
 function described above, and cdr is a plist whose property
 may be :key and/or :keymap.  It looks like
 \(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
-READ-KEY is a function which takes no arguments and returns
-key sequence to be bound.
-OBTAIN-KEYMAP is a function which takes two arguments the
-key and entry to be bound, and returns keymap object on
-which key and entry are bound; this overrides
-`loophole-editing'.
+READ-KEY is a function which takes one argument a standard
+prompt string and returns key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes one argument the
+key to be bound, and returns keymap object on which key and
+entry are bound; this overrides `loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is
 non-nil other than 'negative-argument, or while it is
@@ -341,13 +340,12 @@ the key to be bound and returns a command for binding entry.
 Each element optionally can be a list whose car is a
 function described above, and cdr is a plist whose property
 may be :key and/or :keymap.  It looks like
-\(OBTAIN-COMMAND :key READ-KEY :keymap OBTAIN-KEYMAP).
-READ-KEY is a function which takes no arguments and returns
-key sequence to be bound.
-OBTAIN-KEYMAP is a function which takes two arguments the
-key and command to be bound, and returns keymap object on
-which key and command are bound; this overrides
-`loophole-editing'.
+\(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes one argument a standard
+prompt string and returns key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes one argument the
+key to be bound, and returns keymap object on which key and
+entry are bound; this overrides `loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is
 non-nil, or while it is 'negative-argument and
@@ -373,13 +371,12 @@ entry.
 Each element optionally can be a list whose car is a
 function described above, and cdr is a plist whose property
 may be :key and/or :keymap.  It looks like
-\(OBTAIN-KMACRO :key READ-KEY :keymap OBTAIN-KEYMAP).
-READ-KEY is a function which takes no arguments and returns
-key sequence to be bound.
-OBTAIN-KEYMAP is a function which takes two arguments the
-key and kmacro to be bound, and returns keymap object on
-which key and kmacro are bound; this overrides
-`loophole-editing'.
+\(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes one argument a standard
+prompt string and returns key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes one argument the
+key to be bound, and returns keymap object on which key and
+entry are bound; this overrides `loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is
 non-nil other than 'negative-argument, or while it is
@@ -403,13 +400,12 @@ the key to be bound and returns a array for binding entry.
 Each element optionally can be a list whose car is a
 function described above, and cdr is a plist whose property
 may be :key and/or :keymap.  It looks like
-\(OBTAIN-ARRAY :key READ-KEY :keymap OBTAIN-KEYMAP).
-READ-KEY is a function which takes no arguments and returns
-key sequence to be bound.
-OBTAIN-KEYMAP is a function which takes two arguments the
-key and array to be bound, and returns keymap object on
-which key and array are bound; this overrides
-`loophole-editing'.
+\(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes one argument a standard
+prompt string and returns key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes one argument the
+key to be bound, and returns keymap object on which key and
+entry are bound; this overrides `loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is
 non-nil other than 'negative-argument, or while it is
@@ -434,13 +430,12 @@ entry.
 Each element optionally can be a list whose car is a
 function described above, and cdr is a plist whose property
 may be :key and/or :keymap.  It looks like
-\(OBTAIN-KEYMAP :key READ-KEY :keymap OBTAIN-ANOTHER-KEYMAP).
-READ-KEY is a function which takes no arguments and returns
-key sequence to be bound.
-OBTAIN-ANOTHER-KEYMAP is a function which takes two
-arguments the key and keymap to be bound, and returns
-another-keymap object on which key and keymap are bound;
-this overrides `loophole-editing'.
+\(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes one argument a standard
+prompt string and returns key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes one argument the
+key to be bound, and returns keymap object on which key and
+entry are bound; this overrides `loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is
 non-nil other than 'negative-argument, or while it is
@@ -465,13 +460,12 @@ the key to be bound and returns a symbol for binding entry.
 Each element optionally can be a list whose car is a
 function described above, and cdr is a plist whose property
 may be :key and/or :keymap.  It looks like
-\(OBTAIN-SYMBOL :key READ-KEY :keymap OBTAIN-KEYMAP).
-READ-KEY is a function which takes no arguments and returns
-key sequence to be bound.
-OBTAIN-KEYMAP is a function which takes two arguments the
-key and symbol to be bound, and returns keymap object on
-which key and symbol are bound; this overrides
-`loophole-editing'.
+\(OBTAIN-ENTRY :key READ-KEY :keymap OBTAIN-KEYMAP).
+READ-KEY is a function which takes one argument a standard
+prompt string and returns key sequence to be bound.
+OBTAIN-KEYMAP is a function which takes one argument the
+key to be bound, and returns keymap object on which key and
+entry are bound; this overrides `loophole-editing'.
 
 If `loophole-decide-obtaining-method-after-read-key' is
 non-nil other than 'negative-argument, or while it is
@@ -501,8 +495,8 @@ Each element optionally can be a list whose car is a
 function described above, and cdr is a plist which has
 a property :key.  It looks like
 \(OBTAIN-ENTRY :key READ-KEY).
-READ-KEY is a function which takes no arguments and returns
-key sequence to be bound.
+READ-KEY is a function which takes one argument a standard
+prompt string and returns key sequence to be bound.
 
 If `loophole-decide-obtaining-method-after-read-key' is
 non-nil other than 'negative-argument, or while it is
