@@ -4940,6 +4940,7 @@ for this variable.  Use `custom-set-variables' or call
 `loophole-turn-on-idle-prioritize' or
 `loophole-turn-off-idle-prioritize' manually.
 They setup idle timer."
+  :risky t
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
@@ -4983,6 +4984,7 @@ for this variable.  Use `custom-set-variables' or call
 `loophole-turn-on-idle-save' or
 `loophole-turn-off-idle-save' manually.
 They setup idle timer."
+  :risky t
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
