@@ -127,7 +127,7 @@ or enabled earliest used one."
 (defcustom loophole-allow-keyboard-quit t
   "If non-nil, binding commands can be quit even while reading keys.
 If binidng commands use reading key function other than
-`loohpole-read-key' and its variant, this variable takes no
+`loophole-read-key' and its variant, this variable takes no
 effect."
   :group 'loophole
   :type 'boolean)
@@ -180,7 +180,7 @@ write protected."
   :type 'boolean)
 
 (defcustom loophole-read-key-limit-time 1.0
-  "Limit time in seconds for `loohpole-read-key-with-time-limit'."
+  "Limit time in seconds for `loophole-read-key-with-time-limit'."
   :group 'loophole
   :type 'number)
 
@@ -1250,7 +1250,7 @@ returned."
 (defun loophole--protected-keymap-entry-list (protected-keymap)
   "Return list of protected keymap element from raw PROTECTED-KEYMAP.
 PROTECTED-KEYMAP is flatten keymap object stored in the each
-map-variable as symbol property :loohpole-protected-keymap.
+map-variable as symbol property :loophole-protected-keymap.
 It looks like
   (keymap (keymap ... body of entry1)
           (keymap ... wall of entry1)
