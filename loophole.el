@@ -4643,11 +4643,11 @@ from function defining from optimized customization."
              (let ((active (seq-some #'symbol-value
                                      (loophole-state-variable-list))))
                (if active (advice-add 'loophole-editing
-                                      :filter-return (lambda (returns) t)))
+                                      :filter-return (lambda (__) t)))
                (unwind-protect
                    (advice-eval-interactive-spec spec)
                  (if active (advice-remove 'loophole-editing
-                                           (lambda (returns) t)))))))
+                                           (lambda (__) t)))))))
           (let ((editing (loophole-editing))
                 (map-variable (loophole-map-variable-for-key-binding key)))
             (if (and (loophole-registered-p map-variable)
