@@ -3965,8 +3965,9 @@ well as ordinary binding can be reset."
 ;;; Entry modifiers
 
 (defun loophole-modify-lambda-form (key &optional map-variable)
-  "Modify lambda form bound to KEY in MAP-VARIABLE.
-If MAP-VARIABLE is nil, lookup all active loophole maps.
+  "Modify lambda form bound to KEY in editing keymap.
+If MAP-VARIABLE is non-nil, that is looked up instead of
+editing keymap.
 
 This function print bound lambda form to temporary buffer,
 and read it back when modifying is finished.
@@ -3981,17 +3982,16 @@ user a workspace, if user option
 this command is quit, and temporary buffer is remained with
 transient local binidngs whose entry binds KEY and modified
 lambda form."
-  (interactive (list (loophole-read-key "Modify lambda form for key: ")
-                     (if current-prefix-arg
-                         (loophole-read-map-variable "Lookup: "))))
+  (interactive (if (or current-prefix-arg (loophole-editing) )
+                   (list (loophole-read-key "Modify lambda form for key: ")
+                         (if current-prefix-arg
+                             (loophole-read-map-variable "Lookup: ")))
+                 (user-error "There is no editing map")))
   (if map-variable
       (unless (loophole-registered-p map-variable)
         (user-error "Specified map-variable %s is not registered" map-variable))
-    (setq map-variable (loophole-map-variable-for-key-binding key))
-    (unless map-variable
-      (user-error "No entry found in loophole maps for key: %s"
-                  (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key t))
+    (setq map-variable (loophole-editing)))
+  (let ((entry (lookup-key (symbol-value map-variable) key))
         (buffer (get-buffer-create "*Loophole*")))
     (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
@@ -4017,8 +4017,9 @@ lambda form."
       (funcall test-and-bind (loophole-read-buffer test-and-bind buffer)))))
 
 (defun loophole-modify-kmacro (key &optional map-variable)
-  "Modify kmacro bound to KEY in MAP-VARIABLE.
-If MAP-VARIABLE is nil, lookup all active loophole maps.
+  "Modify kmacro bound to KEY in editing keymap.
+If MAP-VARIABLE is non-nil, that is looked up instead of
+editing keymap.
 
 This function print bound kmacro to temporary buffer, and
 read it back when modifying is finished.
@@ -4036,17 +4037,16 @@ user a workspace, if user option
 this command is quit, and temporary buffer is remained with
 transient local binidngs whose entry binds KEY and modified
 lambda form."
-  (interactive (list (loophole-read-key "Modify kmacro for key: ")
-                     (if current-prefix-arg
-                         (loophole-read-map-variable "Lookup: "))))
+  (interactive (if (or current-prefix-arg (loophole-editing) )
+                   (list (loophole-read-key "Modify kmacro for key: ")
+                         (if current-prefix-arg
+                             (loophole-read-map-variable "Lookup: ")))
+                 (user-error "There is no editing map")))
   (if map-variable
       (unless (loophole-registered-p map-variable)
         (user-error "Specified map-variable %s is not registered" map-variable))
-    (setq map-variable (loophole-map-variable-for-key-binding key))
-    (unless map-variable
-      (user-error "No entry found in loophole maps for key: %s"
-                  (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key t))
+    (setq map-variable (loophole-editing)))
+  (let ((entry (lookup-key (symbol-value map-variable) key))
         (buffer (get-buffer-create "*Loophole*")))
     (unless (featurep 'kmacro)
       (user-error "Bound entry cannot be kmacro, feature has not been loaded"))
@@ -4079,8 +4079,9 @@ lambda form."
       (funcall test-and-bind (loophole-read-buffer test-and-bind buffer)))))
 
 (defun loophole-modify-array (key &optional map-variable)
-  "Modify array bound to KEY in MAP-VARIABLE.
-If MAP-VARIABLE is nil, lookup all active loophole maps.
+  "Modify array bound to KEY in editing keymap.
+If MAP-VARIABLE is non-nil, that is looked up instead of
+editing keymap.
 
 This function print bound array to temporary buffer, and
 read it back when modifying is finished.
@@ -4094,17 +4095,16 @@ user a workspace, if user option
 this command is quit, and temporary buffer is remained with
 transient local binidngs whose entry binds KEY and modified
 lambda form."
-  (interactive (list (loophole-read-key "Modify array for key: ")
-                     (if current-prefix-arg
-                         (loophole-read-map-variable "Lookup: "))))
+  (interactive (if (or current-prefix-arg (loophole-editing) )
+                   (list (loophole-read-key "Modify array for key: ")
+                         (if current-prefix-arg
+                             (loophole-read-map-variable "Lookup: ")))
+                 (user-error "There is no editing map")))
   (if map-variable
       (unless (loophole-registered-p map-variable)
         (user-error "Specified map-variable %s is not registered" map-variable))
-    (setq map-variable (loophole-map-variable-for-key-binding key))
-    (unless map-variable
-      (user-error "No entry found in loophole maps for key: %s"
-                  (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key t))
+    (setq map-variable (loophole-editing)))
+  (let ((entry (lookup-key (symbol-value map-variable) key))
         (buffer (get-buffer-create "*Loophole*")))
     (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
@@ -4129,22 +4129,22 @@ lambda form."
       (funcall test-and-bind (loophole-read-buffer test-and-bind buffer)))))
 
 (defun loophole-modify-entry (key &optional map-variable)
-  "Modify entry bound to KEY in MAP-VARIABLE.
-If MAP-VARIABLE is nil, lookup all active Loophole maps.
+  "Modify entry bound to KEY in editing keymap.
+If MAP-VARIABLE is non-nil, that is looked up instead of
+editing keymap.
 
 This function checks entry bound to KEY and call proper
 function to modify it."
-  (interactive (list (loophole-read-key "Modify entry for key: ")
-                     (if current-prefix-arg
-                         (loophole-read-map-variable "Lookup: "))))
+  (interactive (if (or current-prefix-arg (loophole-editing) )
+                   (list (loophole-read-key "Modify entry for key: ")
+                         (if current-prefix-arg
+                             (loophole-read-map-variable "Lookup: ")))
+                 (user-error "There is no editing map")))
   (if map-variable
       (unless (loophole-registered-p map-variable)
         (user-error "Specified map-variable %s is not registered" map-variable))
-    (setq map-variable (loophole-map-variable-for-key-binding key))
-    (unless map-variable
-      (user-error "No entry found in loophole maps for key: %s"
-                  (key-description key))))
-  (let ((entry (lookup-key (symbol-value map-variable) key t)))
+    (setq map-variable (loophole-editing)))
+  (let ((entry (lookup-key (symbol-value map-variable) key)))
     (cond ((or (null entry) (numberp entry))
            (user-error "No entry found in loophole map: %s" map-variable))
           ((kmacro-p entry) (loophole-modify-kmacro key map-variable))
@@ -4622,13 +4622,15 @@ binding.
 If optional argument ASK is non-nil, this function asks user
 if editing session should be started.
 
-This fuction add advise to `loophole-unset-key' and
-`loophole-reset-key'
-Bothe these advise are optional.
+This fuction add advise to `loophole-unset-key',
+`loophole-reset-key', `loophole-modify-lambda-form',
+`loophole-modify-kmacro', `loophole-modify-array' and
+`loophole-modify-entry'.
+All of advises are optional.
 Instead of using this function, user can pick some advises
 from function defining from optimized customization."
   (let ((advise
-         (lambda (key)
+         (lambda (key &rest _)
            (interactive
             (lambda (spec)
               (let ((active (seq-some #'symbol-value
@@ -4652,14 +4654,18 @@ from function defining from optimized customization."
                             (message nil))))
                  (loophole-start-editing map-variable))))))
     (advice-add 'loophole-unset-key :before advise)
-    (advice-add 'loophole-reset-key :before advise)))
+    (advice-add 'loophole-reset-key :before advise)
+    (advice-add 'loophole-modify-lambda-form :before advise)
+    (advice-add 'loophole-modify-kmacro :before advise)
+    (advice-add 'loophole-modify-array :before advise)
+    (advice-add 'loophole-modify-entry :before advise)))
 
 (defun loophole-turn-off-auto-start-editing-for-existing-binding ()
   "Turn off auto edit for existing key binidngs as user customization.
 Remove advises added by
 `loophole-turn-on-auto-start-editing-for-existing-binding'."
   (let ((advise
-         (lambda (key)
+         (lambda (key &rest _)
            (interactive
             (lambda (spec)
               (let ((active (seq-some #'symbol-value
@@ -4682,7 +4688,11 @@ Remove advises added by
                             (message nil))))
                  (loophole-start-editing map-variable))))))
     (advice-remove 'loophole-unset-key advise)
-    (advice-remove 'loophole-reset-key advise)))
+    (advice-remove 'loophole-reset-key advise)
+    (advice-remove 'loophole-modify-lambda-form advise)
+    (advice-remove 'loophole-modify-kmacro advise)
+    (advice-remove 'loophole-modify-array advise)
+    (advice-remove 'loophole-modify-entry advise)))
 
 (defun loophole-turn-on-idle-prioritize (&optional target time)
   "Turn on idle prioritization as user customization.
