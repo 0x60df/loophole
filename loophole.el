@@ -4053,6 +4053,8 @@ lambda form."
       (erase-buffer)
       (insert ";; For modifying kmacro.\n\n")
       (let ((extracted (kmacro-extract-lambda entry)))
+        (insert ";; Format: ([KEYS OF KMACRO]\n")
+        (insert ";;          COUNTER \"COUNTER-FORMAT\")\n")
         (insert ";; Key description: " (key-description (car extracted)) "\n")
         (if loophole-print-event-in-char-read-syntax
             (insert "(["
@@ -4108,6 +4110,7 @@ lambda form."
     (with-current-buffer buffer
       (erase-buffer)
       (insert ";; For modifying array.\n\n")
+      (insert ";; Format: [KEYS OF KBD MACRO]\n")
       (insert ";; Key description: " (key-description entry) "\n")
       (if loophole-print-event-in-char-read-syntax
           (insert "[" (mapconcat #'loophole--char-read-syntax entry " ") "]\n")
