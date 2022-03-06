@@ -158,7 +158,10 @@ Besides, if decision is after reading key, optional
 :key property of obtaining method defined at other user
 options like `loophole-set-key-order' will be omitted."
   :group 'loophole
-  :type 'boolean)
+  :type '(choice
+          (const :tag "Yes" t)
+          (const :tag "Yes, only with negative-argument" negative-argument)
+          (other :tag "No" nil)))
 
 (defcustom loophole-protect-keymap-entry t
   "If non-nil, when keymap object is bound, it will be protected.
