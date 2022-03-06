@@ -133,7 +133,7 @@ effect."
   :type 'boolean)
 
 (defcustom loophole-decide-obtaining-method-after-read-key 'negative-argument
-  "Flag if obtaining method is decided after read-key.
+  "Flag if obtaining method is decided after read key.
 
 If this value is non-nil, binding commands decide obtaining
 method after reading key.
