@@ -298,6 +298,22 @@ Activity of this map is controled by
   :group 'loophole
   :type 'string)
 
+(defcustom loophole-alternative-read-key-function
+  #'loophole-read-key-with-time-limit
+  "Alternative read key function for `loophole-read-key'.
+The value of this user options should be a function which
+takes one argument a standard prompt string and returns read
+key sequence.
+
+`loophole-unset-key' and `loophole-reset-key' called with
+prefix argument use this function to read key.
+
+For binding commands, and `loophole-set-key', this option
+does not take effect, becase they refer loophole-*-order
+which can specify more conplex rules to read key."
+  :group 'loophole
+  :type 'function)
+
 (defcustom loophole-bind-entry-order
   '(loophole-obtain-object)
   "The priority list of methods to obtain any Lisp object for binding.
@@ -3889,14 +3905,15 @@ affects the timing of this `completing-read'."
 (defun loophole-unset-key (key)
   "Unset the temporary binding of KEY of `loophole-editing'.
 When called interactively, KEY will be read by
-`loohpole-read-key'.  If called with prefix argument, KEY
-will be read by `loohpole-read-key-with-time-limit'.
-By using `loohpole-read-key-with-time-limit', prefix key as
+`loophole-read-key'.  If called with prefix argument, KEY
+will be read by `loophole-alternative-read-key-function'
+whose default value is `loophole-read-key-with-time-limit'.
+By using `loophole-read-key-with-time-limit', prefix key as
 well as ordinary binding can be unset."
   (interactive (if (loophole-editing)
                    (list (funcall
                           (if current-prefix-arg
-                              #'loophole-read-key-with-time-limit
+                              loophole-alternative-read-key-function
                             #'loophole-read-key)
                           "Unset temporarily set key: "))
                  (user-error "There is no editing map")))
@@ -3927,15 +3944,16 @@ looked up."
 Actually, new binding for NEW-KEY is set and KEY will be
 unset.
 When called interactively, KEY and NEW-KEY will be read by
-`loohpole-read-key'.  If called with prefix argument, KEY
+`loophole-read-key'.  If called with prefix argument, KEY
 and NEW-KEY will be read by
-`loohpole-read-key-with-time-limit'.
-By using `loohpole-read-key-with-time-limit', prefix key as
+`loophole-alternative-read-key-function' whose default value
+is `loophole-read-key-with-time-limit'.
+By using `loophole-read-key-with-time-limit', prefix key as
 well as ordinary binding can be reset."
   (interactive (if (loophole-editing)
                    (let ((old-key (funcall
                                    (if current-prefix-arg
-                                       #'loophole-read-key-with-time-limit
+                                       loophole-alternative-read-key-function
                                      #'loophole-read-key)
                                    "Reset temporarily set key: ")))
                      (list old-key
