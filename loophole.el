@@ -4611,6 +4611,79 @@ Remove hooks added by `loophole-turn-on-auto-editing-timer'."
   (remove-hook 'loophole-after-localize-editing-functions
                (lambda (_) (loophole-start-editing-timer))))
 
+(defun loophole-turn-on-auto-start-editing-for-existing-binding (&optional ask)
+  "Turn on auto edit for existing key binidngs as user customization.
+
+Some Loophole commands edit existing key bindings.
+This function set up advises to start editing session
+automatically with the keymap which holds concerned key
+binding.
+
+If optional argument ASK is non-nil, this function asks user
+if editing session should be started.
+
+This fuction add advise to `loophole-unset-key' and
+`loophole-reset-key'
+Bothe these advise are optional.
+Instead of using this function, user can pick some advises
+from function defining from optimized customization."
+  (let ((advise
+         (lambda (key)
+           (interactive
+            (lambda (spec)
+              (let ((active (seq-some #'symbol-value
+                                      (loophole-state-variable-list))))
+                (if active (advice-add 'loophole-editing
+                                       :filter-return (lambda (returns) t)))
+                (unwind-protect
+                    (advice-eval-interactive-spec spec)
+                  (if active (advice-remove 'loophole-editing
+                                            (lambda (returns) t)))))))
+           (let ((editing (loophole-editing))
+                 (map-variable (loophole-map-variable-for-key-binding key)))
+             (if (and (loophole-registered-p map-variable)
+                      (not (eq map-variable editing))
+                      (or (null ask)
+                          (prog1 (y-or-n-p
+                                  (format
+                                   "Currently editing %s.  Start editing %s? "
+                                   (if editing editing "session is stopped")
+                                   map-variable))
+                            (message nil))))
+                 (loophole-start-editing map-variable))))))
+    (advice-add 'loophole-unset-key :before advise)
+    (advice-add 'loophole-reset-key :before advise)))
+
+(defun loophole-turn-off-auto-start-editing-for-existing-binding ()
+  "Turn off auto edit for existing key binidngs as user customization.
+Remove advises added by
+`loophole-turn-on-auto-start-editing-for-existing-binding'."
+  (let ((advise
+         (lambda (key)
+           (interactive
+            (lambda (spec)
+              (let ((active (seq-some #'symbol-value
+                                      (loophole-state-variable-list))))
+                (if active (advice-add 'loophole-editing
+                                       :filter-return (lambda (returns) t)))
+                (unwind-protect
+                    (advice-eval-interactive-spec spec)
+                  (if active (advice-remove 'loophole-editing
+                                            (lambda (returns) t)))))))
+           (let ((map-variable (loophole-map-variable-for-key-binding key)))
+             (if (and (loophole-registered-p map-variable)
+                      (not (eq map-variable (loophole-editing)))
+                      (or (null ask)
+                          (prog1 (y-or-n-p
+                                  (format
+                                   "Currently editing %s.  Start editing %s? "
+                                   (if editing editing "session is stopped")
+                                   map-variable))
+                            (message nil))))
+                 (loophole-start-editing map-variable))))))
+    (advice-remove 'loophole-unset-key advise)
+    (advice-remove 'loophole-reset-key advise)))
+
 (defun loophole-turn-on-idle-prioritize (&optional target time)
   "Turn on idle prioritization as user customization.
 Start idle timer for prioritizing Loophole maps.
@@ -4812,6 +4885,37 @@ For more detailed customization, see documentation string of
          (if value
              (loophole-turn-on-auto-editing-timer)
            (loophole-turn-off-auto-editing-timer))))
+
+(defcustom loophole-use-auto-start-editing-for-existing-binding nil
+  "Flag if start editing automatically when existing key is looked up.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-turn-on-auto-start-editing-for-existing-binding'
+or
+`loophole-turn-off-auto-start-editing-for-existing-binding'
+manually.
+They setup some advises.
+
+If the value of this user option is a list, it is applied to
+`loophole-turn-on-auto-start-editing-for-existing-binding'.
+In that case, the value should be a list whose first element
+is a flag if user is asked to confirm starting editing
+session.
+
+For more detailed customization, see documentation string of
+`loophole-turn-on-auto-start-editing-for-existing-binding'."
+  :group 'loophole
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (if (listp value)
+                 (apply
+                  #'loophole-turn-on-auto-start-editing-for-existing-binding
+                  value)
+               (loophole-turn-on-auto-start-editing-for-existing-binding))
+           (loophole-turn-off-auto-start-editing-for-existing-binding))))
 
 (defcustom loophole-use-idle-prioritize nil
   "Flag if prioritize Loophole maps when idle.

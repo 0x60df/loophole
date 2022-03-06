@@ -311,6 +311,7 @@ See also documentation strings of user options and commands.
  '(loophole-make-load-overwrite-map t)
  '(loophole-use-auto-timer t)
  '(loophole-use-auto-editing-timer t)
+ '(loophole-use-auto-start-editing-for-existing-binding t)
  '(loophole-use-idle-prioritize t)
  '(loophole-use-idle-save t)
  '(loophole-read-key-termination-key (kbd "C-]"))
