@@ -5141,20 +5141,24 @@ TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
         `(make-variable-buffer-local ',state))
      (loophole-register ',map ',state ,tag ,global ,without-base-map)))
 
-(dolist (mode '(emacs-lisp-mode lisp-interaction-mode))
-  (if loophole-font-lock-multiline
-      (add-hook (intern (concat (symbol-name mode) "-hook"))
-                #'loophole--define-map-add-font-lock-extend-region-function))
-
-  (font-lock-add-keywords
-   mode
-   `((,(if loophole-font-lock-multiline
-           #'loophole--define-map-font-lock-function
-         loophole--define-map-font-lock-regexp)
-      (1 font-lock-keyword-face)
-      (2 font-lock-variable-name-face nil t)
-      (3 font-lock-variable-name-face nil t)
-      (4 font-lock-doc-face t t)))))
+(let ((keywords `((,(if loophole-font-lock-multiline
+                        #'loophole--define-map-font-lock-function
+                      loophole--define-map-font-lock-regexp)
+                   (1 font-lock-keyword-face)
+                   (2 font-lock-variable-name-face nil t)
+                   (3 font-lock-variable-name-face nil t)
+                   (4 font-lock-doc-face t t))))
+      (modes '(emacs-lisp-mode lisp-interaction-mode)))
+  (dolist (mode modes)
+    (if loophole-font-lock-multiline
+        (add-hook (intern (concat (symbol-name mode) "-hook"))
+                  #'loophole--define-map-add-font-lock-extend-region-function))
+    (font-lock-add-keywords mode keywords))
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (memq major-mode modes)
+        (loophole--define-map-add-font-lock-extend-region-function)
+        (font-lock-add-keywords nil keywords)))))
 
 ;;; Aliases for main interfaces
 
