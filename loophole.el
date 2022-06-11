@@ -2557,15 +2557,19 @@ If TIME is negative, shorten timer."
            (let* ((line-list (split-string (substitute-command-keys
                                             (format "\\{%s}" map-variable))
                                            "\n"))
-                  (assoc-list (mapcar
-                               (lambda (line)
-                                 (cons line
-                                       (let ((keys (car (split-string line))))
-                                         (if (stringp keys)
-                                             (lookup-key
-                                              (symbol-value map-variable)
-                                              (kbd keys))))))
-                               line-list))
+                  (assoc-list
+                   (mapcar
+                    (lambda (line)
+                      (cons line
+                            (let ((keys (replace-regexp-in-string
+                                         "^\\(.+?\\)\\(  \\| \\.\\. \\).*"
+                                         "\\1"
+                                         line)))
+                              (if (stringp keys)
+                                  (lookup-key
+                                   (symbol-value map-variable)
+                                   (kbd keys))))))
+                    line-list))
                   (expanded-list
                    (mapcar (lambda (assoc)
                              (replace-regexp-in-string
