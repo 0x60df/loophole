@@ -1241,11 +1241,13 @@ returned."
     (prin1-to-string event)))
 
 (defun loophole--symbol-function-recursively (symbol)
-  "`symbol-function' SYMBOL recursively."
-  (let ((function (symbol-function symbol)))
-    (cond ((eq function symbol) function)
-          ((not (symbolp function)) function)
-          (t (loophole--symbol-function-recursively function)))))
+  "Return function definition of SYMBOL traced recursively.
+`indirect-function' is used to find definition but if
+cyclic-function-indirection is signaled, SYMBOL itself is
+returned."
+  (condition-case e
+      (indirect-function symbol)
+    (cyclic-function-indirection symbol)))
 
 (defun loophole--protected-keymap-entry-list (protected-keymap)
   "Return list of protected keymap element from raw PROTECTED-KEYMAP.
@@ -3599,7 +3601,7 @@ or a symbol whose function cell is ultimately a keymap."
                   obarray
                   (lambda (s)
                     (let ((f (loophole--symbol-function-recursively s)))
-                      (keymapp f)))
+                      (and (not (symbolp f)) (keymapp f))))
                   t))))
     (loophole-toss-binding-form key `(loophole--symbol-function-recursively
                                       ',symbol))
@@ -3616,7 +3618,7 @@ or a symbol whose function cell is ultimately a keymap."
            obarray
            (lambda (s)
              (let ((f (loophole--symbol-function-recursively s)))
-               (keymapp f)))
+               (and (not (symbolp f)) (keymapp f))))
            t)))
 
 (defun loophole-obtain-symbol-by-read-command (key &optional _keymap)
