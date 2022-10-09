@@ -1245,7 +1245,7 @@ returned."
 `indirect-function' is used to find definition but if
 cyclic-function-indirection is signaled, SYMBOL itself is
 returned."
-  (condition-case e
+  (condition-case _
       (indirect-function symbol)
     (cyclic-function-indirection symbol)))
 
