@@ -3302,29 +3302,31 @@ key and binding only."
         (setq obtain-keymap-function
               (unless without-keymap
                 (funcall get-obtain-keymap-function obtaining-method-spec))))
-      (let ((arg-key
-             (funcall (or read-key-function #'loophole-read-key)
-                      "Set key temporarily: ")))
-        (unless (or (null loophole-decide-obtaining-method-after-read-key)
-                    (and (eq loophole-decide-obtaining-method-after-read-key
-                             'negative-argument)
-                         (not (< n 0))))
-          (setq obtaining-method-spec (funcall decide-obtaining-method n))
-          (setq obtain-entry-function
-                (funcall get-obtain-entry-function obtaining-method-spec))
-          (setq obtain-keymap-function
-                (unless without-keymap
-                  (funcall get-obtain-keymap-function obtaining-method-spec))))
-        (let* ((arg-keymap (if (and (not without-keymap)
-                                    obtain-keymap-function)
-                               (funcall obtain-keymap-function
-                                        arg-key)))
-               (arg-entry (if arg-keymap
-                              (funcall obtain-entry-function arg-key arg-keymap)
-                            (funcall obtain-entry-function arg-key))))
-          (if without-keymap
-              (list arg-key arg-entry)
-            (list arg-key arg-entry arg-keymap)))))))
+      (save-current-buffer
+        (let ((arg-key
+               (funcall (or read-key-function #'loophole-read-key)
+                        "Set key temporarily: ")))
+          (unless (or (null loophole-decide-obtaining-method-after-read-key)
+                      (and (eq loophole-decide-obtaining-method-after-read-key
+                               'negative-argument)
+                           (not (< n 0))))
+            (setq obtaining-method-spec (funcall decide-obtaining-method n))
+            (setq obtain-entry-function
+                  (funcall get-obtain-entry-function obtaining-method-spec))
+            (setq obtain-keymap-function
+                  (unless without-keymap
+                    (funcall get-obtain-keymap-function
+                             obtaining-method-spec))))
+          (let* ((arg-keymap
+                  (if (and (not without-keymap) obtain-keymap-function)
+                      (funcall obtain-keymap-function arg-key)))
+                 (arg-entry
+                  (if arg-keymap
+                      (funcall obtain-entry-function arg-key arg-keymap)
+                    (funcall obtain-entry-function arg-key))))
+            (if without-keymap
+                (list arg-key arg-entry)
+              (list arg-key arg-entry arg-keymap))))))))
 
 ;;; Obtaining methods
 
@@ -3392,7 +3394,10 @@ KEYMAP."
                     (loophole-bind-entry key (funcall test-and-return form)
                                          (if keymap
                                              keymap
-                                           (loophole-ready-map))))))))
+                                           (loophole-ready-map))))
+                (user-error
+                 (concat "Lambda form is not bound "
+                         "because the anchored buffer is not alive"))))))
       (funcall test-and-return (loophole-read-buffer test-and-bind
                                                      writing-buffer)))))
 
@@ -3483,16 +3488,22 @@ macro are bound on KEYMAP."
                   (if (loophole-registered-p
                        'loophole-defining-kmacro-map)
                       (loophole-unregister
-                       'loophole-defining-kmacro-map)))))
+                       'loophole-defining-kmacro-map))))
+         (buffer (current-buffer)))
     (fset end (lambda ()
                 (interactive)
                 (unwind-protect
                     (when defining-kbd-macro
                       (kmacro-end-macro nil)
-                      (loophole-bind-entry
-                       key
-                       (kmacro-lambda-form (kmacro-ring-head))
-                       keymap))
+                      (if (buffer-live-p buffer)
+                          (with-current-buffer buffer
+                            (loophole-bind-entry
+                             key
+                             (kmacro-lambda-form (kmacro-ring-head))
+                             keymap))
+                        (user-error
+                         (concat "Kmacro is not bound "
+                                 "because the anchored buffer is not alive"))))
                   (funcall clean))))
     (fset abort (lambda ()
                   (interactive)
