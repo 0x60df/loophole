@@ -5174,7 +5174,8 @@ TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when (memq major-mode modes)
-        (loophole--define-map-add-font-lock-extend-region-function)
+        (if loophole-font-lock-multiline
+            (loophole--define-map-add-font-lock-extend-region-function))
         (font-lock-add-keywords nil keywords)))))
 
 ;;; Aliases for main interfaces
