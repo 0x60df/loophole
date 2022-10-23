@@ -5039,18 +5039,6 @@ They setup idle timer."
   "(\\(loophole-define-map\\)\\_>[ 	]*\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)?"
   "Regexp that matches with head of `loophole-define-map' form.")
 
-(defcustom loophole-font-lock-multiline t
-  "Flag if multiline font lock for Loophole forms is enabled.
-
-This user option must be set before loading this file.
-
-If the value of this option is non-nil,
-`jit-lock-contextually' should be non-nil on buffers
-containing Loophole forms like `loophole-define-map' to
-properly rehighlight forms."
-  :group 'loophole
-  :type 'boolean)
-
 (defun loophole--define-map-font-lock-extend-region ()
   "Extending region of multiline font lock for `loophole-define-map'.
 If cursor is located in `loophole-define-map' form, extend
@@ -5105,7 +5093,91 @@ LIMIT is used for limiting search region."
 (defun loophole--define-map-add-font-lock-extend-region-function ()
   "Add `loophole--define-map-font-lock-extend-region' to hook."
   (add-hook 'font-lock-extend-region-functions
-             #'loophole--define-map-font-lock-extend-region nil t))
+            #'loophole--define-map-font-lock-extend-region nil t))
+
+(defun loophole--font-lock-keywords (&optional multiline)
+  "Return keyboards of Loophole for font lock.
+If the optional argument MULTILINE is non-nil, the keywords
+support multiline."
+  `((,(if multiline
+          #'loophole--define-map-font-lock-function
+        loophole--define-map-font-lock-regexp)
+     (1 font-lock-keyword-face)
+     (2 font-lock-variable-name-face nil t)
+     (3 font-lock-variable-name-face nil t)
+     (4 font-lock-doc-face t t))))
+
+(defun loophole-font-lock-add-keywords (&optional multiline)
+  "Add keyboards of Loophole for font lock.
+If the optional argument MULTILINE is non-nil, the keyboards
+supporting multiline are added."
+  (let ((keywords (loophole--font-lock-keywords multiline))
+        (modes '(emacs-lisp-mode lisp-interaction-mode)))
+    (dolist (mode modes)
+      (if multiline
+          (add-hook
+           (intern (concat (symbol-name mode) "-hook"))
+           #'loophole--define-map-add-font-lock-extend-region-function))
+      (font-lock-add-keywords mode keywords))
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+        (when (memq major-mode modes)
+          (if multiline
+              (loophole--define-map-add-font-lock-extend-region-function))
+          (font-lock-add-keywords nil keywords))))))
+
+(defun loophole-font-lock-remove-keywords (&optional multiline)
+  "Remove keyboards of Loophole for font lock.
+If the optional argument MULTILINE is non-nil, the keyboards
+supporting multiline are removed."
+  (let ((keywords (loophole--font-lock-keywords multiline))
+        (modes '(emacs-lisp-mode lisp-interaction-mode)))
+    (dolist (mode modes)
+      (if multiline
+          (remove-hook
+           (intern (concat (symbol-name mode) "-hook"))
+           #'loophole--define-map-add-font-lock-extend-region-function))
+      (font-lock-remove-keywords mode keywords))
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+        (when (memq major-mode modes)
+          (if multiline
+              (remove-hook 'font-lock-extend-region-functions
+                            #'loophole--define-map-font-lock-extend-region t))
+          (font-lock-remove-keywords nil keywords))))))
+
+(make-obsolete-variable
+ 'loophole-font-lock-multiline
+ "Font lock activity is now handled by `loophole-font-lock'."
+ "0.8.2")
+(defcustom loophole-font-lock 'multiline
+  "Flag if font lock for Loophole forms is enabled.
+
+Because this option uses :set property, `setq' does not work
+for this variable.  Use `custom-set-variables' or call
+`loophole-font-lock-add-keywords' or
+`loophole-font-lock-remove-keywords' manually.
+They setup some hooks and add or remove keyboards.
+
+If the value of this option is non-nil, font lock for
+Loophole form is enabled, and especially for the symbol
+multiline, multiline font lock is enabled.
+When using multiline, `jit-lock-contextually' should be
+non-nil on buffers containing Loophole forms like
+`loophole-define-map' to properly rehighlight forms."
+  :group 'loophole
+  :type '(choice
+          (const :tag "Disable font lock" nil)
+          (const :tag "Enable font lock with support for multiline" multiline)
+          (other :tag "Enable" t))
+  :set (lambda (symbol new-value)
+         (let ((old-value (if (boundp symbol) (symbol-value symbol))))
+           (if new-value
+               (unless old-value
+                 (loophole-font-lock-add-keywords (eq new-value 'multiline)))
+             (when old-value
+               (loophole-font-lock-remove-keywords (eq old-value 'multiline)))))
+         (set-default symbol new-value)))
 
 ;;;###autoload
 (defmacro loophole-define-map (map &optional spec docstring
@@ -5157,26 +5229,6 @@ TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
      ,(unless global
         `(make-variable-buffer-local ',state))
      (loophole-register ',map ',state ,tag ,global ,without-base-map)))
-
-(let ((keywords `((,(if loophole-font-lock-multiline
-                        #'loophole--define-map-font-lock-function
-                      loophole--define-map-font-lock-regexp)
-                   (1 font-lock-keyword-face)
-                   (2 font-lock-variable-name-face nil t)
-                   (3 font-lock-variable-name-face nil t)
-                   (4 font-lock-doc-face t t))))
-      (modes '(emacs-lisp-mode lisp-interaction-mode)))
-  (dolist (mode modes)
-    (if loophole-font-lock-multiline
-        (add-hook (intern (concat (symbol-name mode) "-hook"))
-                  #'loophole--define-map-add-font-lock-extend-region-function))
-    (font-lock-add-keywords mode keywords))
-  (dolist (buffer (buffer-list))
-    (with-current-buffer buffer
-      (when (memq major-mode modes)
-        (if loophole-font-lock-multiline
-            (loophole--define-map-add-font-lock-extend-region-function))
-        (font-lock-add-keywords nil keywords)))))
 
 ;;; Aliases for main interfaces
 
