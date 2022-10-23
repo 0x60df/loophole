@@ -236,7 +236,10 @@ If non-nil, `loophole-register' always reads tag string,
 but if symbol infer is set, `loophole-register' try to infer
 tag string before asking."
   :group 'loophole
-  :type 'boolean)
+  :type '(choice
+          (const :tag "No" nil)
+          (const :tag "Yes, but try to infer first" multiline)
+          (other :tag "Yes" t)))
 
 (defcustom loophole-make-describe-use-builtin nil
   "Flag if `loophole-describe' uses builtin `describe-keymap'.
@@ -4936,7 +4939,7 @@ session.
 For more detailed customization, see documentation string of
 `loophole-turn-on-auto-start-editing-for-existing-binding'."
   :group 'loophole
-  :type 'boolean
+  :type 'sexp
   :set (lambda (symbol value)
          (if value
              (if (listp value)
@@ -4978,7 +4981,7 @@ for this variable.  Use `custom-set-variables' or call
 They setup idle timer."
   :risky t
   :group 'loophole
-  :type 'boolean
+  :type 'sexp
   :set (lambda (symbol value)
          (if value
              (if (listp value)
@@ -5022,7 +5025,7 @@ for this variable.  Use `custom-set-variables' or call
 They setup idle timer."
   :risky t
   :group 'loophole
-  :type 'boolean
+  :type 'sexp
   :set (lambda (symbol value)
          (if value
              (if (listp value)
