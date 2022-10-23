@@ -4835,10 +4835,10 @@ For more detailed customization, see documentation string of
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
-         (set-default symbol value)
          (if value
              (loophole-turn-on-auto-prioritize)
-           (loophole-turn-off-auto-prioritize))))
+           (if (boundp symbol) (loophole-turn-off-auto-prioritize)))
+         (set-default symbol value)))
 
 (defcustom loophole-use-auto-stop-editing t
   "Flag if stop editing keymap automatically.
@@ -4854,10 +4854,10 @@ For more detailed customization, see documentation string of
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
-         (set-default symbol value)
          (if value
              (loophole-turn-on-auto-stop-editing)
-           (loophole-turn-off-auto-stop-editing))))
+           (if (boundp symbol) (loophole-turn-off-auto-stop-editing)))
+         (set-default symbol value)))
 
 (defcustom loophole-use-auto-resume t
   "Flag if resume Loophole automatically.
@@ -4873,10 +4873,10 @@ For more detailed customization, see documentation string of
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
-         (set-default symbol value)
          (if value
              (loophole-turn-on-auto-resume)
-           (loophole-turn-off-auto-resume))))
+           (if (boundp symbol) (loophole-turn-off-auto-resume)))
+         (set-default symbol value)))
 
 (defcustom loophole-use-auto-timer nil
   "Flag if start timer for disabling Loophole map automatically.
@@ -4892,10 +4892,10 @@ For more detailed customization, see documentation string of
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
-         (set-default symbol value)
          (if value
              (loophole-turn-on-auto-timer)
-           (loophole-turn-off-auto-timer))))
+           (if (boundp symbol) (loophole-turn-off-auto-timer)))
+         (set-default symbol value)))
 
 (defcustom loophole-use-auto-editing-timer nil
   "Flag if start timer for stopping editing session automatically.
@@ -4911,10 +4911,10 @@ For more detailed customization, see documentation string of
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
-         (set-default symbol value)
          (if value
              (loophole-turn-on-auto-editing-timer)
-           (loophole-turn-off-auto-editing-timer))))
+           (if (boundp symbol) (loophole-turn-off-auto-editing-timer)))
+         (set-default symbol value)))
 
 (defcustom loophole-use-auto-start-editing-for-existing-binding nil
   "Flag if start editing automatically when existing key is looked up.
@@ -4938,14 +4938,15 @@ For more detailed customization, see documentation string of
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
-         (set-default symbol value)
          (if value
              (if (listp value)
                  (apply
                   #'loophole-turn-on-auto-start-editing-for-existing-binding
                   value)
                (loophole-turn-on-auto-start-editing-for-existing-binding))
-           (loophole-turn-off-auto-start-editing-for-existing-binding))))
+           (if (boundp symbol)
+               (loophole-turn-off-auto-start-editing-for-existing-binding)))
+         (set-default symbol value)))
 
 (defcustom loophole-use-idle-prioritize nil
   "Flag if prioritize Loophole maps when idle.
@@ -4979,12 +4980,12 @@ They setup idle timer."
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
-         (set-default symbol value)
          (if value
              (if (listp value)
                  (apply #'loophole-turn-on-idle-prioritize value)
                (loophole-turn-on-idle-prioritize))
-           (loophole-turn-off-idle-prioritize))))
+           (if (boundp symbol) (loophole-turn-off-idle-prioritize)))
+         (set-default symbol value)))
 
 (defcustom loophole-use-idle-save nil
   "Flag if save Loophole maps when idle.
@@ -5023,12 +5024,12 @@ They setup idle timer."
   :group 'loophole
   :type 'boolean
   :set (lambda (symbol value)
-         (set-default symbol value)
          (if value
              (if (listp value)
                  (apply #'loophole-turn-on-idle-save value)
                (loophole-turn-on-idle-save))
-           (loophole-turn-off-idle-save))))
+           (if (boundp symbol) (loophole-turn-off-idle-save)))
+         (set-default symbol value)))
 
 ;;; A macro for defining keymap
 
