@@ -189,12 +189,11 @@ Setup temporary buffer with template for writing lambda form and start
 recursive edit.
 When you finish writing lambda form,
 type `C-c C-c` (`loophole-read-buffer-finish-key`).
-Then, buffer contents will be read and evaluated,
-and returned object will be bound.
+Then, buffer contents will be read and bound.
 When you want to abort, type `C-c C-k` (`loophole-read-buffer-abort-key`).
 
-Actually, buffer contents can be any lisp forms other than sole lambda form.
-If returned value is a valid lambda object, it will be bound anyway.
+When multiple forms are written in the buffer,
+the forms other than the first will be omitted.
 
 Note that while you are in recursive edit, it looks like top-level of Emacs
 and you may feel that the control is returned to you,

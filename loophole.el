@@ -3359,9 +3359,10 @@ Read key sequence with prompt in which KEY is embedded."
   "Return command obtained by writing lambda form.
 This function provides work space for writing lambda form as
 a temporary buffer.
-Actually, any Lisp forms can be written in a temporary
-buffer, and if return value of evaluating first form is
-valid lambda command, this function return it.
+The first form of the buffer is read, and if it is a valid
+lambda form, this function returns it.
+Note that this function just read the buffer and does not
+evaluate the form.
 
 Because this function uses `loophole-read-buffer' to give
 user a workspace, if user option
@@ -3382,14 +3383,12 @@ KEYMAP."
       (deactivate-mark t))
     (let* ((test-and-return
             (lambda (form)
-              (let ((lambda-form (eval form)))
-                (if (and (commandp lambda-form)
-                         (listp lambda-form)
-                         (eq (car lambda-form) 'lambda))
-                    lambda-form
-                  (user-error
-                   "Obtained Lisp object is not valid lambda command: %s"
-                   lambda-form)))))
+              (if (and (commandp form)
+                       (listp form)
+                       (eq (car form) 'lambda))
+                  form
+                (user-error
+                 "Obtained Lisp object is not valid lambda command: %s" form))))
            (test-and-bind
             (lambda (form)
               (if (buffer-live-p binding-buffer)
@@ -4004,8 +4003,7 @@ editing keymap.
 
 This function print bound lambda form to temporary buffer,
 and read it back when modifying is finished.
-In contrast with `loophole-obtain-command-by-lambda-form',
-this function does not evaluate the form but just read it.
+This function does not evaluate the form but just read it.
 If temporary buffer contains multiple forms when finished,
 the first one will be read.
 
