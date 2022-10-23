@@ -185,9 +185,9 @@ write protected."
   :type 'number)
 
 (define-obsolete-variable-alias 'loophole-kmacro-by-read-key-finish-key
-  'loophole-read-key-termination-key "27.1")
+  'loophole-read-key-termination-key "0.8.2")
 (define-obsolete-variable-alias 'loophole-array-by-read-key-finish-key
-  'loophole-read-key-termination-key "27.1")
+  'loophole-read-key-termination-key "0.8.2")
 (defcustom loophole-read-key-termination-key (where-is-internal
                                               'keyboard-quit nil t)
   "Key sequence to finish `loophole-read-key-until-termination-key'."
@@ -269,7 +269,7 @@ in the buffer."
   :type 'string)
 
 (define-obsolete-variable-alias 'loophole-kmacro-by-recursive-edit-map
-  'loophole-defining-kmacro-map "27.1")
+  'loophole-defining-kmacro-map "0.8.2")
 (defvar loophole-defining-kmacro-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c[" #'loophole-end-kmacro)
@@ -284,14 +284,14 @@ Activity of this map is controled by
 `loophole-defining-kmacro-map-flag'.")
 
 (define-obsolete-variable-alias 'loophole-kmacro-by-recursive-edit-map-flag
-  'loophole-defining-kmacro-map-flag "27.1")
+  'loophole-defining-kmacro-map-flag "0.8.2")
 (defcustom loophole-defining-kmacro-map-flag t
   "Non-nil means `loophole-defining-kmacro-map' is enabled."
   :group 'loophole
   :type 'boolean)
 
 (define-obsolete-variable-alias 'loophole-kmacro-by-recursive-edit-map-tag
-  'loophole-defining-kmacro-map-tag "27.1")
+  'loophole-defining-kmacro-map-tag "0.8.2")
 (defcustom loophole-defining-kmacro-map-tag
   "kmacro[End: \\[loophole-end-kmacro], Abort: \\[loophole-abort-kmacro]]"
   "Tag string for `loophole-defining-kmacro-map'."
@@ -524,7 +524,7 @@ default `loophole-read-key' will be used for reading key."
   :type '(repeat sexp))
 
 (define-obsolete-variable-alias 'loophole-register-functions
-  'loophole-after-register-functions "27.1")
+  'loophole-after-register-functions "0.7.6")
 (defcustom loophole-after-register-functions nil
   "Hook for `loophole-register'.
 Functions added to this user option are called with one
@@ -533,7 +533,7 @@ argument, registered map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-unregister-functions
-  'loophole-after-unregister-functions "27.1")
+  'loophole-after-unregister-functions "0.7.6")
 (defcustom loophole-after-unregister-functions nil
   "Hook for `loophole-unregister'.
 Functions added to this user option are called with one
@@ -542,7 +542,7 @@ argument, unregistered map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-prioritize-functions
-  'loophole-after-prioritize-functions "27.1")
+  'loophole-after-prioritize-functions "0.7.6")
 (defcustom loophole-after-prioritize-functions nil
   "Hook for `loophole-prioritize'.
 Functions added to this user option are called with one
@@ -551,7 +551,7 @@ argument, prioritized map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-globalize-functions
-  'loophole-after-globalize-functions "27.1")
+  'loophole-after-globalize-functions "0.7.6")
 (defcustom loophole-after-globalize-functions nil
   "Hook for `loophole-globalize'.
 Functions added to this user option are called with one
@@ -560,7 +560,7 @@ argument, globalized map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-localize-functions
-  'loophole-after-localize-functions "27.1")
+  'loophole-after-localize-functions "0.7.6")
 (defcustom loophole-after-localize-functions nil
   "Hook for `loophole-localize'.
 Functions added to this user option are called with one
@@ -569,7 +569,7 @@ argument, localized map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-enable-functions
-  'loophole-after-enable-functions "27.1")
+  'loophole-after-enable-functions "0.7.6")
 (defcustom loophole-after-enable-functions nil
   "Hook for `loophole-enable'.
 Functions added to this user option are called with one
@@ -578,7 +578,7 @@ argument, enabled map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-disable-functions
-  'loophole-after-disable-functions "27.1")
+  'loophole-after-disable-functions "0.7.6")
 (defcustom loophole-after-disable-functions nil
   "Hook for `loophole-disable'.
 Functions added to this user option are called with one
@@ -587,7 +587,7 @@ argument, disabled map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-start-editing-functions
-  'loophole-after-start-editing-functions "27.1")
+  'loophole-after-start-editing-functions "0.7.6")
 (defcustom loophole-after-start-editing-functions nil
   "Hook for `loophole-start-editing'.
 Functions added to this user option are called with one
@@ -596,7 +596,7 @@ argument, which is being edited map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-stop-editing-functions
-  'loophole-after-stop-editing-functions "27.1")
+  'loophole-after-stop-editing-functions "0.7.6")
 (defcustom loophole-after-stop-editing-functions nil
   "Hook for `loophole-stop-editing'.
 Functions added to this user option are called with one
@@ -605,7 +605,7 @@ argument, which has been edited map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-globalize-editing-functions
-  'loophole-after-globalize-editing-functions "27.1")
+  'loophole-after-globalize-editing-functions "0.7.6")
 (defcustom loophole-after-globalize-editing-functions nil
   "Hook for `loophole-globalize-editing'.
 Functions added to this user option are called with one
@@ -614,7 +614,7 @@ argument, which is being edited map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-localize-editing-functions
-  'loophole-after-localize-editing-functions "27.1")
+  'loophole-after-localize-editing-functions "0.7.6")
 (defcustom loophole-after-localize-editing-functions nil
   "Hook for `loophole-localize-editing'.
 Functions added to this user option are called with one
@@ -623,7 +623,7 @@ argument, which is being edited map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-name-functions
-  'loophole-after-name-functions "27.1")
+  'loophole-after-name-functions "0.7.6")
 (defcustom loophole-after-name-functions nil
   "Hook for `loophole-name'.
 Functions added to this user option are called with one
@@ -632,7 +632,7 @@ argument, named new map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-merge-functions
-  'loophole-after-merge-functions "27.1")
+  'loophole-after-merge-functions "0.7.6")
 (defcustom loophole-after-merge-functions nil
   "Hook for `loophole-merge'.
 Functions added to this user option are called with one
@@ -641,7 +641,7 @@ argument, merger map variable."
   :type 'hook)
 
 (define-obsolete-variable-alias 'loophole-duplicate-functions
-  'loophole-after-duplicate-functions "27.1")
+  'loophole-after-duplicate-functions "0.7.6")
 (defcustom loophole-after-duplicate-functions nil
   "Hook for `loophole-duplicate'.
 Functions added to this user option are called with two
@@ -3219,7 +3219,7 @@ Definition can be finished by calling `loophole-end-kmacro'."
 (defun loophole-read-key-for-kmacro-by-read-key (prompt)
   "`loophole-read-key' with checking finish and quit key.
 PROMPT is a string for reading key."
-  (declare (obsolete nil "27.1"))
+  (declare (obsolete nil "0.8.2"))
   (let ((finish (vconcat loophole-kmacro-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
     (or (not (zerop (length finish)))
@@ -3230,7 +3230,7 @@ PROMPT is a string for reading key."
 (defun loophole-read-key-for-array-by-read-key (prompt)
   "`loophole-read-key' with checking finish and quit key.
 PROMPT is a string for reading key."
-  (declare (obsolete nil "27.1"))
+  (declare (obsolete nil "0.8.2"))
   (let ((finish (vconcat loophole-array-by-read-key-finish-key))
         (quit (vconcat (where-is-internal 'keyboard-quit nil t))))
     (or (not (zerop (length finish)))
