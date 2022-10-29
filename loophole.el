@@ -1130,11 +1130,12 @@ buffer, use it instead of current buffer."
               (lambda ()
                 (interactive)
                 (funcall clean-buffer)
-                (if (functionp callback)
-                    (save-excursion
-                      (goto-char 1)
-                      (funcall callback (read (current-buffer)))))
-                (funcall clean-window)))
+                (unwind-protect
+                    (if (functionp callback)
+                        (save-excursion
+                          (goto-char 1)
+                          (funcall callback (read (current-buffer)))))
+                  (funcall clean-window))))
             (define-key (current-local-map) loophole-read-buffer-abort-key
               (lambda ()
                 (interactive)
