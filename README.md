@@ -132,7 +132,7 @@ which just calls `loophole-resume` and set up auxiliary facilities,
 that is some key bindings, mode-line lighter, and variable-watcher
 which works only for speeding up internal process.
 Major part of Loophole works independently of `loophole-mode`.
-If you don't need these facilities, use `loophole-resume`
+If you don't need the auxiliary facilities, use `loophole-resume`
 instead of `loophole-mode` to activate temporary key bindings.
 
 #### State variable
