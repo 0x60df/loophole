@@ -127,6 +127,14 @@ state of each Loophole map.
 If you want to completely disable Loophole, use `loophole-quit`.
 It disables all Loophole maps and `loophole-mode`.
 
+Actually, Loophole can be used without enabling `loophole-mode`,
+which just calls `loophole-resume` and set up auxiliary facilities,
+that is some key bindings, mode-line lighter, and variable-watcher
+which works only for speeding up internal process.
+Major part of Loophole works independently of `loophole-mode`.
+If you don't need these facilities, use `loophole-resume`
+instead of `loophole-mode` to activate temporary key bindings.
+
 #### State variable
 
 Each Loophole map has corresponding state variable.
