@@ -4136,7 +4136,6 @@ function to modify it."
 
 ;;; Base control
 
-;;;###autoload
 (defun loophole-suspend ()
   "Suspend Loophole.
 To suspend Loophole, this function delete
@@ -4146,6 +4145,7 @@ To suspend Loophole, this function delete
         (delq 'loophole--map-alist emulation-mode-map-alists))
   (setq loophole--suspended t))
 
+;;;###autoload
 (defun loophole-resume ()
   "Resume Loophole.
 To resume Loophole, this functions add
