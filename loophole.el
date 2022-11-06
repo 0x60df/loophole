@@ -2889,7 +2889,7 @@ buffer, window, frame...  will be omitted.
 If an optional argument TARGET is non-nil, saving target is
 changed according to the value of TARGET.
 When TARGET is a symbol named, named Loophole map, i.e.,
-loophole-*-name but not loophole-n-map will be saved.
+loophole-*-map but not loophole-n-map will be saved.
 When TARGET is a symbol all, all registered maps will be
 saved.
 When TARGET is a function, it will be used as a filter
@@ -3046,7 +3046,7 @@ be overwritten without asking.
 If an optional argument TARGET is non-nil, loading target is
 changed according to the value of TARGET.
 When TARGET is a symbol named,  named Loophole map, i.e.,
-loophole-*-name but not loophole-n-map will be loaded.
+loophole-*-map but not loophole-n-map will be loaded.
 When TARGET is a symbol all, all registered maps will be
 loaded.
 When TARGET is a function, it will be used as a filter
@@ -4940,7 +4940,7 @@ a duration time.
 Target specifier is passed to `loophole-save' as an argument
 TARGET through `loophople-turn-on-idle-save'.
 Therefore, when  target specifier is a symbol named, named
-Loophole map, i.e., loophole-*-name but not loophole-n-map
+Loophole map, i.e., loophole-*-map but not loophole-n-map
 will be saved.
 When target specifier is a symbol all, all registered maps
 will be saved.
