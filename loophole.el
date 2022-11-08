@@ -61,7 +61,7 @@ active or not.  KEYMAP is a keymap object.
 STATE-VARIABLE, KEYMAP and map-variable which holds KEYMAP
 must be unique for each element of this variable.")
 
-(defvar loophole--buffer-list nil
+(defvar loophole--buffer-list t
   "List of buffers on which Loophole variables have local value.
 Loophole mode maintains this variable as up to date.
 When Loophole mode is disabled, this variable is set as t
