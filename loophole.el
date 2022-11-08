@@ -1535,18 +1535,18 @@ variable."
   (let ((filter (lambda (buffer)
                   (and (buffer-live-p buffer)
                        (with-current-buffer buffer
-                         (let ((no-local-variable
+                         (let ((hava-local-variable
                                 (seq-some
                                  #'local-variable-p
                                  (loophole-local-variable-if-set-list))))
-                           (when no-local-variable
+                           (unless hava-local-variable
                              (remove-hook
                               'change-major-mode-hook
                               #'loophole--follow-killing-local-variable t)
                              (remove-hook
                               'kill-buffer-hook
                               #'loophole--follow-killing-local-variable t))
-                           no-local-variable))))))
+                           hava-local-variable))))))
     (if (listp loophole--buffer-list)
         (setq loophole--buffer-list (seq-filter filter loophole--buffer-list))
       (seq-filter filter (buffer-list)))))
