@@ -59,7 +59,70 @@ looks like (STATE-VARIABLE . KEYMAP).  STATE-VARIABLE is a
 symbol whose boolean value represents if the KEYMAP is
 active or not.  KEYMAP is a keymap object.
 STATE-VARIABLE, KEYMAP and map-variable which holds KEYMAP
-must be unique for each element of this variable.")
+must be unique for each element of this variable.
+
+Set of map-variable, state-variable, and keymap object is a
+unit of temporary key bindings, called Loophole map.
+Variables and keymap can be referred each other via this
+variable, and `symbol-plist'.
+Map-variable has a property :loophole-state-variable,
+and state-variable has a property :loophole-map-variable.
+The values of those properties are as name suggests.
+This is to say,
+map-variable ---(symbol-plist)----> state-variable
+map-variable ---(symbol-value)----> keymap object
+state-variable -(symbol-plist)----> map-variable
+state-variable -(assq map-alist)--> keymap object
+keymap object --(rassq map-alist)-> state-variable
+
+Map-variable has other properties as well as
+:loophole-state-variable.  These keep the properties of the
+Loophole map.  All properties other than
+:loophole-state-variable are listed below.
+:loophole-tag : Tag string of the Loophole map.
+:loophole-protected-keymap : Keymap object which holds key
+  bindings for keymap entry.  The same object as the value
+  of this property is added to `keymap-parent', and thus
+  keymap entries in this property take effect while they are
+  not overwritten by binding command.  Value of this
+  property looks like
+  (keymap (keymap ... (key1 keymap ... body of entry1))
+          (keymap ... (key1 . undefined))
+          (keymap ... (key2 keymap ... body of entry2))
+          (keymap ... (key2 . undefined))
+          ...),
+  here, keymap object containing `undefined' is a wall for
+  the concerning key.  Owing to this wall, the key is shaded
+  and key bindings defined in the following entries whose
+  prefix key is the concerning key are not merged.
+:loophole-form-storage : Alist of a key and forms which
+  derives a entry of key binding.  This property is used for
+  key bindings whose entry should be a same object as
+  something other feature refers.  Loophole functions use
+  this property to properly restore such key bindings.
+  For example, `loohpole-load' refers this property and
+  performes binding for keymap object which is bound to
+  something variable.  As a result, both this key binding
+  and the variable shares the same keymap object.
+  Modification on that keymap via that variable is reflected
+  to the key binding of Loophole map.
+
+As mentioned above, Loophole uses `keymap-parent' of keymap
+object of Loophole map.  `loophole-base-map',
+:loophole-protected-keymap, or composed keymap of them may
+be set as parent.
+Note that, when registering keymap whose `keymap-parent' is
+not nil, Loophole handles it and compose it with
+`loophole-base-map'.  However, after registeration,
+manipulating `keymap-parent' may corrupt Loophole map.
+See the documentation string of `loophole-register' for
+detailes.
+
+This variable is a pivot of Loophole.
+Temporary key bindings take effect as this variable is
+added to `emulation-mode-map-alists'.
+The value of this variable is a major part of whole state of
+Loophole.")
 
 (defvar loophole--buffer-list t
   "List of buffers on which Loophole variables have local value.
