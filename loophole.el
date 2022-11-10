@@ -1625,11 +1625,13 @@ variable."
 If optional argument STATE-VARIABLE is not nil,
 Return non-nil if both MAP-VARIABLE and STATE-VARIABLE are
 registered, and they are associated."
-  (and (if state-variable
+  (and map-variable
+       (if state-variable
            (eq state-variable (get map-variable :loophole-state-variable))
          (setq state-variable (get map-variable :loophole-state-variable)))
        (eq map-variable (get state-variable :loophole-map-variable))
-       (assq state-variable (default-value 'loophole--map-alist))))
+       (eq (symbol-value map-variable)
+           (cdr (assq state-variable (default-value 'loophole--map-alist))))))
 
 ;;; Main functions
 
