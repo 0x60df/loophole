@@ -1588,6 +1588,12 @@ added to the hooks above."
   (remove-hook 'kill-buffer-hook
                #'loophole--follow-killing-local-variable t))
 
+(defun loophole-tag-string (map-variable)
+  "Return tag string for MAP-VARIABLE."
+  (if (loophole-registered-p map-variable)
+      (get map-variable :loophole-tag)
+    (error "Specified argument is not valid map-variable: %s" map-variable)))
+
 (defun loophole-buffer-list ()
   "Return buffer list on which Loophole variables have local value.
 This function sanitize orphan hooks by side effect.
@@ -2187,7 +2193,7 @@ Introduced by `loophole-name'." named-map-variable)))
                     (format "New tag for keymap %s%s%s: "
                             arg-map-variable
                             loophole-tag-sign
-                            (get arg-map-variable :loophole-tag)))))
+                            (loophole-tag-string arg-map-variable)))))
      (list arg-map-variable arg-tag)))
   (unless (loophole-registered-p map-variable)
     (user-error "Specified map-variable %s is not registered" map-variable))
