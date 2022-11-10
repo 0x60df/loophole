@@ -876,6 +876,27 @@ format."
 
 ;;; Auxiliary functions
 
+(defun loophole-map-variable (state-variable)
+  "Return map-variable of STATE-VARIABLE."
+  (let ((map-variable (get state-variable :loophole-map-variable))
+        (keymap
+         (cdr (assq state-variable (default-value 'loophole--map-alist)))))
+    (if (and map-variable
+             (eq (symbol-value map-variable) keymap))
+        map-variable
+      (error "The argument is not valid state-variable: %s" state-variable))))
+
+(defun loophole-state-variable (map-variable)
+  "Return state-variable of MAP-VARIABLE."
+  (let* ((state-variable (get map-variable :loophole-state-variable))
+         (keymap
+          (cdr (assq state-variable (default-value 'loophole--map-alist)))))
+    (if (and state-variable
+             map-variable
+             (eq (symbol-value map-variable) keymap))
+        state-variable
+      (error "The argument is not valid map-variable: %s" map-variable))))
+
 (defun loophole-map-variable-list ()
   "Return list of all keymap variables for loophole.
 Elements are ordered according to `loophole--map-alist'."
