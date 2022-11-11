@@ -374,7 +374,37 @@ This function must be used in
   (setq loophole--map-alist (reverse loophole--map-alist))
   (setq-default loophole--map-alist (reverse
                                      (default-value 'loophole--map-alist))))
+
+;; Auxiliary functions
 
+(ert-deftest loophole-test-map-variable ()
+  "Test for `loophole-map-variable'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (should (eq (loophole-map-variable (intern "loophole-1-map-state"))
+                (intern "loophole-1-map")))
+    (should (eq (loophole-map-variable (intern "loophole-test-a-map-state"))
+                (intern "loophole-test-a-map")))
+    (should (eq (loophole-map-variable (intern "loophole-state"))
+                (intern "loophole")))
+    (should-error (loophole-map-variable (intern "loophole-2-map"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-map-variable (intern "loophole-test-b-map"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-map-variable (intern "loophole"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-map-variable 0) :type 'wrong-type-argument)
+    (should-error (loophole-map-variable 1.0) :type 'wrong-type-argument)
+    (should-error (loophole-map-variable ?c) :type 'wrong-type-argument)
+    (should-error (loophole-map-variable (intern "s"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-map-variable (cons 0 0))
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable (make-string 0 ?s))
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable (make-vector 0 0))
+                  :type 'wrong-type-argument)))
+
 (provide 'loophole-tests)
 
 ;;; loophole-tests.el ends here
