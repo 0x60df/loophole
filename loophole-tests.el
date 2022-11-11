@@ -30,6 +30,7 @@
 
 (require 'loophole)
 (require 'ert)
+(require 'seq)
 
 ;; Test tools
 
@@ -432,6 +433,21 @@ This function must be used in
                   :type 'wrong-type-argument)
     (should-error (loophole-state-variable (make-vector 0 0))
                   :type 'wrong-type-argument)))
+
+(ert-deftest loophole-test-map-variable-list ()
+  "Test for `loophole-map-variable-list'."
+  (let ((meet-requirement
+         (lambda ()
+           (let ((return (loophole-map-variable-list)))
+             (or (null return)
+                 (and (consp return)
+                      (seq-every-p #'loophole-registered-p return)
+                      (equal (mapcar #'loophole-state-variable return)
+                             (mapcar #'car loophole--map-alist))))))))
+    (loophole--test-with-pseudo-environment
+      (should (funcall meet-requirement))
+      (loophole--test-set-pseudo-map-alist)
+      (should (funcall meet-requirement)))))
 
 (provide 'loophole-tests)
 
