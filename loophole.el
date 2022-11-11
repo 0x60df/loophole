@@ -5270,7 +5270,7 @@ TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
 (defalias 'loophole-reveal #'loophole-enable)
 (defalias 'loophole-edit #'loophole-start-editing)
 (defalias 'loophole-break #'loophole-stop-editing)
-
+
 (provide 'loophole)
 
 ;;; loophole.el ends here
