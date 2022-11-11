@@ -404,6 +404,34 @@ This function must be used in
                   :type 'wrong-type-argument)
     (should-error (loophole-map-variable (make-vector 0 0))
                   :type 'wrong-type-argument)))
+
+(ert-deftest loophole-test-state-variable ()
+  "Test for `loophole-state-variable'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (should (eq (loophole-state-variable (intern "loophole-1-map"))
+                (intern "loophole-1-map-state")))
+    (should (eq (loophole-state-variable (intern "loophole-test-a-map"))
+                (intern "loophole-test-a-map-state")))
+    (should (eq (loophole-state-variable (intern "loophole"))
+                (intern "loophole-state")))
+    (should-error (loophole-state-variable (intern "loophole-2-map-state"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-state-variable (intern "loophole-test-b-map-state"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-state-variable (intern "loophole-state"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-state-variable 0) :type 'wrong-type-argument)
+    (should-error (loophole-state-variable 1.0) :type 'wrong-type-argument)
+    (should-error (loophole-state-variable ?c) :type 'wrong-type-argument)
+    (should-error (loophole-state-variable (intern "s"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-state-variable (cons 0 0))
+                  :type 'wrong-type-argument)
+    (should-error (loophole-state-variable (make-string 0 ?s))
+                  :type 'wrong-type-argument)
+    (should-error (loophole-state-variable (make-vector 0 0))
+                  :type 'wrong-type-argument)))
 
 (provide 'loophole-tests)
 
