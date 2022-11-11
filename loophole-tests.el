@@ -345,6 +345,36 @@ Default value of local variables are set as initial value."
                       variable
                       #'loophole--follow-adding-local-variable))))))))))
 
+(defun loophole--test-set-pseudo-map-alist ()
+  "Set pseudo `loophole--map-alist' value.
+This function must be used in
+`loophole--test-with-pseudo-environment'."
+  (setq loophole--map-alist nil)
+  (setq-default loophole--map-alist nil)
+  (dolist (name-tag '(("loophole-1-map" . "1")
+                      ("loophole-2-map" . "2")
+                      ("loophole-test-a-map" . "a")
+                      ("loophole-test-b-map" . "b")
+                      ("loophole" . "loop")))
+    (let* ((name (car name-tag))
+           (tag (cdr name-tag))
+           (map-variable (intern name))
+           (state-variable (intern (concat name "-state"))))
+      (set map-variable (make-sparse-keymap))
+      (set state-variable t)
+      (put map-variable :loophole-state-variable state-variable)
+      (put state-variable :loophole-map-variable map-variable)
+      (put map-variable :loophole-tag tag)
+      (setq loophole--map-alist
+            (cons `(,state-variable . ,(symbol-value map-variable))
+                  loophole--map-alist))
+      (setq-default loophole--map-alist
+                    (cons `(,state-variable . ,(symbol-value map-variable))
+                          (default-value 'loophole--map-alist)))))
+  (setq loophole--map-alist (reverse loophole--map-alist))
+  (setq-default loophole--map-alist (reverse
+                                     (default-value 'loophole--map-alist))))
+
 (provide 'loophole-tests)
 
 ;;; loophole-tests.el ends here
