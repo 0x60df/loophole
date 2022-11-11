@@ -448,6 +448,25 @@ This function must be used in
       (should (funcall meet-requirement))
       (loophole--test-set-pseudo-map-alist)
       (should (funcall meet-requirement)))))
+
+(ert-deftest loophole-test-state-variable-list ()
+  "Test for `loophole-state-variable-list'."
+  (let ((meet-requirement
+         (lambda ()
+           (let ((return (loophole-state-variable-list)))
+             (or (null return)
+                 (and (consp return)
+                      (seq-every-p (lambda (state-variable)
+                                     (loophole-registered-p
+                                      (loophole-map-variable state-variable)
+                                      state-variable))
+                                   return)
+                      (equal return
+                             (mapcar #'car loophole--map-alist))))))))
+    (loophole--test-with-pseudo-environment
+      (should (funcall meet-requirement))
+      (loophole--test-set-pseudo-map-alist)
+      (should (funcall meet-requirement)))))
 
 (provide 'loophole-tests)
 
