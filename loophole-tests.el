@@ -270,23 +270,29 @@ Default value of local variables are set as initial value."
              (,temp-obarray (obarray-make))
              (,mode-state loophole-mode)
              (,local-variable-if-set-list
-              `(loophole--map-alist
-                loophole--editing
-                loophole--timer-alist
-                loophole--editing-timer
+              `((loophole--map-alist . nil)
+                (loophole--editing . t)
+                (loophole--timer-alist . nil)
+                (loophole--editing-timer . nil)
                 ,@(seq-filter #'local-variable-if-set-p
                               (mapcar #'car loophole--map-alist))))
              ,local-variable-alist)
          (dolist (buffer (buffer-list))
            (with-current-buffer buffer
              (let (list)
-               (dolist (variable ,local-variable-if-set-list)
-                 (if (local-variable-p variable)
-                     (push `(,variable . ,(symbol-value variable)) list)))
+               (dolist (cons-or-variable ,local-variable-if-set-list)
+                 (let ((variable (if (consp cons-or-variable)
+                                     (car cons-or-variable)
+                                   cons-or-variable)))
+                   (if (local-variable-p variable)
+                       (push `(,variable . ,(symbol-value variable)) list))))
                (if list
                    (push `(,buffer . ,list) ,local-variable-alist)))))
-         (push `(nil . ,(mapcar (lambda (variable)
-                                  `(,variable . ,(default-value variable)))
+         (push `(nil . ,(mapcar (lambda (cons-or-variable)
+                                  (let ((variable (if (consp cons-or-variable)
+                                                      (car cons-or-variable)
+                                                    cons-or-variable)))
+                                    `(,variable . ,(default-value variable))))
                                 ,local-variable-if-set-list))
                ,local-variable-alist)
          (with-temp-buffer
@@ -305,9 +311,12 @@ Default value of local variables are set as initial value."
                            args))))))
              (unwind-protect
                  (progn
-                   (dolist (variable ,local-variable-if-set-list)
-                     (remove-variable-watcher
-                      variable #'loophole--follow-adding-local-variable))
+                   (dolist (cons-or-variable ,local-variable-if-set-list)
+                     (let ((variable (if (consp cons-or-variable)
+                                         (car cons-or-variable)
+                                       cons-or-variable)))
+                       (remove-variable-watcher
+                        variable #'loophole--follow-adding-local-variable)))
                    (dolist (buffer-binding-list (cdr ,local-variable-alist))
                      (with-current-buffer (car buffer-binding-list)
                        (remove-hook 'kill-buffer-hook
@@ -318,10 +327,10 @@ Default value of local variables are set as initial value."
                                     t)
                        (dolist (binding (cdr buffer-binding-list))
                          (kill-local-variable (car binding)))))
-                   (setq-default loophole--map-alist nil)
-                   (setq-default loophole--editing t)
-                   (setq-default loophole--timer-alist nil)
-                   (setq-default loophole--editing-timer nil)
+                   (dolist (cons-or-variable ,local-variable-if-set-list)
+                     (if (consp cons-or-variable)
+                         (set-default (car cons-or-variable)
+                                      (cdr cons-or-variable))))
                    (advice-add 'intern :filter-args deflect-to-temp-obarray)
                    (advice-add 'unintern :filter-args deflect-to-temp-obarray)
                    ,@body)
@@ -341,10 +350,13 @@ Default value of local variables are set as initial value."
                                #'loophole--follow-killing-local-variable
                                nil t))))
                (if ,mode-state
-                   (dolist (variable ,local-variable-if-set-list)
-                     (add-variable-watcher
-                      variable
-                      #'loophole--follow-adding-local-variable))))))))))
+                   (dolist (cons-or-variable ,local-variable-if-set-list)
+                     (let ((variable (if (consp cons-or-variable)
+                                         (car cons-or-variable)
+                                       cons-or-variable)))
+                       (add-variable-watcher
+                        variable
+                        #'loophole--follow-adding-local-variable)))))))))))
 
 (defun loophole--test-set-pseudo-map-alist ()
   "Set pseudo `loophole--map-alist' value.
