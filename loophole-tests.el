@@ -479,6 +479,27 @@ This function must be used in
       (should (funcall meet-requirement))
       (loophole--test-set-pseudo-map-alist)
       (should (funcall meet-requirement)))))
+
+(ert-deftest loophole-test-key-equal ()
+  "Test for `loophole-key-equal'."
+  (should (loophole-key-equal (string ?a) (vector ?a)))
+  (should-not (loophole-key-equal (string ?A) (vector ?\S-a)))
+  (should (loophole-key-equal (string ?\C-a) (vector ?\C-a)))
+  (should (loophole-key-equal (string ?\e ?a) (vector ?\e ?a)))
+  (should (loophole-key-equal (string ?\e ?a) (string (+ ?a (lsh 2 6)))))
+  (should (loophole-key-equal (string ?\e ?a) (vector ?\M-a)))
+  (should (loophole-key-equal (string ?\e ?/) (vector ?\e ?/)))
+  (should (loophole-key-equal (string ?\e ?/) (vector ?\M-/)))
+  (should (loophole-key-equal (kbd "DEL") (vector ?\^?)))
+  (should (loophole-key-equal (string ?\e ?\C-a) (vector ?\e ?\C-a)))
+  (should (loophole-key-equal (string ?\e ?\C-a) (vector ?\C-\M-a)))
+  (should-error (loophole-key-equal 0 0) :type 'wrong-type-argument)
+  (should-error (loophole-key-equal 1.0 1.0) :type 'wrong-type-argument)
+  (should-error (loophole-key-equal ?c ?c) :type 'wrong-type-argument)
+  (should-error (loophole-key-equal (intern "s") (intern "s"))
+                :type 'wrong-type-argument)
+  (should-error (loophole-key-equal (cons 0 0) (cons 0 0))
+                :type 'wrong-type-argument))
 
 (provide 'loophole-tests)
 
