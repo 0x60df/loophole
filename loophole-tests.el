@@ -503,6 +503,24 @@ This function must be used in
                 :type 'wrong-type-argument)
   (should-error (loophole-key-equal (cons 0 0) (cons 0 0))
                 :type 'wrong-type-argument))
+
+(ert-deftest loophole-test-local-variable-if-set-list ()
+  "Test for `loophole-local-variable-if-set-list'."
+  (loophole--test-with-pseudo-environment
+    (should (equal (loophole-local-variable-if-set-list)
+                   (list 'loophole--map-alist
+                         'loophole--editing
+                         'loophole--timer-alist
+                         'loophole--editing-timer)))
+    (loophole--test-set-pseudo-map-alist)
+    (should (equal (loophole-local-variable-if-set-list)
+                   (list 'loophole--map-alist
+                         'loophole--editing
+                         'loophole--timer-alist
+                         'loophole--editing-timer
+                         (intern "loophole-2-map-state")
+                         (intern "loophole-test-b-map-state")
+                         (intern "loophole-state"))))))
 
 (provide 'loophole-tests)
 
