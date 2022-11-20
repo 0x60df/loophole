@@ -413,9 +413,9 @@ This function must be used in
                   :type 'error :exclude-subtypes t)
     (should-error (loophole-map-variable (cons 0 0))
                   :type 'wrong-type-argument)
-    (should-error (loophole-map-variable (make-string 0 ?s))
+    (should-error (loophole-map-variable (string ?s))
                   :type 'wrong-type-argument)
-    (should-error (loophole-map-variable (make-vector 0 0))
+    (should-error (loophole-map-variable (vector ?v))
                   :type 'wrong-type-argument)))
 
 (ert-deftest loophole-test-state-variable ()
@@ -441,9 +441,9 @@ This function must be used in
                   :type 'error :exclude-subtypes t)
     (should-error (loophole-state-variable (cons 0 0))
                   :type 'wrong-type-argument)
-    (should-error (loophole-state-variable (make-string 0 ?s))
+    (should-error (loophole-state-variable (string ?s))
                   :type 'wrong-type-argument)
-    (should-error (loophole-state-variable (make-vector 0 0))
+    (should-error (loophole-state-variable (vector ?v))
                   :type 'wrong-type-argument)))
 
 (ert-deftest loophole-test-map-variable-list ()
