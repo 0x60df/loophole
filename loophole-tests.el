@@ -384,6 +384,9 @@ This function must be used in
       (setq-default loophole--map-alist
                     (cons `(,state-variable . ,(symbol-value map-variable))
                           (default-value 'loophole--map-alist)))))
+  (make-variable-buffer-local (intern "loophole-2-map-state"))
+  (make-variable-buffer-local (intern "loophole-test-b-map-state"))
+  (make-variable-buffer-local (intern "loophole-state"))
   (setq loophole--map-alist (reverse loophole--map-alist))
   (setq-default loophole--map-alist (reverse
                                      (default-value 'loophole--map-alist))))
