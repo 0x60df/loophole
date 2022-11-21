@@ -341,6 +341,15 @@ Default value of local variables are set as initial value."
                    ,@body)
                (advice-remove 'unintern deflect-to-temp-obarray)
                (advice-remove 'intern deflect-to-temp-obarray)
+               (dolist (buffer (buffer-list))
+                 (with-current-buffer buffer
+                   (dolist (cons-or-variable ,local-variable-if-set-list)
+                     (let ((local-variable-if-set
+                            (if (consp cons-or-variable)
+                                (car cons-or-variable)
+                              cons-or-variable)))
+                       (if (local-variable-p local-variable-if-set)
+                           (kill-local-variable local-variable-if-set))))))
                (dolist (binding (cdar ,local-variable-alist))
                  (set-default (car binding) (cdr binding)))
                (dolist (buffer-binding-list (cdr ,local-variable-alist))
