@@ -598,6 +598,48 @@ This function must be used in
                          (intern "loophole-2-map-state")
                          (intern "loophole-test-b-map-state")
                          (intern "loophole-state"))))))
+
+(ert-deftest loophole-test-read-key ()
+  "Test for `loophole-read-key'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-with-keyboard-events (vector ?a)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?a))))
+    (loophole--test-with-keyboard-events (vector ?A)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?A))))
+    (loophole--test-with-keyboard-events (vector ?\C-a)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\C-a))))
+    (loophole--test-with-keyboard-events (vector ?\M-a)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\M-a))))
+    (loophole--test-with-keyboard-events (vector ?\C-x ?\C-f)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\C-x ?\C-f))))
+    (loophole--test-with-keyboard-events (vector ?\C-\M-f)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\C-\M-f))))
+    (loophole--test-with-keyboard-events (vector ?\C-\S-f)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\C-\S-f))))
+    (loophole--test-with-keyboard-events (vector ?\M-\S-f)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\M-\S-f))))
+    (loophole--test-with-keyboard-events (vector ?\H-a)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\H-a))))
+    (loophole--test-with-keyboard-events (vector ?\s-a)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\s-a))))
+    (loophole--test-with-keyboard-events (vector ?\S-a)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\S-a))))
+    (loophole--test-with-keyboard-events (vector ?\A-a)
+      (should (loophole-key-equal (loophole-read-key "") (vector ?\A-a))))
+    (let* ((quit-binding-key (where-is-internal 'keyboard-quit nil t))
+           (quit-key (or quit-binding-key [?\C-g])))
+      (loophole--test-with-keyboard-events quit-key
+        (unless quit-binding-key
+          (define-key overriding-terminal-local-map quit-key #'keyboard-quit))
+        (should (condition-case nil
+                    (progn (loophole-read-key "") nil)
+                  (quit t))))
+      (loophole--test-with-keyboard-events quit-key
+        (unless quit-binding-key
+          (define-key overriding-terminal-local-map quit-key #'keyboard-quit))
+        (should (loophole-key-equal (let ((loophole-allow-keyboard-quit nil))
+                                      (loophole-read-key ""))
+                                    quit-key))))))
 
 (provide 'loophole-tests)
 
