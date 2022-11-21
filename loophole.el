@@ -931,13 +931,11 @@ If `loophole-allow-keyboard-quit' is non-nil,
 Otherwise, \\[keyboard-quit] will be returned as it is read."
   (let* ((menu-prompting nil)
          (key (read-key-sequence prompt nil t)))
-    (or (vectorp key) (stringp key)
-        (signal 'wrong-type-argument (list 'arrayp key)))
-    (and loophole-allow-keyboard-quit
-         (loophole-key-equal
-          (vconcat (where-is-internal 'keyboard-quit nil t))
-          (vconcat key))
-         (keyboard-quit))
+    (if (and loophole-allow-keyboard-quit
+             (loophole-key-equal
+              (vconcat (where-is-internal 'keyboard-quit nil t))
+              (vconcat key)))
+        (keyboard-quit))
     key))
 
 (defun loophole-read-key-with-time-limit (prompt)
@@ -3732,6 +3730,8 @@ affects the timing of this `completing-read'.
 Return map-variable on which KEY and ENTRY are bound."
   (interactive
    (loophole--arg-list loophole-bind-entry-order current-prefix-arg))
+  (or (vectorp key) (stringp key)
+      (signal 'wrong-type-argument (list 'arrayp key)))
   (setq keymap
         (if keymap
             (let ((map-variable (loophole-map-variable-for-keymap keymap)))
