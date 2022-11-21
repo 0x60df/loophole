@@ -43,6 +43,11 @@ temporary `obarray'.
 Note that, if obarray is specified explicitly for
  `intern' and `unintern', deflection does not performed.")
 
+(defconst loophole--test-wait-time 0.5
+  "Time to signal `loophole-test-error' for tests that reads events.")
+
+(define-error 'loohpole-test-error "Loophole test error" 'error)
+
 (defmacro loophole--test-with-pseudo-environment (&rest body)
   "Evaluate BODY with pseudo environment for Loophole.
 
@@ -357,6 +362,77 @@ Default value of local variables are set as initial value."
                        (add-variable-watcher
                         variable
                         #'loophole--follow-adding-local-variable)))))))))))
+
+(defmacro loophole--test-with-keyboard-events (keyboard-events &rest body)
+  "Evaluate BODY followed by KEYBOARD-EVENTS.
+KEYBOARD-EVENTS should be a string, vector representing
+keyboard events, or a list of them .
+
+In this macro,  KEYBOARD-EVENTS are bound to
+`overriding-terminal-local-map' transiently.  Consequently,
+KEYBOARD-EVENTS are ensured to be complete key sequence.
+Bound entry is key-binding currently valid or undefined
+if specified events are not bound to valid command.
+However, if any form in BODY invokes minibuffer, transient
+key bindings are disable.  After the form exit minibuffer,
+transient binding are re-enabled.
+If keyboard-events is a list, its elements are bound to
+`overriding-terminal-local-map' individually.
+
+If KEYBOARD-EVENTS is something invalid and test is not
+finished even after `loophole--test-wait-time' is spent,
+`loophole-test-error' is signaled."
+  (declare (debug t) (indent 1))
+  (let ((exit-function (make-symbol "exit-function"))
+        (enter-transient-map (make-symbol "enter-transient-map"))
+        (exit-transient-map (make-symbol "exit-transient-map"))
+        (timer (make-symbol "timer")))
+    `(let ((unread-command-events (if (listp ,keyboard-events)
+                                      (apply #'append
+                                               (mapcar #'listify-key-sequence
+                                                         ,keyboard-events))
+                                    (listify-key-sequence ,keyboard-events)))
+           (,exit-function #'ignore))
+       (let  ((,enter-transient-map
+               (lambda ()
+                 (setq ,exit-function
+                       (set-transient-map
+                        (let ((map (make-sparse-keymap)))
+                          (if (listp ,keyboard-events)
+                              (dolist (key ,keyboard-events)
+                                (define-key map key
+                                  (let ((entry (key-binding key)))
+                                    (if (commandp entry)
+                                        entry
+                                      #'undefined))))
+                            (define-key map ,keyboard-events
+                              (let ((entry (key-binding ,keyboard-events)))
+                                (if (commandp entry)
+                                    entry
+                                  #'undefined))))
+                          map)
+                        t))))
+              (,exit-transient-map
+               (lambda ()
+                 (funcall ,exit-function)
+                 (setq ,exit-function #'ignore)))
+              (,timer nil))
+         (unwind-protect
+             (progn
+               (funcall ,enter-transient-map)
+               (add-hook 'minibuffer-setup-hook ,exit-transient-map)
+               (add-hook 'minibuffer-exit-hook ,enter-transient-map)
+               (setq ,timer
+                     (run-with-timer
+                      loophole--test-wait-time nil
+                      (lambda ()
+                        (signal
+                         'loophole-test-error
+                         (list "Test with keyboard events is timed out")))))
+               ,@body)
+           (if (timerp ,timer) (cancel-timer ,timer))
+           (remove-hook 'minibuffer-exit-hook ,enter-transient-map)
+           (remove-hook 'minibuffer-setup-hook ,exit-transient-map))))))
 
 (defun loophole--test-set-pseudo-map-alist ()
   "Set pseudo `loophole--map-alist' value.
