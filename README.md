@@ -361,7 +361,8 @@ See also documentation strings of user options and commands.
 (define-key loophole-defining-kmacro-map (kbd "C-c \\") nil)
 (define-key loophole-defining-kmacro-map (kbd "C-]") #'loophole-end-kmacro)
 (define-key loophole-defining-kmacro-map (kbd "C-}") #'loophole-abort-kmacro)
-(define-key loophole-defining-kmacro-map (kbd "C-c ] k a") #'undefined)
+(put 'loophole-end-kmacro :advertised-binding (kbd "C-]"))
+(put 'loophole-abort-kmacro :advertised-binding (kbd "C-}"))
 ```
 
 ### Details
