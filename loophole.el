@@ -952,27 +952,22 @@ read keys will be shown in echo area."
                   (lambda ()
                     (if read-keys (throw 'loophole-read-keys read-keys))))))
       (unwind-protect
-          (let ((key (catch 'loophole-read-keys
-                       (setq read-keys (vector (read-key prompt)))
-                       (while t
-                         (if (and loophole-allow-keyboard-quit
-                                  (not (zerop (length quit)))
-                                  (loophole-key-equal
-                                   (seq-take (reverse read-keys) (length quit))
-                                   quit))
-                             (keyboard-quit))
-                         (setq read-keys
-                               (vconcat read-keys
-                                        (vector
-                                         (read-key
-                                          (mapconcat (lambda (e)
-                                                       (key-description
-                                                        (vector e)))
-                                                     read-keys
-                                                     " ")))))))))
-            (or (vectorp key) (stringp key)
-                (signal 'wrong-type-argument (list 'arrayp key)))
-            key)
+          (catch 'loophole-read-keys
+            (setq read-keys (vector (read-key prompt)))
+            (while t
+              (if (and loophole-allow-keyboard-quit
+                       (not (zerop (length quit)))
+                       (loophole-key-equal
+                        (seq-take (reverse read-keys) (length quit))
+                        quit))
+                  (keyboard-quit))
+              (setq read-keys (vconcat read-keys
+                                       (vector (read-key
+                                                (mapconcat
+                                                 (lambda (e)
+                                                   (key-description (vector e)))
+                                                 read-keys
+                                                 " ")))))))
         (cancel-timer timer)))))
 
 (defun loophole-read-key-until-termination-key (prompt)
