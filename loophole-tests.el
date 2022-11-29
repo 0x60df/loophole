@@ -654,6 +654,13 @@ This function must be used in
   "Test for `loophole-read-key-with-time-limit'."
   (loophole--test-with-pseudo-environment
     (let* ((loophole-read-key-limit-time (* 0.2 loophole--test-wait-time)))
+      (should (catch 'loophole-test-read-key-with-time-limit
+                (run-with-idle-timer
+                 (* loophole-read-key-limit-time 2.0)
+                 nil
+                 (lambda () (throw 'loophole-test-read-key-with-time-limit t)))
+                (loophole-read-key-with-time-limit "")
+                nil))
       (loophole--test-with-keyboard-events (vector ?a)
         (should (loophole-key-equal (loophole-read-key-with-time-limit "")
                                     (vector ?a))))
