@@ -676,9 +676,9 @@ This function must be used in
       (loophole--test-with-keyboard-events (vector ?\M-g ?\M-g)
         (should (loophole-key-equal (loophole-read-key-with-time-limit "")
                                     (vector ?\M-g ?\M-g))))
-      ;; Cannot use C-x or ESC for this test becase they are defined in
+      ;; Cannot use C-x or ESC for this test because they are defined in
       ;; key-translate-table, function-key-map, and input-decode-map.
-      ;; See comment in `read-key' srouce for details.
+      ;; See comment in `read-key' source for details.
       (loophole--test-with-keyboard-events (vector ?\C-\M-f)
         (should (loophole-key-equal (loophole-read-key-with-time-limit "")
                                     (vector ?\C-\M-f))))
