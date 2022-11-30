@@ -783,10 +783,13 @@ This function must be used in
         (list (vector ?\S-a) loophole-read-key-termination-key)
       (should (loophole-key-equal (loophole-read-key-until-termination-key "")
                                   (vector ?\S-a))))
+    ;; Cannot use A-a for this test because it is defined in key-translation-map
+    ;; when batch mode, more specifically when no window system.
+    ;; Same situation with C-x and ESC
     (loophole--test-with-keyboard-events
-        (list (vector ?\A-a) loophole-read-key-termination-key)
+        (list (vector ?\A-b) loophole-read-key-termination-key)
       (should (loophole-key-equal (loophole-read-key-until-termination-key "")
-                                  (vector ?\A-a))))
+                                  (vector ?\A-b))))
     (loophole--test-with-keyboard-events
         (list (vector ?a)
               (vector ?b)
