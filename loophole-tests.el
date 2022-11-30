@@ -729,6 +729,115 @@ This function must be used in
           (should (loophole-key-equal (let ((loophole-allow-keyboard-quit nil))
                                         (loophole-read-key-with-time-limit ""))
                                       quit-key)))))))
+
+(ert-deftest loophole-test-read-key-until-termination-key ()
+  "Test for `loophole-read-key-until-termination-key'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-with-keyboard-events loophole-read-key-termination-key
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?a) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?a))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?A) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?A))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\C-a) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\C-a))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\M-a) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\M-a))))
+    ;; Cannot use C-x or ESC for this test because they are defined in
+    ;; key-translate-table, function-key-map, and input-decode-map.
+    ;; See comment in `read-key' source for details.
+    (loophole--test-with-keyboard-events
+        (list (vector ?\M-g ?\M-g) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\M-g ?\M-g))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\C-\M-f) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\C-\M-f))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\C-\S-f) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\C-\S-f))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\M-\S-f) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\M-\S-f))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\H-a) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\H-a))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\s-a) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\s-a))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\S-a) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\S-a))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\A-a) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\A-a))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?a)
+              (vector ?b)
+              (vector ?c)
+              loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?a ?b ?c))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\C-a)
+              (vector ?\C-b)
+              (vector ?\C-c)
+              loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\C-a ?\C-b ?\C-c))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\M-a)
+              (vector ?\M-b)
+              (vector ?\M-c)
+              loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\M-a ?\M-b ?\M-c))))
+    (let* ((quit-binding-key (where-is-internal 'keyboard-quit nil t))
+           (quit-key (or quit-binding-key [?\C-g])))
+      (loophole--test-with-keyboard-events quit-key
+        (unless quit-binding-key
+          (define-key overriding-terminal-local-map quit-key #'keyboard-quit))
+        (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                    (vector))))
+      (loophole--test-with-keyboard-events
+          (list quit-key loophole-read-key-termination-key)
+        (unless quit-binding-key
+          (define-key overriding-terminal-local-map quit-key #'keyboard-quit))
+        (should (loophole-key-equal
+                 (let ((loophole-allow-keyboard-quit nil))
+                   (loophole-read-key-until-termination-key ""))
+                 (vector))))
+      (let ((loophole-read-key-termination-key (vector ?\C-\])))
+        (loophole--test-with-keyboard-events quit-key
+          (unless quit-binding-key
+            (define-key overriding-terminal-local-map quit-key #'keyboard-quit))
+          (should (condition-case nil
+                      (progn (loophole-read-key-until-termination-key "") nil)
+                    (quit t))))
+        (loophole--test-with-keyboard-events
+            (list quit-key loophole-read-key-termination-key)
+          (unless quit-binding-key
+            (define-key overriding-terminal-local-map quit-key #'keyboard-quit))
+          (should (loophole-key-equal
+                   (let ((loophole-allow-keyboard-quit nil))
+                     (loophole-read-key-until-termination-key ""))
+                   quit-key)))))))
 
 (provide 'loophole-tests)
 
