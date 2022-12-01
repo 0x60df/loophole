@@ -847,6 +847,73 @@ This function must be used in
                    (let ((loophole-allow-keyboard-quit nil))
                      (loophole-read-key-until-termination-key ""))
                    quit-key)))))))
+
+(ert-deftest loophole-test-read-map-variable ()
+  "Test for `loophole-read-map-variable'."
+  (loophole--test-with-pseudo-environment
+    (should-error (loophole-read-map-variable "")
+                  :type 'user-error)
+    (loophole--test-set-pseudo-map-alist)
+    (loophole--test-with-keyboard-events "loophole-1-map"
+      (should (eq (loophole-read-map-variable "")
+                  (intern "loophole-1-map"))))
+    (should-error (loophole-read-map-variable "" (lambda (_) nil))
+                  :type 'user-error)
+    (let* ((monitored-args nil)
+           (monitor-args (lambda (args)
+                           (setq monitored-args args)
+                           args)))
+      (unwind-protect
+          (progn
+            (advice-add 'loophole-describe :filter-args monitor-args)
+            (let ((map-variable-list (loophole-map-variable-list)))
+              (let ((n 1))
+                (loophole--test-with-keyboard-events
+                    (vconcat (make-vector n help-char) (vector ?\C-m))
+                  (loophole-read-map-variable ""))
+                (should (eq (car monitored-args)
+                            (nth (1- (% n (length map-variable-list)))
+                                 map-variable-list))))
+              (let ((n (/ (length map-variable-list) 2)))
+                (loophole--test-with-keyboard-events
+                    (vconcat (make-vector n help-char) (vector ?\C-m))
+                  (loophole-read-map-variable ""))
+                (should (eq (car monitored-args)
+                            (nth (1- (% n (length map-variable-list)))
+                                 map-variable-list))))
+              (let ((n (1+ (length map-variable-list))))
+                (loophole--test-with-keyboard-events
+                    (vconcat (make-vector n help-char) (vector ?\C-m))
+                  (loophole-read-map-variable ""))
+                (should (eq (car monitored-args)
+                            (nth (1- (% n (length map-variable-list)))
+                                 map-variable-list)))))
+            (let* ((filter (lambda (symbol)
+                             (string-match "[0-9]" (symbol-name symbol))))
+                   (map-variable-list
+                    (seq-filter filter (loophole-map-variable-list))))
+              (let ((n 1))
+                (loophole--test-with-keyboard-events
+                    (vconcat (make-vector n help-char) (vector ?\C-m))
+                  (loophole-read-map-variable "" filter))
+                (should (eq (car monitored-args)
+                            (nth (1- (% n (length map-variable-list)))
+                                 map-variable-list))))
+              (let ((n (/ (length map-variable-list) 2)))
+                (loophole--test-with-keyboard-events
+                    (vconcat (make-vector n help-char) (vector ?\C-m))
+                  (loophole-read-map-variable "" filter))
+                (should (eq (car monitored-args)
+                            (nth (1- (% n (length map-variable-list)))
+                                 map-variable-list))))
+              (let ((n (1+ (length map-variable-list))))
+                (loophole--test-with-keyboard-events
+                    (vconcat (make-vector n help-char) (vector ?\C-m))
+                  (loophole-read-map-variable "" filter))
+                (should (eq (car monitored-args)
+                            (nth (1- (% n (length map-variable-list)))
+                                 map-variable-list))))))
+        (advice-remove 'loophole-describe monitor-args)))))
 
 (provide 'loophole-tests)
 
