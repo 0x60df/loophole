@@ -440,6 +440,7 @@ finished even after `loophole--test-wait-time' is spent,
                          (list "Test with keyboard events is timed out")))))
                ,@body)
            (if (timerp ,timer) (cancel-timer ,timer))
+           (funcall ,exit-function)
            (remove-hook 'minibuffer-exit-hook ,enter-transient-map)
            (remove-hook 'minibuffer-setup-hook ,exit-transient-map))))))
 
