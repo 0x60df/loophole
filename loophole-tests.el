@@ -811,6 +811,11 @@ This function must be used in
               loophole-read-key-termination-key)
       (should (loophole-key-equal (loophole-read-key-until-termination-key "")
                                   (vector ?\M-a ?\M-b ?\M-c))))
+    (loophole--test-with-keyboard-events nil
+      (let ((loophole-read-key-termination-key (vector))
+            (loophole-allow-keyboard-quit nil))
+        (should-error (loophole-read-key-until-termination-key "")
+                      :type 'user-error)))
     (let* ((quit-binding-key (where-is-internal 'keyboard-quit nil t))
            (quit-key (or quit-binding-key [?\C-g])))
       (loophole--test-with-keyboard-events quit-key
