@@ -886,7 +886,7 @@ This function must be used in
   "Test for `loophole-read-map-variable'.
 This test has assertions for interactive behaviors of
 `loophole-read-map-variable'.  When this test is run in
-batch-mode, these assertions are skipped"
+batch-mode, these assertions are skipped."
   :tags '(interactive)
   (loophole--test-with-pseudo-environment
     (should-error (loophole-read-map-variable "")
