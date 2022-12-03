@@ -390,18 +390,34 @@ If keyboard-events is a list, its elements are bound to
 
 If KEYBOARD-EVENTS is something invalid and test is not
 finished even after `loophole--test-wait-time' is spent,
-`loophole-test-error' is signaled."
+`loophole-test-error' is signaled.
+
+When Emacs runs noninteractively, i.e. in batch mode,
+`read-from-minibuffer' usually reads standard input for
+emacs.  In this macro, when run noninteractively,
+`read-from-minibuffer' is adviced to return a string that is
+a portion of KEYBOARD-EVENTS delimited by newline.
+By this advice, standard input is emulated with
+KEYBOARD-EVENTS, and even while batch mode, tests can be run
+ with emulated KEYBOARD-EVENTS.
+Note that, adviced `read-from-minibuffer' returns a portion
+of KEYBOARD-EVENTS as it is, test should not rely of the
+completing features of reading minibuffer functions like
+`completing-read'."
   (declare (debug t) (indent 1))
   (let ((exit-function (make-symbol "exit-function"))
         (enter-transient-map (make-symbol "enter-transient-map"))
         (exit-transient-map (make-symbol "exit-transient-map"))
+        (return-events (make-symbol "return-events"))
+        (flatten-events (make-symbol "flatten-events"))
+        (pseudo-standard-input (make-symbol "flatten-events"))
         (timer (make-symbol "timer")))
-    `(let ((unread-command-events (if (listp ,keyboard-events)
-                                      (apply #'append
-                                               (mapcar #'listify-key-sequence
-                                                         ,keyboard-events))
-                                    (listify-key-sequence ,keyboard-events)))
-           (,exit-function #'ignore))
+    `(let* ((,flatten-events (if (listp ,keyboard-events)
+                                 (apply #'vconcat ,keyboard-events)
+                               ,keyboard-events))
+            (unread-command-events (listify-key-sequence ,flatten-events))
+            (,pseudo-standard-input ,flatten-events)
+            (,exit-function #'ignore))
        (let  ((,enter-transient-map
                (lambda ()
                  (setq ,exit-function
@@ -425,12 +441,28 @@ finished even after `loophole--test-wait-time' is spent,
                (lambda ()
                  (funcall ,exit-function)
                  (setq ,exit-function #'ignore)))
+              (,return-events
+               (lambda (&rest _)
+                 (let* ((newline-position (seq-position
+                                            ,pseudo-standard-input ?\r))
+                        (head (seq-take
+                               ,pseudo-standard-input newline-position))
+                        (tail (seq-drop
+                               ,pseudo-standard-input (1+ newline-position))))
+                   (unless (seq-every-p #'characterp head)
+                     (signal 'loophole-test-error
+                             (list (concat "Non-character events for minibuffer"
+                                           " in batch mode is not allowed"))))
+                   (setq ,pseudo-standard-input tail)
+                   (concat head))))
               (,timer nil))
          (unwind-protect
              (progn
                (funcall ,enter-transient-map)
                (add-hook 'minibuffer-setup-hook ,exit-transient-map)
                (add-hook 'minibuffer-exit-hook ,enter-transient-map)
+               (if noninteractive
+                   (advice-add 'read-from-minibuffer :override ,return-events))
                (setq ,timer
                      (run-with-timer
                       loophole--test-wait-time nil
@@ -440,6 +472,8 @@ finished even after `loophole--test-wait-time' is spent,
                          (list "Test with keyboard events is timed out")))))
                ,@body)
            (if (timerp ,timer) (cancel-timer ,timer))
+           (if noninteractive
+               (advice-remove 'read-from-minibuffer ,return-events))
            (funcall ,exit-function)
            (remove-hook 'minibuffer-exit-hook ,enter-transient-map)
            (remove-hook 'minibuffer-setup-hook ,exit-transient-map))))))
