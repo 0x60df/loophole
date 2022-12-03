@@ -1074,26 +1074,25 @@ displayed in other window, and immediately after body is
 executed, original window configuration is recovered."
   (declare (debug t) (indent 1))
   (let ((frame (make-symbol "frame"))
-        (window (make-symbol "window"))
-        (other-window (make-symbol "other-symbol")))
-    `(let ((,window (selected-window))
-           (,frame (selected-frame))
-           ,other-window)
+        (frame-list (make-symbol "frame-list"))
+        (made-frame (make-symbol "made-frame"))
+        (window-configuration (make-symbol "window")))
+    `(let* ((,frame (selected-frame))
+            (,frame-list (frame-list))
+            (,window-configuration (current-window-configuration ,frame))
+            ,made-frame)
        (unwind-protect
            (progn
              (switch-to-buffer-other-window
               (get-buffer-create ,buffer-or-name) t)
-             (setq ,other-window (selected-window))
+             (unless (memq (selected-frame) ,frame-list)
+               (setq ,made-frame (selected-frame)))
              ,@body)
-         (if (window-prev-buffers)
-             (progn
-               (switch-to-prev-buffer ,other-window)
-               (if (frame-live-p ,frame)
-                   (select-frame-set-input-focus ,frame t))
-               (if (window-live-p ,window) (select-window ,window t)))
-           (if (= 1 (length (window-list)))
-               (delete-frame nil t)
-             (delete-window)))))))
+         (if (frame-live-p ,made-frame) (delete-frame ,made-frame t))
+         (when (frame-live-p ,frame)
+           (if (not (eq (selected-frame) ,frame))
+               (select-frame-set-input-focus ,frame t))
+           (set-window-configuration ,window-configuration))))))
 
 (defun loophole-read-buffer (callback &optional buffer)
   "Read Lisp object from current buffer after user modifies it.
