@@ -901,67 +901,35 @@ batch-mode, these assertions are skipped"
       (let* ((monitored-args nil)
              (monitor-args (lambda (&rest args) (setq monitored-args args))))
         (unwind-protect
-            (progn
+            (let ((help-char-works
+                   (lambda (help-char-count &optional filter-for-map-variable)
+                     (loophole--test-with-keyboard-events
+                         (vconcat (make-vector help-char-count help-char)
+                                  (vector ?\C-m))
+                       (loophole-read-map-variable "" filter-for-map-variable))
+                     (let ((map-variable-list
+                            (if filter-for-map-variable
+                                (seq-filter filter-for-map-variable
+                                            (loophole-map-variable-list))
+                              (loophole-map-variable-list))))
+                       (prog1 (and monitored-args
+                                   (eq (car monitored-args)
+                                       (nth (1- (% help-char-count
+                                                   (length map-variable-list)))
+                                            map-variable-list)))
+                         (setq monitored-args nil))))))
               (advice-add 'loophole-describe :override monitor-args)
-              (let ((map-variable-list (loophole-map-variable-list)))
-                (let ((n 1))
-                  (loophole--test-with-keyboard-events
-                      (vconcat (make-vector n help-char) (vector ?\C-m))
-                    (loophole-read-map-variable ""))
-                  (should (and monitored-args
-                               (eq (car monitored-args)
-                                   (nth (1- (% n (length map-variable-list)))
-                                        map-variable-list)))))
-                (setq monitored-args nil)
-                (let ((n (/ (length map-variable-list) 2)))
-                  (loophole--test-with-keyboard-events
-                      (vconcat (make-vector n help-char) (vector ?\C-m))
-                    (loophole-read-map-variable ""))
-                  (should (and monitored-args
-                               (eq (car monitored-args)
-                                   (nth (1- (% n (length map-variable-list)))
-                                        map-variable-list)))))
-                (setq monitored-args nil)
-                (let ((n (1+ (length map-variable-list))))
-                  (loophole--test-with-keyboard-events
-                      (vconcat (make-vector n help-char) (vector ?\C-m))
-                    (loophole-read-map-variable ""))
-                  (should (and monitored-args
-                               (eq (car monitored-args)
-                                   (nth (1- (% n (length map-variable-list)))
-                                        map-variable-list)))))
-                (setq monitored-args nil))
+              (let ((size (length (loophole-map-variable-list))))
+                (should (funcall help-char-works 1))
+                (should (funcall help-char-works (/ size 2)))
+                (should (funcall help-char-works (1+ size))))
               (let* ((filter (lambda (symbol)
                                (string-match "[0-9]" (symbol-name symbol))))
-                     (map-variable-list
-                      (seq-filter filter (loophole-map-variable-list))))
-                (let ((n 1))
-                  (loophole--test-with-keyboard-events
-                      (vconcat (make-vector n help-char) (vector ?\C-m))
-                    (loophole-read-map-variable "" filter))
-                  (should (and monitored-args
-                               (eq (car monitored-args)
-                                   (nth (1- (% n (length map-variable-list)))
-                                        map-variable-list))))
-                  (setq monitored-args nil))
-                (let ((n (/ (length map-variable-list) 2)))
-                  (loophole--test-with-keyboard-events
-                      (vconcat (make-vector n help-char) (vector ?\C-m))
-                    (loophole-read-map-variable "" filter))
-                  (should (and monitored-args
-                               (eq (car monitored-args)
-                                   (nth (1- (% n (length map-variable-list)))
-                                        map-variable-list))))
-                  (setq monitored-args nil))
-                (let ((n (1+ (length map-variable-list))))
-                  (loophole--test-with-keyboard-events
-                      (vconcat (make-vector n help-char) (vector ?\C-m))
-                    (loophole-read-map-variable "" filter))
-                  (should (and monitored-args
-                               (eq (car monitored-args)
-                                   (nth (1- (% n (length map-variable-list)))
-                                        map-variable-list))))
-                  (setq monitored-args nil))))
+                     (size (length
+                            (seq-filter filter (loophole-map-variable-list)))))
+                (should (funcall help-char-works 1 filter))
+                (should (funcall help-char-works (/ size 2) filter))
+                (should (funcall help-char-works (1+ size) filter))))
           (advice-remove 'loophole-describe monitor-args))))))
 
 (provide 'loophole-tests)
