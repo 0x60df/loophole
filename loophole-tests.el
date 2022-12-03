@@ -899,12 +899,10 @@ batch-mode, these assertions are skipped"
                   :type 'user-error)
     (unless noninteractive
       (let* ((monitored-args nil)
-             (monitor-args (lambda (args)
-                             (setq monitored-args args)
-                             args)))
+             (monitor-args (lambda (&rest args) (setq monitored-args args))))
         (unwind-protect
             (progn
-              (advice-add 'loophole-describe :filter-args monitor-args)
+              (advice-add 'loophole-describe :override monitor-args)
               (let ((map-variable-list (loophole-map-variable-list)))
                 (let ((n 1))
                   (loophole--test-with-keyboard-events
