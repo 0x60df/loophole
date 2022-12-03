@@ -1073,22 +1073,27 @@ The buffer specified by BUFFER-OR-NAME is transiently
 displayed in other window, and immediately after body is
 executed, original window configuration is recovered."
   (declare (debug t) (indent 1))
-  `(let ((window (selected-window))
-         (frame (selected-frame))
-         other-window)
-     (unwind-protect
-         (progn
-           (switch-to-buffer-other-window (get-buffer-create ,buffer-or-name) t)
-           (setq other-window (selected-window))
-           ,@body)
-       (if (window-prev-buffers)
+  (let ((frame (make-symbol "frame"))
+        (window (make-symbol "window"))
+        (other-window (make-symbol "other-symbol")))
+    `(let ((,window (selected-window))
+           (,frame (selected-frame))
+           ,other-window)
+       (unwind-protect
            (progn
-             (switch-to-prev-buffer other-window)
-             (if (frame-live-p frame) (select-frame-set-input-focus frame t))
-             (if (window-live-p window) (select-window window t)))
-         (if (= 1 (length (window-list)))
-             (delete-frame nil t)
-           (delete-window))))))
+             (switch-to-buffer-other-window
+              (get-buffer-create ,buffer-or-name) t)
+             (setq ,other-window (selected-window))
+             ,@body)
+         (if (window-prev-buffers)
+             (progn
+               (switch-to-prev-buffer ,other-window)
+               (if (frame-live-p ,frame)
+                   (select-frame-set-input-focus ,frame t))
+               (if (window-live-p ,window) (select-window ,window t)))
+           (if (= 1 (length (window-list)))
+               (delete-frame nil t)
+             (delete-window)))))))
 
 (defun loophole-read-buffer (callback &optional buffer)
   "Read Lisp object from current buffer after user modifies it.
