@@ -914,22 +914,24 @@ batch-mode, these assertions are skipped"
                               (loophole-map-variable-list))))
                        (prog1 (and monitored-args
                                    (eq (car monitored-args)
-                                       (nth (1- (% help-char-count
-                                                   (length map-variable-list)))
+                                       (nth (% (1- help-char-count)
+                                               (length map-variable-list))
                                             map-variable-list)))
                          (setq monitored-args nil))))))
               (advice-add 'loophole-describe :override monitor-args)
               (let ((size (length (loophole-map-variable-list))))
                 (should (funcall help-char-works 1))
                 (should (funcall help-char-works (/ size 2)))
-                (should (funcall help-char-works (1+ size))))
+                (should (funcall help-char-works (1+ size)))
+                (should (funcall help-char-works (* size 2))))
               (let* ((filter (lambda (symbol)
                                (string-match "[0-9]" (symbol-name symbol))))
                      (size (length
                             (seq-filter filter (loophole-map-variable-list)))))
                 (should (funcall help-char-works 1 filter))
                 (should (funcall help-char-works (/ size 2) filter))
-                (should (funcall help-char-works (1+ size) filter))))
+                (should (funcall help-char-works (1+ size) filter))
+                (should (funcall help-char-works (* size 2) filter))))
           (advice-remove 'loophole-describe monitor-args))))))
 
 (provide 'loophole-tests)
