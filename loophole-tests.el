@@ -933,6 +933,72 @@ batch-mode, these assertions are skipped"
                 (should (funcall help-char-works (1+ size) filter))
                 (should (funcall help-char-works (* size 2) filter))))
           (advice-remove 'loophole-describe monitor-args))))))
+
+(ert-deftest loophole-test-with-current-buffer-other-window ()
+  "Test for `loophole--with-current-buffer-other-window'."
+  (with-temp-buffer
+    (let ((temp-buffer (current-buffer)))
+      (with-temp-buffer
+        (let* ((frame (selected-frame))
+               (window-configuration (current-window-configuration frame)))
+          (let ((display-buffer-alist nil))
+            (loophole--with-current-buffer-other-window temp-buffer
+              (should (eq temp-buffer (current-buffer)))
+              (should (eq frame (selected-frame)))
+              (should-not (compare-window-configurations
+                           window-configuration
+                           (current-window-configuration))))
+            (should (eq frame (selected-frame)))
+            (should (compare-window-configurations
+                     window-configuration (current-window-configuration)))
+            (loophole--with-current-buffer-other-window temp-buffer
+              (select-frame (seq-find (lambda (f)
+                                        (and (not (eq f frame))
+                                             (not (eq f (selected-frame)))))
+                                      (frame-list))
+                            t))
+            (should (eq frame (selected-frame)))
+            (should (compare-window-configurations
+                     window-configuration (current-window-configuration)))
+            (loophole--with-current-buffer-other-window temp-buffer
+              (select-window (seq-find (lambda (w)
+                                         (not (eq w (selected-window))))
+                                       (window-list))))
+            (should (eq frame (selected-frame)))
+            (should (compare-window-configurations
+                     window-configuration (current-window-configuration)))
+            (loophole--with-current-buffer-other-window temp-buffer
+              (delete-window))
+            (should (eq frame (selected-frame)))
+            (should (compare-window-configurations
+                     window-configuration (current-window-configuration))))
+          (let ((display-buffer-alist '(("*" display-buffer-pop-up-frame)))
+                made-frame)
+            (loophole--with-current-buffer-other-window temp-buffer
+              (should (eq temp-buffer (current-buffer)))
+              (setq made-frame (selected-frame))
+              (should-not (eq frame made-frame))
+              (should-not (compare-window-configurations
+                           window-configuration
+                           (current-window-configuration))))
+            (should (eq frame (selected-frame)))
+            (should (compare-window-configurations
+                     window-configuration (current-window-configuration)))
+            (should (and made-frame (not (frame-live-p made-frame))))
+            (loophole--with-current-buffer-other-window temp-buffer
+              (select-frame (seq-find (lambda (f)
+                                        (and (not (eq f frame))
+                                             (not (eq f (selected-frame)))))
+                                      (frame-list))
+                            t))
+            (should (eq frame (selected-frame)))
+            (should (compare-window-configurations
+                     window-configuration (current-window-configuration)))
+            (loophole--with-current-buffer-other-window temp-buffer
+              (delete-frame nil t))
+            (should (eq frame (selected-frame)))
+            (should (compare-window-configurations
+                     window-configuration (current-window-configuration)))))))))
 
 (provide 'loophole-tests)
 
