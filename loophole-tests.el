@@ -1359,6 +1359,32 @@ batch-mode, these assertions are skipped."
     (setq loophole--editing (intern "loophole-1-map"))
     (should (eq (loophole-editing)
                 (intern "loophole-1-map")))))
+
+(ert-deftest loophole-test-char-read-syntax ()
+  "Test for `loophole--char-read-syntax'."
+  (should (equal (loophole--char-read-syntax ?a) (string ?? ?a)))
+  (should (equal (loophole--char-read-syntax ?\C-a) (string ?? ?\\ ?C ?- ?a)))
+  (should (equal (loophole--char-read-syntax ?\M-a) (string ?? ?\\ ?M ?- ?a)))
+  (should (equal (loophole--char-read-syntax ?\S-a) (string ?? ?\\ ?S ?- ?a)))
+  (should (equal (loophole--char-read-syntax ?\H-a) (string ?? ?\\ ?H ?- ?a)))
+  (should (equal (loophole--char-read-syntax ?\s-a) (string ?? ?\\ ?s ?- ?a)))
+  (should (equal (loophole--char-read-syntax ?\A-a) (string ?? ?\\ ?A ?- ?a)))
+  (should (equal (loophole--char-read-syntax ?\C-\M-\S-\H-\s-\A-a)
+                 (string ??
+                         ?\\ ?A ?-
+                         ?\\ ?s ?-
+                         ?\\ ?H ?-
+                         ?\\ ?S ?-
+                         ?\\ ?C ?-
+                         ?\\ ?M ?-
+                         ?a)))
+  (should (equal (loophole--char-read-syntax (intern "return")) "return"))
+  (should (equal (loophole--char-read-syntax ?a) (string ?? ?a)))
+  (should (equal (loophole--char-read-syntax ?a) (string ?? ?a)))
+  (should-error (loophole-global-p 1.0) :type 'wrong-type-argument)
+  (should-error (loophole-global-p (cons 0 0)) :type 'wrong-type-argument)
+  (should-error (loophole-global-p (string ?s)) :type 'wrong-type-argument)
+  (should-error (loophole-global-p (vector ?v)) :type 'wrong-type-argument))
 
 (provide 'loophole-tests)
 
