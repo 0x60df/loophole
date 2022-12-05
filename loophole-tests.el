@@ -1250,6 +1250,31 @@ batch-mode, these assertions are skipped."
                   (should (compare-window-configurations
                            window-configuration
                            (current-window-configuration))))))))))))
+
+(ert-deftest loophole-test-map-variable-for-keymap ()
+  "Test for `loophole-map-variable-for-keymap'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (should (eq (loophole-map-variable-for-keymap
+                 (symbol-value (intern "loophole-1-map")))
+                (intern "loophole-1-map")))
+    (should (eq (loophole-map-variable-for-keymap
+                 (symbol-value (intern "loophole-test-a-map")))
+                (intern "loophole-test-a-map")))
+    (should (eq (loophole-map-variable-for-keymap
+                 (symbol-value (intern "loophole")))
+                (intern "loophole")))
+    (should (null (loophole-map-variable-for-keymap (make-sparse-keymap))))
+    (should-error (loophole-map-variable-for-keymap 0)
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-keymap 1.0)
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-keymap ?c)
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-keymap (intern "s"))
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-keymap (cons 0 0))
+                  :type 'wrong-type-argument)))
 
 (provide 'loophole-tests)
 
