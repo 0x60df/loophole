@@ -1274,6 +1274,10 @@ batch-mode, these assertions are skipped."
     (should-error (loophole-map-variable-for-keymap (intern "s"))
                   :type 'wrong-type-argument)
     (should-error (loophole-map-variable-for-keymap (cons 0 0))
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-keymap (string ?s))
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-keymap (vector ?v))
                   :type 'wrong-type-argument)))
 
 (ert-deftest loophole-test-map-variable-for-key-binding ()
