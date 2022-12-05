@@ -1338,6 +1338,15 @@ batch-mode, these assertions are skipped."
     (should (loophole-global-editing-p))
     (setq-default loophole--editing t)
     (should-not (loophole-global-editing-p))))
+
+(ert-deftest loophole-test-suspending-p ()
+  "Test for `loophole-suspending-p'."
+  (loophole--test-with-pseudo-environment
+    (should-not (loophole-suspending-p))
+    (setq emulation-mode-map-alists nil)
+    (should (loophole-suspending-p))
+    (setq emulation-mode-map-alists '(loophole--map-alist))
+    (should-not (loophole-suspending-p))))
 
 (provide 'loophole-tests)
 
