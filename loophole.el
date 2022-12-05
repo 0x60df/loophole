@@ -1072,7 +1072,7 @@ If there are no candidates after PREDICATE is applied to
 The buffer specified by BUFFER-OR-NAME is transiently
 displayed in other window, and immediately after body is
 executed, original window configuration is recovered."
-  (declare (debug t) (indent 1))
+  (declare (debug t) (indent 1) (obsolete nil "0.8.3"))
   (let ((frame (make-symbol "frame"))
         (frame-list (make-symbol "frame-list"))
         (made-frame (make-symbol "made-frame"))
@@ -1094,8 +1094,11 @@ executed, original window configuration is recovered."
                (select-frame-set-input-focus ,frame t))
            (set-window-configuration ,window-configuration))))))
 
-(defun loophole-read-buffer (callback &optional buffer)
+(defun loophole-read-buffer (callback &optional buffer-or-name)
   "Read Lisp object from current buffer after user modifies it.
+As a workspace, window for the buffer is prepared by
+`switch-to-buffer-other-window'.  After reading buffer,
+original window configuration is restored.
 
 This function usually starts `recursive-edit', to give user
 an environment for writing Lisp form on a buffer.
@@ -1113,86 +1116,99 @@ By these utilities, user can use the buffer as well as using
 To allow user to choose inhibiting `recursive-edit',
 CALLBACK must be defined.
 
-If optional argument BUFFER is non-nil and is an alive
-buffer, use it instead of current buffer."
-  (setq buffer (or (if (buffer-live-p buffer) buffer)
-                   (current-buffer)))
-  (with-current-buffer buffer
-    (let* ((mode major-mode)
-           (clean-buffer (lambda ()
-                           (if (buffer-live-p buffer)
-                               (with-current-buffer buffer
-                                 (setq header-line-format nil)
-                                 (use-local-map emacs-lisp-mode-map)
-                                 (funcall mode))))))
-      (emacs-lisp-mode)
-      (use-local-map (let ((map (make-sparse-keymap)))
-                       (set-keymap-parent map emacs-lisp-mode-map)
-                       map))
-      (setq header-line-format
-            `(""
-              mode-line-front-space
-              ,(format "Writing lisp form.  finish `%s', Abort `%s'."
-                       (key-description loophole-read-buffer-finish-key)
-                       (key-description loophole-read-buffer-abort-key))))
-      (if loophole-read-buffer-inhibit-recursive-edit
-          (let* ((window (selected-window))
-                 (frame (selected-frame))
-                 (clean-window (lambda ()
-                                 (if (window-prev-buffers)
-                                     (progn
-                                       (switch-to-prev-buffer nil t)
-                                       (if (frame-live-p frame)
-                                           (select-frame-set-input-focus frame
-                                                                         t))
-                                       (if (window-live-p window)
-                                           (select-window window t)))
-                                   (if (= 1 (length (window-list)))
-                                       (delete-frame nil t)
-                                     (delete-window)))))
-                 (hook-function (make-symbol
-                                 "loophole-one-time-hook-function")))
-            (define-key (current-local-map) loophole-read-buffer-finish-key
+If optional argument BUFFER-OR-NAME is non-nil, it is passed
+to `get-buffer-create', and if returned buffer is alive, use
+it instead of current buffer."
+  (let ((buffer
+         (let ((b (if buffer-or-name (get-buffer-create buffer-or-name))))
+           (if (buffer-live-p b) b (current-buffer)))))
+    (with-current-buffer buffer
+      (let* ((mode major-mode)
+             (header-line header-line-format)
+             (set-up-buffer
               (lambda ()
-                (interactive)
-                (funcall clean-buffer)
-                (unwind-protect
-                    (if (functionp callback)
-                        (save-excursion
-                          (goto-char 1)
-                          (funcall callback (read (current-buffer)))))
-                  (funcall clean-window))))
-            (define-key (current-local-map) loophole-read-buffer-abort-key
+                (emacs-lisp-mode)
+                (use-local-map (let ((map (make-sparse-keymap)))
+                                 (set-keymap-parent map emacs-lisp-mode-map)
+                                 map))
+                (setq header-line-format
+                      `(""
+                        mode-line-front-space
+                        ,(format "Writing lisp form.  finish `%s', Abort `%s'."
+                                 (key-description
+                                  loophole-read-buffer-finish-key)
+                                 (key-description
+                                  loophole-read-buffer-abort-key))))))
+             (clean-buffer (lambda ()
+                             (if (buffer-live-p buffer)
+                                 (with-current-buffer buffer
+                                   (setq header-line-format header-line)
+                                   (use-local-map emacs-lisp-mode-map)
+                                   (funcall mode)))))
+             (frame (selected-frame))
+             (frame-list (frame-list))
+             (window-configuration (current-window-configuration frame))
+             (made-frame nil)
+             (set-up-window
               (lambda ()
-                (interactive)
-                (funcall clean-buffer)
-                (funcall clean-window)))
-            (fset hook-function
-                  (lambda ()
-                    (unwind-protect
-                        (progn
-                          (switch-to-buffer-other-window buffer)
-                          (run-hooks 'loophole-read-buffer-set-up-hook)
-                          (message nil))
-                      (remove-hook 'post-command-hook hook-function))))
-            (add-hook 'post-command-hook hook-function)
-            (signal 'quit nil))
-        (define-key (current-local-map) loophole-read-buffer-finish-key
-          (lambda ()
-            (interactive)
-            (funcall clean-buffer)
-            (exit-recursive-edit)))
-        (define-key (current-local-map) loophole-read-buffer-abort-key
-          (lambda ()
-            (interactive)
-            (funcall clean-buffer)
-            (abort-recursive-edit)))
-        (loophole--with-current-buffer-other-window buffer
-          (run-hooks 'loophole-read-buffer-set-up-hook)
-          (recursive-edit)
-          (save-excursion
-            (goto-char 1)
-            (read (current-buffer))))))))
+                (switch-to-buffer-other-window buffer t)
+                (unless (memq (selected-frame) frame-list)
+                  (setq made-frame (selected-frame)))))
+             (clean-window
+              (lambda ()
+                (if (frame-live-p made-frame) (delete-frame made-frame t))
+                (when (frame-live-p frame)
+                  (if (not (eq (selected-frame) frame))
+                      (select-frame-set-input-focus frame t))
+                  (set-window-configuration window-configuration)))))
+        (if loophole-read-buffer-inhibit-recursive-edit
+            (let ((hook-function (make-symbol
+                                  "loophole-one-time-hook-function")))
+              (funcall set-up-buffer)
+              (define-key (current-local-map) loophole-read-buffer-finish-key
+                (lambda ()
+                  (interactive)
+                  (unwind-protect
+                      (if (functionp callback)
+                          (with-current-buffer buffer
+                            (save-excursion
+                              (goto-char 1)
+                              (funcall callback (read buffer)))))
+                    (funcall clean-window)
+                    (funcall clean-buffer))))
+              (define-key (current-local-map) loophole-read-buffer-abort-key
+                (lambda ()
+                  (interactive)
+                  (unwind-protect
+                      (ignore)
+                    (funcall clean-window)
+                    (funcall clean-buffer))))
+              (fset hook-function
+                    (lambda ()
+                      (unwind-protect
+                          (progn
+                            (funcall set-up-window)
+                            (run-hooks 'loophole-read-buffer-set-up-hook)
+                            (message nil))
+                        (remove-hook 'post-command-hook hook-function))))
+              (add-hook 'post-command-hook hook-function)
+              (signal 'quit nil))
+          (unwind-protect
+              (progn
+                (funcall set-up-buffer)
+                (define-key (current-local-map) loophole-read-buffer-finish-key
+                  #'exit-recursive-edit)
+                (define-key (current-local-map) loophole-read-buffer-abort-key
+                  #'abort-recursive-edit)
+                (funcall set-up-window)
+                (run-hooks 'loophole-read-buffer-set-up-hook)
+                (recursive-edit)
+                (with-current-buffer buffer
+                  (save-excursion
+                  (goto-char 1)
+                  (read (current-buffer)))))
+            (funcall clean-window)
+            (funcall clean-buffer)))))))
 
 (defun loophole-map-variable-for-keymap (keymap)
   "Return map variable whose value is KEYMAP."
