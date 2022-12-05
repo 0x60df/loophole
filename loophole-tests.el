@@ -1347,6 +1347,18 @@ batch-mode, these assertions are skipped."
     (should (loophole-suspending-p))
     (setq emulation-mode-map-alists '(loophole--map-alist))
     (should-not (loophole-suspending-p))))
+
+(ert-deftest loophole-test-editing ()
+    "Test for `loophole-editing'."
+  (loophole--test-with-pseudo-environment
+    (should (null (loophole-editing)))
+    (loophole--test-set-pseudo-map-alist)
+    (setq-default loophole--editing (intern "loophole-1-map"))
+    (should (eq (loophole-editing)
+                (intern "loophole-1-map")))
+    (setq loophole--editing (intern "loophole-1-map"))
+    (should (eq (loophole-editing)
+                (intern "loophole-1-map")))))
 
 (provide 'loophole-tests)
 
