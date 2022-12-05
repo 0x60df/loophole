@@ -1328,6 +1328,16 @@ batch-mode, these assertions are skipped."
     (should-error (loophole-global-p (cons 0 0)) :type 'wrong-type-argument)
     (should-error (loophole-global-p (string ?s)) :type 'wrong-type-argument)
     (should-error (loophole-global-p (vector ?v)) :type 'wrong-type-argument)))
+
+(ert-deftest loophole-test-global-editing-p ()
+  "Test for `loophole-global-editing-p'."
+  (loophole--test-with-pseudo-environment
+    (should-not (loophole-global-editing-p))
+    (loophole--test-set-pseudo-map-alist)
+    (setq-default loophole--editing (intern "loophole-1-map"))
+    (should (loophole-global-editing-p))
+    (setq-default loophole--editing t)
+    (should-not (loophole-global-editing-p))))
 
 (provide 'loophole-tests)
 
