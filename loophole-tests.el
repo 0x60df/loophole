@@ -1394,6 +1394,30 @@ batch-mode, these assertions are skipped."
   (should-error (loophole-global-p (cons 0 0)) :type 'wrong-type-argument)
   (should-error (loophole-global-p (string ?s)) :type 'wrong-type-argument)
   (should-error (loophole-global-p (vector ?v)) :type 'wrong-type-argument))
+
+(ert-deftest loophole-test-symbol-function-recursively ()
+  "Test for `loophole--symbol-function-recursively'."
+  (let ((f1 (make-symbol "f1"))
+        (f2 (make-symbol "f2"))
+        (f3 (make-symbol "f3"))
+        (f4 (make-symbol "f4"))
+        (f5 (make-symbol "f5"))
+        (f6 (make-symbol "f6"))
+        (f7 (make-symbol "f7"))
+        (f8 (make-symbol "f8")))
+    (fset f1 '(lambda () 1))
+    (fset f2 f3)
+    (fset f3 '(lambda () 2))
+    (fset f4 f5)
+    (fset f5 f6)
+    (fset f6 '(lambda () 3))
+    (fset f7 f8)
+    (fset f8 f7)
+    (should (equal (loophole--symbol-function-recursively f1) '(lambda () 1)))
+    (should (equal (loophole--symbol-function-recursively f3) '(lambda () 2)))
+    (should (equal (loophole--symbol-function-recursively f6) '(lambda () 3)))
+    (should (eq (loophole--symbol-function-recursively f7) f7))
+    (should (eq (loophole--symbol-function-recursively f8) f8))))
 
 (provide 'loophole-tests)
 
