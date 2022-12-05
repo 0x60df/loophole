@@ -1275,6 +1275,32 @@ batch-mode, these assertions are skipped."
                   :type 'wrong-type-argument)
     (should-error (loophole-map-variable-for-keymap (cons 0 0))
                   :type 'wrong-type-argument)))
+
+(ert-deftest loophole-test-map-variable-for-key-binding ()
+  "Test for `loophole-map-variable-for-key-binding'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (define-key (symbol-value (intern "loophole-1-map")) [?\C-a] #'ignore)
+    (define-key (symbol-value (intern "loophole")) [?\C-a] #'ignore)
+    (define-key (symbol-value (intern "loophole-2-map")) [?\C-b] #'ignore)
+    (define-key (symbol-value (intern "loophole-test-b-map")) [?\C-c]
+      #'ignore)
+    (set (intern "loophole-2-map-state") nil)
+    (should (eq (loophole-map-variable-for-key-binding [?\C-a])
+                (intern "loophole-1-map")))
+    (should (null (loophole-map-variable-for-key-binding [?\C-b])))
+    (should (eq (loophole-map-variable-for-key-binding [?\C-c])
+                (intern "loophole-test-b-map")))
+    (should-error (loophole-map-variable-for-key-binding 0)
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-key-binding 1.0)
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-key-binding ?c)
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-key-binding (intern "s"))
+                  :type 'wrong-type-argument)
+    (should-error (loophole-map-variable-for-key-binding (cons 0 0))
+                  :type 'wrong-type-argument)))
 
 (provide 'loophole-tests)
 
