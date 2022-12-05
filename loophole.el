@@ -5249,7 +5249,7 @@ TAG, GLOBAL and WITHOUT-BASE-MAP are passed to
                                  (cdr key-binding)))
                              m))
                           ((null s) (make-sparse-keymap))
-                          (t (error "Invalid keymap %" s))))
+                          (t (error "Invalid keymap: %s" s))))
        ,docstring)
      (defvar ,state ,state-init-value
        (if ,state-docstring
