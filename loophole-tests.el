@@ -670,6 +670,9 @@ This function must be used in
       (should (loophole-key-equal (loophole-read-key "") (vector ?\S-a))))
     (loophole--test-with-keyboard-events (vector ?\A-a)
       (should (loophole-key-equal (loophole-read-key "") (vector ?\A-a))))
+    (loophole--test-with-keyboard-events (vector ?\C-\M-\S-\H-\s-\A-a)
+      (should (loophole-key-equal (loophole-read-key "")
+                                  (vector ?\C-\M-\S-\H-\s-\A-a))))
     (let* ((quit-binding-key (where-is-internal 'keyboard-quit nil t))
            (quit-key (or quit-binding-key [?\C-g])))
       (loophole--test-with-keyboard-events quit-key
@@ -735,6 +738,9 @@ This function must be used in
       (loophole--test-with-keyboard-events (vector ?\A-a)
         (should (loophole-key-equal (loophole-read-key-with-time-limit "")
                                     (vector ?\A-a))))
+      (loophole--test-with-keyboard-events (vector ?\C-\M-\S-\H-\s-\A-a)
+        (should (loophole-key-equal (loophole-read-key-with-time-limit "")
+                                    (vector ?\C-\M-\S-\H-\s-\A-a))))
       (loophole--test-with-keyboard-events (list (vector ?a)
                                                  (vector ?b)
                                                  (vector ?c))
@@ -825,6 +831,10 @@ This function must be used in
         (list (vector ?\A-b) loophole-read-key-termination-key)
       (should (loophole-key-equal (loophole-read-key-until-termination-key "")
                                   (vector ?\A-b))))
+    (loophole--test-with-keyboard-events
+        (list (vector ?\C-\M-\S-\H-\s-\A-a) loophole-read-key-termination-key)
+      (should (loophole-key-equal (loophole-read-key-until-termination-key "")
+                                  (vector ?\C-\M-\S-\H-\s-\A-a))))
     (loophole--test-with-keyboard-events
         (list (vector ?a)
               (vector ?b)
