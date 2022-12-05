@@ -380,7 +380,7 @@ keyboard events, or a list of them .
 In this macro,  KEYBOARD-EVENTS are bound to
 `overriding-terminal-local-map' transiently.  Consequently,
 KEYBOARD-EVENTS are ensured to be complete key sequence.
-Bound entry is key-binding currently valid or undefined
+Bound entry is key binding currently valid or undefined
 if specified events are not bound to valid command.
 However, if any form in BODY invokes minibuffer, transient
 key bindings are disable.  After the form exit minibuffer,
@@ -394,7 +394,7 @@ finished even after `loophole--test-wait-time' is spent,
 
 When Emacs runs noninteractively, i.e. in batch mode,
 `read-from-minibuffer' usually reads standard input for
-emacs.  In this macro, when run noninteractively,
+Emacs.  In this macro, when run noninteractively,
 `read-from-minibuffer' is adviced to return a string that is
 a portion of KEYBOARD-EVENTS delimited by newline.
 By this advice, standard input is emulated with
