@@ -1301,6 +1301,14 @@ batch-mode, these assertions are skipped."
                   :type 'wrong-type-argument)
     (should-error (loophole-map-variable-for-key-binding (cons 0 0))
                   :type 'wrong-type-argument)))
+
+(ert-deftest loophole-test-priority-is-local-p ()
+  "Test for `loophole-priority-is-local-p'."
+  (loophole--test-with-pseudo-environment
+    (should-not (loophole-priority-is-local-p))
+    (loophole--test-set-pseudo-map-alist)
+    (should (loophole-priority-is-local-p))
+    (with-temp-buffer (should-not (loophole-priority-is-local-p)))))
 
 (provide 'loophole-tests)
 
