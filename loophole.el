@@ -1212,6 +1212,7 @@ it instead of current buffer."
 
 (defun loophole-map-variable-for-keymap (keymap)
   "Return map variable whose value is KEYMAP."
+  (or (keymapp keymap) (signal 'wrong-type-argument (list 'keymapp keymap)))
   (let* ((state-variable (car (rassq keymap loophole--map-alist)))
          (map-variable (get state-variable :loophole-map-variable)))
     (if (eq (symbol-value map-variable) keymap)
