@@ -1313,6 +1313,21 @@ batch-mode, these assertions are skipped."
     (loophole--test-set-pseudo-map-alist)
     (should (loophole-priority-is-local-p))
     (with-temp-buffer (should-not (loophole-priority-is-local-p)))))
+
+(ert-deftest loophole-test-global-p ()
+  "Test for `loophole-global-p'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (should (loophole-global-p (intern "loophole-1-map")))
+    (should-not (loophole-global-p (intern "loophole-2-map")))
+    (should-not (loophole-global-p (intern "loophole-3-map")))
+    (should-error (loophole-global-p 0) :type 'wrong-type-argument)
+    (should-error (loophole-global-p 1.0) :type 'wrong-type-argument)
+    (should-error (loophole-global-p ?c) :type 'wrong-type-argument)
+    (should (null (loophole-global-p (intern "s"))))
+    (should-error (loophole-global-p (cons 0 0)) :type 'wrong-type-argument)
+    (should-error (loophole-global-p (string ?s)) :type 'wrong-type-argument)
+    (should-error (loophole-global-p (vector ?v)) :type 'wrong-type-argument)))
 
 (provide 'loophole-tests)
 
