@@ -46,7 +46,7 @@ Note that, if obarray is specified explicitly for
 (defconst loophole--test-wait-time 0.5
   "Time to signal `loophole-test-error' for tests that reads events.")
 
-(define-error 'loohpole-test-error "Loophole test error" 'error)
+(define-error 'loophole-test-error "Loophole test error" 'error)
 
 (defmacro loophole--test-with-pseudo-environment (&rest body)
   "Evaluate BODY with pseudo environment for Loophole.
