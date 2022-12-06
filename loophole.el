@@ -1271,7 +1271,7 @@ for keyboard events.
 An ordinary key event, i.e., integer is translated into
 question mark format string; otherwise, EVENT itself is
 returned."
-  (or (eventp event) (signal 'wrong-type-argument (list 'eventp keymap)))
+  (or (eventp event) (signal 'wrong-type-argument (list 'eventp event)))
   (if (integerp event)
       (let ((modifiers (event-modifiers event))
             (basic-type (event-basic-type event)))
