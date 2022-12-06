@@ -1297,6 +1297,36 @@ returned."
       (indirect-function symbol)
     (cyclic-function-indirection symbol)))
 
+(defun loophole--protected-keymap-prefix-key (protected-element)
+  "Return prefix keys vector of PROTECTED-ELEMENT.
+PROTECTED-ELEMENT must be a list object representing
+protected keymap entry, i.e., looks like
+  ((keymap (KEY (keymap ... (KEY . SYMBOL))))
+   (keymap (KEY (keymap ... (KEY . undefined)))))
+or
+  ((keymap (KEY (keymap ... (KEY . (keymap ...)))))
+   (keymap (KEY (keymap ... (KEY . undefined))))).
+First one is for a symbol whose function cell is a keymap.
+Second one is for a keymap object.
+The portion (KEY (keymap ... (KEY ...))) is a prefix key,
+and SYMBOL and last (keymap ...) is an entry.
+
+Actually, this function searches the symbol undefined in
+the cadr of PROTECTED-ELEMENT and return found keys vector."
+  (letrec ((prefix-key-list
+            (lambda (object)
+              (cond ((eq object 'undefined) nil)
+                    ((or (not (consp (cdr object)))
+                         (not (= (length object) 2))
+                         (not (or (characterp (caadr object))
+                                  (symbolp (caadr object))))
+                         (not (or (keymapp (cdadr object))
+                                  (eq 'undefined (cdadr object)))))
+                     (error "KEYMAP is not an element of protected keymap"))
+                    (t (cons (caadr object)
+                             (funcall prefix-key-list (cdadr object))))))))
+    (vconcat (funcall prefix-key-list (cadr protected-element)))))
+
 (defun loophole--protected-keymap-entry-list (protected-keymap)
   "Return list of protected keymap element from raw PROTECTED-KEYMAP.
 PROTECTED-KEYMAP is flatten keymap object stored in the each
@@ -1451,36 +1481,6 @@ they will be removed."
                  (if (= (length parent) 2)
                      (set-keymap-parent map (cadr parent)))))
           (put map-variable :loophole-protected-keymap nil))))))
-
-(defun loophole--protected-keymap-prefix-key (protected-element)
-  "Return prefix keys vector of PROTECTED-ELEMENT.
-PROTECTED-ELEMENT must be a list object representing
-protected keymap entry, i.e., looks like
-  ((keymap (KEY (keymap ... (KEY . SYMBOL))))
-   (keymap (KEY (keymap ... (KEY . undefined)))))
-or
-  ((keymap (KEY (keymap ... (KEY . (keymap ...)))))
-   (keymap (KEY (keymap ... (KEY . undefined))))).
-First one is for a symbol whose function cell is a keymap.
-Second one is for a keymap object.
-The portion (KEY (keymap ... (KEY ...))) is a prefix key,
-and SYMBOL and last (keymap ...) is an entry.
-
-Actually, this function searches the symbol undefined in
-the cadr of PROTECTED-ELEMENT and return found keys vector."
-  (letrec ((prefix-key-list
-            (lambda (object)
-              (cond ((eq object 'undefined) nil)
-                    ((or (not (consp (cdr object)))
-                         (not (= (length object) 2))
-                         (not (or (characterp (caadr object))
-                                  (symbolp (caadr object))))
-                         (not (or (keymapp (cdadr object))
-                                  (eq 'undefined (cdadr object)))))
-                     (error "KEYMAP is not an element of protected keymap"))
-                    (t (cons (caadr object)
-                             (funcall prefix-key-list (cdadr object))))))))
-    (vconcat (funcall prefix-key-list (cadr protected-element)))))
 
 (defun loophole--trace-key-to-find-non-keymap-entry (key-sequence keymap)
   "Trace KEY-SEQUENCE in KEYMAP to find non-keymap entry.
