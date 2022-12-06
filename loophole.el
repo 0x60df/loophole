@@ -1312,9 +1312,14 @@ them.  It looks like
   (((keymap ... body of entry1) (keymap ... wall of entry1))
    ((keymap ... body of entry2) (keymap ... wall of entry2))
    ...)."
-  (if (and (keymapp protected-keymap)
-           (keymap-parent protected-keymap))
+  (or (keymapp protected-keymap)
+      (signal 'wrong-type-argument (list 'keymapp protected-keymap)))
+  (if (keymap-parent protected-keymap)
       (error "Protected keymap is corrupted, it has parent keymap: %s"
+             protected-keymap))
+  (if (seq-some (lambda (element) (not (keymapp element)))
+                (cdr protected-keymap))
+      (error "Protected keymap is corrupted, non-keymap entry exists: %s"
              protected-keymap))
   (letrec ((entry-list
             (lambda (current)
@@ -1323,8 +1328,21 @@ them.  It looks like
                      (error
                       "Protected keymap is corrupted, it has odd length: %s"
                       protected-keymap))
-                    (t (cons (list (car current) (cadr current))
-                             (funcall entry-list (cddr current))))))))
+                    (t (let* ((body (car current))
+                              (wall (cadr current))
+                              (element (list body wall))
+                              (entry (lookup-key
+                                      body
+                                      (loophole--protected-keymap-prefix-key
+                                       element))))
+                         (or (keymapp entry)
+                             (and (symbolp entry)
+                                  (keymapp (symbol-function entry)))
+                             (error (concat "Protected keymap is corrupted, "
+                                            "broken entry: %s, %s")
+                                    body wall))
+                         (cons element
+                               (funcall entry-list (cddr current)))))))))
     (funcall entry-list (cdr protected-keymap))))
 
 (defun loophole--add-protected-keymap-entry (map-variable key keymap)
@@ -1420,8 +1438,9 @@ they will be removed."
                        (seq-filter (lambda (protected-element)
                                      (funcall shadedp (car protected-element)
                                               (append key nil)))
-                                   (loophole--protected-keymap-entry-list
-                                    protected-keymap))))
+                                   (if protected-keymap
+                                       (loophole--protected-keymap-entry-list
+                                        protected-keymap)))))
         (setcdr protected-keymap (delq shaded (cdr protected-keymap))))
       (when (< (length protected-keymap) 2)
         (let* ((map (symbol-value map-variable))
@@ -3071,8 +3090,9 @@ FILE will be asked."
                                                        (car key-form))
                                            'undefined))
                                      valid-form))
-                                  (loophole--protected-keymap-entry-list
-                                   protected-keymap)))))
+                                  (if protected-keymap
+                                      (loophole--protected-keymap-entry-list
+                                       protected-keymap))))))
                            (seq-filter (lambda (element)
                                          (not (memq element having-form)))
                                        protected-keymap))))
