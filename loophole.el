@@ -1297,6 +1297,20 @@ returned."
       (indirect-function symbol)
     (cyclic-function-indirection symbol)))
 
+(defun loophole--trace-key-to-find-non-keymap-entry (key-sequence keymap)
+  "Trace KEY-SEQUENCE in KEYMAP to find non-keymap entry.
+If found, return a key sequence bound to non-keymap entry;
+otherwise, return nil."
+  (letrec ((find-non-keymap-entry
+            (lambda (reversal-key-list)
+              (let ((entry (lookup-key keymap
+                                       (vconcat (reverse reversal-key-list)))))
+                (cond ((or (null reversal-key-list) (null entry)) nil)
+                      ((or (keymapp entry) (numberp entry))
+                       (funcall find-non-keymap-entry (cdr reversal-key-list)))
+                      (t (vconcat (reverse reversal-key-list))))))))
+    (funcall find-non-keymap-entry (reverse (append key-sequence nil)))))
+
 (defun loophole--protected-keymap-prefix-key (protected-element)
   "Return prefix keys vector of PROTECTED-ELEMENT.
 PROTECTED-ELEMENT must be a list object representing
@@ -1481,20 +1495,6 @@ they will be removed."
                  (if (= (length parent) 2)
                      (set-keymap-parent map (cadr parent)))))
           (put map-variable :loophole-protected-keymap nil))))))
-
-(defun loophole--trace-key-to-find-non-keymap-entry (key-sequence keymap)
-  "Trace KEY-SEQUENCE in KEYMAP to find non-keymap entry.
-If found, return a key sequence bound to non-keymap entry;
-otherwise, return nil."
-  (letrec ((find-non-keymap-entry
-            (lambda (reversal-key-list)
-              (let ((entry (lookup-key keymap
-                                       (vconcat (reverse reversal-key-list)))))
-                (cond ((or (null reversal-key-list) (null entry)) nil)
-                      ((or (keymapp entry) (numberp entry))
-                       (funcall find-non-keymap-entry (cdr reversal-key-list)))
-                      (t (vconcat (reverse reversal-key-list))))))))
-    (funcall find-non-keymap-entry (reverse (append key-sequence nil)))))
 
 (defun loophole-toss-binding-form (key form)
   "Try to store FORM in a Loophole map of the next binding.
