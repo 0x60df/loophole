@@ -1682,6 +1682,139 @@ batch-mode, these assertions are skipped."
                 (cons body-map (cons wall-map (cdr copy)))))
       (should-error (loophole--protected-keymap-entry-list copy)
                     :type 'error :exclude-subtypes t))))
+
+(ert-deftest loophole-test-add-protected-keymap-entry ()
+  "Test for `loophole--add-protected-keymap-entry'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (loophole--add-protected-keymap-entry (intern "loophole-1-map")
+                                          (vector ?a)
+                                          (make-sparse-keymap))
+    (let ((protected-keymap
+           (get (intern "loophole-1-map") :loophole-protected-keymap)))
+      (should (eq protected-keymap
+                  (keymap-parent (symbol-value (intern "loophole-1-map")))))
+      (should (equal
+               (loophole--protected-keymap-prefix-key
+                (car (loophole--protected-keymap-entry-list protected-keymap)))
+               (vector ?a))))
+    (set-keymap-parent (symbol-value (intern "loophole-2-map"))
+                       loophole-base-map)
+    (loophole--add-protected-keymap-entry (intern "loophole-2-map")
+                                          (vector ?b)
+                                          (make-sparse-keymap))
+    (let ((protected-keymap
+           (get (intern "loophole-2-map") :loophole-protected-keymap)))
+      (should (memq protected-keymap
+                    (keymap-parent (symbol-value (intern "loophole-2-map"))))))
+    (loophole--add-protected-keymap-entry (intern "loophole-2-map")
+                                          (vector ?c)
+                                          (make-sparse-keymap))
+    (let ((protected-keymap
+           (get (intern "loophole-2-map") :loophole-protected-keymap)))
+      (should (memq protected-keymap
+                    (keymap-parent (symbol-value (intern "loophole-2-map"))))))
+    (set-keymap-parent (symbol-value (intern "loophole-test-a-map"))
+                       (make-composed-keymap (list loophole-base-map
+                                                   (make-sparse-keymap))))
+    (loophole--add-protected-keymap-entry (intern "loophole-test-a-map")
+                                          (vector ?d)
+                                          (make-sparse-keymap))
+    (let ((protected-keymap
+           (get (intern "loophole-test-a-map") :loophole-protected-keymap)))
+      (should (memq protected-keymap
+                    (keymap-parent
+                     (symbol-value (intern "loophole-test-a-map"))))))
+    (set-keymap-parent (symbol-value (intern "loophole-test-b-map"))
+                       (make-sparse-keymap))
+    (loophole--add-protected-keymap-entry (intern "loophole-test-b-map")
+                                          (vector ?e)
+                                          (make-sparse-keymap))
+    (let ((protected-keymap
+           (get (intern "loophole-test-b-map") :loophole-protected-keymap)))
+      (should (memq protected-keymap
+                    (keymap-parent
+                     (symbol-value (intern "loophole-test-b-map"))))))
+    (let ((map (symbol-value (intern "loophole")))
+          (key (vector ?f)))
+      (define-key map key #'ignore)
+      (loophole--add-protected-keymap-entry (intern "loophole")
+                                            key
+                                            (make-sparse-keymap))
+      (let ((parent (keymap-parent map)))
+        (unwind-protect
+            (progn
+              (set-keymap-parent map nil)
+              (let ((lookup (lookup-key map key))
+                    (trace (loophole--trace-key-to-find-non-keymap-entry
+                            key map)))
+                (should (or (null lookup)
+                            (and (numberp lookup)
+                                 (null trace))))))
+          (set-keymap-parent map parent))))
+    (define-key (symbol-value (intern "loophole")) (vector ?g) #'ignore)
+    (should-error
+     (loophole--add-protected-keymap-entry (intern "loophole")
+                                           (vector ?g ?a)
+                                           (make-sparse-keymap))
+     :type 'error :exclude-subtypes t)
+    (should-error (loophole--add-protected-keymap-entry
+                   0 (vector ?h) (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   1.0 (vector ?h) (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   ?c (vector ?h) (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "s") (vector ?h) (make-sparse-keymap))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole--add-protected-keymap-entry
+                   (cons 0 0) (vector ?h) (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (string ?s) (vector ?h) (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (vector ?v) (vector ?h) (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") 0 (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") 1.0 (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") ?c (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (intern "s") (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (cons 0 0) (make-sparse-keymap))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (vector ?h) 0)
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (vector ?h) 1.0)
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (vector ?h) ?c)
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (vector ?h) (intern "s"))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (vector ?h) (cons 0 0))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (vector ?h) (string ?s))
+                  :type 'wrong-type-argument)
+    (should-error (loophole--add-protected-keymap-entry
+                   (intern "loophole-1-map") (vector ?h) (vector ?v))
+                  :type 'wrong-type-argument)))
 
 (provide 'loophole-tests)
 
