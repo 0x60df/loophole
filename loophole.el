@@ -1229,6 +1229,19 @@ it instead of current buffer."
                       loophole--map-alist))
        :loophole-map-variable))
 
+(defun loophole-registered-p (map-variable &optional state-variable)
+  "Return non-nil if MAP-VARIABLE is registered to loophole.
+If optional argument STATE-VARIABLE is not nil,
+Return non-nil if both MAP-VARIABLE and STATE-VARIABLE are
+registered, and they are associated."
+  (and map-variable
+       (if state-variable
+           (eq state-variable (get map-variable :loophole-state-variable))
+         (setq state-variable (get map-variable :loophole-state-variable)))
+       (eq map-variable (get state-variable :loophole-map-variable))
+       (eq (symbol-value map-variable)
+           (cdr (assq state-variable (default-value 'loophole--map-alist))))))
+
 (defun loophole-priority-is-local-p ()
   "Non-nil if priority of Loophole maps is local on current buffer.
 Technically, non-nil if `loophole--map-alist' has local
@@ -1263,6 +1276,12 @@ buffer local value."
           loophole--editing
         nil)
     (default-value 'loophole--editing)))
+
+(defun loophole-tag-string (map-variable)
+  "Return tag string for MAP-VARIABLE."
+  (if (loophole-registered-p map-variable)
+      (get map-variable :loophole-tag)
+    (error "Specified argument is not valid map-variable: %s" map-variable)))
 
 (defun loophole--char-read-syntax (event)
   "Return printed representation of EVENT by question mark format.
@@ -1663,12 +1682,6 @@ added to the hooks above."
   (remove-hook 'kill-buffer-hook
                #'loophole--follow-killing-local-variable t))
 
-(defun loophole-tag-string (map-variable)
-  "Return tag string for MAP-VARIABLE."
-  (if (loophole-registered-p map-variable)
-      (get map-variable :loophole-tag)
-    (error "Specified argument is not valid map-variable: %s" map-variable)))
-
 (defun loophole-buffer-list ()
   "Return buffer list on which Loophole variables have local value.
 This function sanitize orphan hooks by side effect.
@@ -1694,19 +1707,6 @@ variable."
     (if (listp loophole--buffer-list)
         (setq loophole--buffer-list (seq-filter filter loophole--buffer-list))
       (seq-filter filter (buffer-list)))))
-
-(defun loophole-registered-p (map-variable &optional state-variable)
-  "Return non-nil if MAP-VARIABLE is registered to loophole.
-If optional argument STATE-VARIABLE is not nil,
-Return non-nil if both MAP-VARIABLE and STATE-VARIABLE are
-registered, and they are associated."
-  (and map-variable
-       (if state-variable
-           (eq state-variable (get map-variable :loophole-state-variable))
-         (setq state-variable (get map-variable :loophole-state-variable)))
-       (eq map-variable (get state-variable :loophole-map-variable))
-       (eq (symbol-value map-variable)
-           (cdr (assq state-variable (default-value 'loophole--map-alist))))))
 
 ;;; Main functions
 
