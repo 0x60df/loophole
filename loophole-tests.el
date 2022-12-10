@@ -1412,6 +1412,29 @@ batch-mode, these assertions are skipped."
     (should (eq (loophole-editing)
                 (intern "loophole-1-map")))))
 
+(ert-deftest loophole-test-tag-string ()
+  "Test for `loophole-tag-string'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (should (equal (loophole-tag-string (intern "loophole-1-map"))
+                   (string ?1)))
+    (should (equal (loophole-tag-string (intern "loophole-test-a-map"))
+                   (string ?a)))
+    (should (equal (loophole-tag-string (intern "loophole"))
+                   (string ?l ?o ?o ?p)))
+    (should-error (loophole-tag-string (intern "loophole-3-map"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-tag-string nil) :type 'error :exclude-subtypes t)
+    (should-error (loophole-tag-string 0) :type 'wrong-type-argument)
+    (should-error (loophole-tag-string 1.0) :type 'wrong-type-argument)
+    (should-error (loophole-tag-string ?c) :type 'wrong-type-argument)
+    (should-error (loophole-tag-string (intern "s"))
+                  :type 'error :exclude-subtypes t)
+    (should-error (loophole-tag-string (cons 0 0)) :type 'wrong-type-argument)
+    (should-error (loophole-tag-string (string ?s)) :type 'wrong-type-argument)
+    (should-error (loophole-tag-string (vector ?v))
+                  :type 'wrong-type-argument)))
+
 (ert-deftest loophole-test-char-read-syntax ()
   "Test for `loophole--char-read-syntax'."
   (should (equal (loophole--char-read-syntax ?a) (string ?? ?a)))
