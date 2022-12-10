@@ -1435,8 +1435,12 @@ Protected keymap is set in keymap parent and symbol property
 :loophole-protected-keymap.
 Ordinary key bindings that shades KEY will be removed to
 make KEYMAP accessible."
-  (unless (keymapp keymap)
-    (signal 'wrong-type-argument (list 'keymapp keymap)))
+  (or (loophole-registered-p map-variable)
+      (error "Specified argument is not valid map-variable: %s" map-variable))
+  (or (arrayp key)
+      (signal 'wrong-type-argument (list 'arrayp key)))
+  (or (keymapp keymap)
+      (signal 'wrong-type-argument (list 'keymapp keymap)))
   (let* ((map (symbol-value map-variable))
          (parent (keymap-parent map))
          (protected-keymap (get map-variable :loophole-protected-keymap)))
