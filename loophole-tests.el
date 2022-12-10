@@ -1419,6 +1419,65 @@ batch-mode, these assertions are skipped."
     (should (eq (loophole--symbol-function-recursively f7) f7))
     (should (eq (loophole--symbol-function-recursively f8) f8))))
 
+(ert-deftest loophole-test-protected-keymap-prefix-key ()
+  "Test for `loophole--protected-keymap-prefix-key'."
+  (let ((make-void-protected-element
+         (lambda (key)
+           (let* ((body-map (make-sparse-keymap))
+                  (wall-map (make-sparse-keymap))
+                  (protected-element (list body-map wall-map)))
+             (define-key body-map key (make-sparse-keymap))
+             (define-key wall-map key 'undefined)
+             protected-element))))
+    (let ((key (vector ?q)))
+      (should (equal key
+                     (loophole--protected-keymap-prefix-key
+                      (funcall make-void-protected-element key)))))
+    (let ((key (vector ?\C-c ?a)))
+      (should (equal key
+                     (loophole--protected-keymap-prefix-key
+                      (funcall make-void-protected-element key)))))
+    (let ((key (vector ?\C-c ?a ?b ?c)))
+      (should (equal key
+                     (loophole--protected-keymap-prefix-key
+                      (funcall make-void-protected-element key)))))
+    (let ((key (vector 'left ?a ?b ?c)))
+      (should (equal key
+                     (loophole--protected-keymap-prefix-key
+                      (funcall make-void-protected-element key)))))
+    (let ((element (funcall make-void-protected-element (vector ?\C-c ?a))))
+      (define-key (car element) (vector ?\C-c ?b) (make-sparse-keymap))
+      (define-key (cadr element) (vector ?\C-c ?b) 'undefined)
+      (should-error (loophole--protected-keymap-prefix-key element)
+                    :type 'error :exclude-subtypes t))
+    (let* ((key (vector ?\C-c ?a))
+           (element (funcall make-void-protected-element key)))
+      (define-key (cadr element) key #'ignore)
+      (should-error (loophole--protected-keymap-prefix-key element)
+                    :type 'error :exclude-subtypes t))
+    (let* ((key (vector ?\C-c ?a))
+           (element (funcall make-void-protected-element key)))
+      (define-key (car element) key nil)
+      (should-error (loophole--protected-keymap-prefix-key element)
+                    :type 'error :exclude-subtypes t)))
+  (should-error (loophole--protected-keymap-prefix-key 0)
+                :type 'wrong-type-argument)
+  (should-error (loophole--protected-keymap-prefix-key 1.0)
+                :type 'wrong-type-argument)
+  (should-error (loophole--protected-keymap-prefix-key ?c)
+                :type 'wrong-type-argument)
+  (should-error (loophole--protected-keymap-prefix-key (intern "s"))
+                :type 'wrong-type-argument)
+  (should-error (loophole--protected-keymap-prefix-key (cons 0 0))
+                :type 'error :exclude-subtypes t)
+  (should-error (loophole--protected-keymap-prefix-key (string ?s))
+                :type 'wrong-type-argument)
+  (should-error (loophole--protected-keymap-prefix-key (vector ?v))
+                :type 'wrong-type-argument)
+  (should-error (loophole--protected-keymap-prefix-key
+                 (list (make-sparse-keymap) (make-sparse-keymap)))
+                :type 'error :exclude-subtypes t))
+
 (ert-deftest loophole-test-protected-keymap-entry-list ()
   "Test for `loophole--protected-keymap-entry-list'."
   (let ((protected-keymap (make-sparse-keymap)))
