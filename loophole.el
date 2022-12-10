@@ -1234,6 +1234,9 @@ it instead of current buffer."
 If optional argument STATE-VARIABLE is not nil,
 Return non-nil if both MAP-VARIABLE and STATE-VARIABLE are
 registered, and they are associated."
+  (if state-variable
+      (or (symbolp state-variable)
+          (signal 'wrong-type-argument (list 'symbolp state-variable))))
   (and map-variable
        (if state-variable
            (eq state-variable (get map-variable :loophole-state-variable))
