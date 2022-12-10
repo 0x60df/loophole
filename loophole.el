@@ -1327,19 +1327,30 @@ and SYMBOL and last (keymap ...) is an entry.
 
 Actually, this function searches the symbol undefined in
 the cadr of PROTECTED-ELEMENT and return found keys vector."
+  (or (consp protected-element)
+      (signal 'wrong-type-argument (list 'consp protected-element)))
+  (or (and (keymapp (car protected-element))
+           (keymapp (cadr protected-element)))
+      (error "PROTECTED-ELEMENT is not an element of protected keymap: %s"
+             protected-element))
   (letrec ((prefix-key-list
             (lambda (object)
               (cond ((eq object 'undefined) nil)
                     ((or (not (consp (cdr object)))
                          (not (= (length object) 2))
-                         (not (or (characterp (caadr object))
-                                  (symbolp (caadr object))))
+                         (not (eventp (caadr object)))
                          (not (or (keymapp (cdadr object))
                                   (eq 'undefined (cdadr object)))))
-                     (error "KEYMAP is not an element of protected keymap"))
+                     (error (concat "PROTECTED-ELEMENT is not "
+                                    "an element of protected keymap: %s")
+                            protected-element))
                     (t (cons (caadr object)
                              (funcall prefix-key-list (cdadr object))))))))
-    (vconcat (funcall prefix-key-list (cadr protected-element)))))
+    (let ((prefix-key (vconcat
+                       (funcall prefix-key-list (cadr protected-element)))))
+      (if (keymapp (lookup-key (car protected-element) prefix-key))
+          prefix-key
+        (error "PROTECTED-ELEMENT is corrupted: %s" protected-element)))))
 
 (defun loophole--protected-keymap-entry-list (protected-keymap)
   "Return list of protected keymap element from raw PROTECTED-KEYMAP.
