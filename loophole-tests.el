@@ -1419,6 +1419,72 @@ batch-mode, these assertions are skipped."
     (should (eq (loophole--symbol-function-recursively f7) f7))
     (should (eq (loophole--symbol-function-recursively f8) f8))))
 
+(ert-deftest loophole-test-trace-key-to-find-non-keymap-entry ()
+  "Test for `loophole--trace-key-to-find-non-keymap-entry'."
+  (let ((map (make-sparse-keymap)))
+    (define-key map (vector ?\C-c ?a ?b) #'ignore)
+    (define-key map (vector ?\C-c ?c) (intern "loophole-prefix"))
+    (fset (intern "loophole-prefix")
+          (let ((inner-map (make-sparse-keymap)))
+            (define-key inner-map (vector ?x) #'ignore)
+            (define-key inner-map (vector ?y ?z) #'ignore)
+            inner-map))
+    (should (equal (loophole--trace-key-to-find-non-keymap-entry
+                    (vector ?\C-c ?a ?b) map)
+                   (vector ?\C-c ?a ?b)))
+    (should (equal (loophole--trace-key-to-find-non-keymap-entry
+                    (vector ?\C-c ?c ?x) map)
+                   (vector ?\C-c ?c ?x)))
+    (should (equal (loophole--trace-key-to-find-non-keymap-entry
+                    (vector ?\C-c ?c ?y ?z) map)
+                   (vector ?\C-c ?c ?y ?z)))
+    (should-not (loophole--trace-key-to-find-non-keymap-entry
+                 (vector ?\C-x) map))
+    (should-not (loophole--trace-key-to-find-non-keymap-entry
+                 (vector ?\C-c ?i) map))
+    (should-not (loophole--trace-key-to-find-non-keymap-entry
+                 (vector ?\C-c ?a) map))
+    (should (equal (loophole--trace-key-to-find-non-keymap-entry
+                    (vector ?\C-c ?a ?b ?i) map)
+                   (vector ?\C-c ?a ?b)))
+    (should (equal (loophole--trace-key-to-find-non-keymap-entry
+                    (vector ?\C-c ?c ?x ?i) map)
+                   (vector ?\C-c ?c ?x)))
+    (should-not (loophole--trace-key-to-find-non-keymap-entry
+                 (vector ?\C-c ?y) map))
+    (should (equal (loophole--trace-key-to-find-non-keymap-entry
+                    (vector ?\C-c ?c ?y ?z ?i) map)
+                   (vector ?\C-c ?c ?y ?z)))
+    (should-error (loophole--trace-key-to-find-non-keymap-entry 0 map)
+                  :type 'wrong-type-argument)
+    (should-error (loophole--trace-key-to-find-non-keymap-entry 1.0 map)
+                  :type 'wrong-type-argument)
+    (should-error (loophole--trace-key-to-find-non-keymap-entry ?c map)
+                  :type 'wrong-type-argument)
+    (should-error
+     (loophole--trace-key-to-find-non-keymap-entry (intern "s") map)
+     :type 'wrong-type-argument)
+    (should-error (loophole--trace-key-to-find-non-keymap-entry (cons 0 0) map)
+                  :type 'wrong-type-argument)
+    (should-error (loophole--trace-key-to-find-non-keymap-entry (vector ?a) 0)
+                  :type 'wrong-type-argument)
+    (should-error (loophole--trace-key-to-find-non-keymap-entry (vector ?a) 1.0)
+                  :type 'wrong-type-argument)
+    (should-error (loophole--trace-key-to-find-non-keymap-entry (vector ?a) ?c)
+                  :type 'wrong-type-argument)
+    (should-error
+     (loophole--trace-key-to-find-non-keymap-entry (vector ?a) (intern "s"))
+     :type 'wrong-type-argument)
+    (should-error
+     (loophole--trace-key-to-find-non-keymap-entry (vector ?a) (cons 0 0))
+     :type 'wrong-type-argument)
+    (should-error
+     (loophole--trace-key-to-find-non-keymap-entry (vector ?a) (string ?s))
+     :type 'wrong-type-argument)
+    (should-error
+     (loophole--trace-key-to-find-non-keymap-entry (vector ?a) (vector ?v))
+     :type 'wrong-type-argument)))
+
 (ert-deftest loophole-test-protected-keymap-prefix-key ()
   "Test for `loophole--protected-keymap-prefix-key'."
   (let ((make-void-protected-element
