@@ -1358,7 +1358,7 @@ batch-mode, these assertions are skipped."
     (should-not (loophole-suspending-p))))
 
 (ert-deftest loophole-test-editing ()
-    "Test for `loophole-editing'."
+  "Test for `loophole-editing'."
   (loophole--test-with-pseudo-environment
     (should (null (loophole-editing)))
     (loophole--test-set-pseudo-map-alist)
