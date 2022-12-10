@@ -1448,7 +1448,6 @@ make KEYMAP accessible."
             (error "Key sequence %s starts with non-prefix key %s"
                    (key-description key)
                    (key-description trace)))))
-    (set-keymap-parent map nil)
     (unwind-protect
         (letrec
             ((existing-cell
@@ -1471,18 +1470,18 @@ make KEYMAP accessible."
                                              (t (funcall one-before last-key
                                                          (cdr list)))))))
                              (funcall one-before (car key-list) object))))))))
+          (set-keymap-parent map nil)
           (let ((cell (funcall existing-cell (append key nil) map)))
             (if cell (setcdr cell (cddr cell)))))
       (set-keymap-parent map parent))
     (unless protected-keymap
       (setq protected-keymap (make-sparse-keymap))
       (put map-variable :loophole-protected-keymap protected-keymap)
-      (let ((parent (keymap-parent map)))
-        (cond ((null parent) (set-keymap-parent map protected-keymap))
-              ((memq loophole-base-map parent)
-               (setcdr parent (cons protected-keymap (cdr parent))))
-              (t (set-keymap-parent map (make-composed-keymap
-                                         (list protected-keymap parent)))))))
+      (cond ((null parent) (set-keymap-parent map protected-keymap))
+            ((memq loophole-base-map parent)
+             (setcdr parent (cons protected-keymap (cdr parent))))
+            (t (set-keymap-parent map (make-composed-keymap
+                                       (list protected-keymap parent))))))
     (setcdr protected-keymap
             (let ((body-map (make-sparse-keymap))
                   (wall-map (make-sparse-keymap)))
