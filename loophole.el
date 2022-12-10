@@ -1278,7 +1278,7 @@ buffer local value."
     (default-value 'loophole--editing)))
 
 (defun loophole-tag-string (map-variable)
-  "Return tag string for MAP-VARIABLE."
+  "Return tag string for MAP-VARIABLE or nil if tag is not specified."
   (if (loophole-registered-p map-variable)
       (get map-variable :loophole-tag)
     (error "Specified argument is not valid map-variable: %s" map-variable)))
