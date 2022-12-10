@@ -1301,6 +1301,10 @@ returned."
   "Trace KEY-SEQUENCE in KEYMAP to find non-keymap entry.
 If found, return a key sequence bound to non-keymap entry;
 otherwise, return nil."
+  (or (arrayp key-sequence)
+      (signal 'wrong-type-argument (list 'arrayp key-sequence)))
+  (or (keymapp keymap)
+      (signal 'wrong-type-argument (list 'keymapp keymap)))
   (letrec ((find-non-keymap-entry
             (lambda (reversal-key-list)
               (let ((entry (lookup-key keymap
@@ -1414,13 +1418,14 @@ make KEYMAP accessible."
   (let* ((map (symbol-value map-variable))
          (parent (keymap-parent map))
          (protected-keymap (get map-variable :loophole-protected-keymap)))
-    (let ((lookup (lookup-key protected-keymap key))
-          (trace (loophole--trace-key-to-find-non-keymap-entry
-                  key protected-keymap)))
-      (when (and (numberp lookup) trace)
-        (error "Key sequence %s starts with non-prefix key %s"
-               (key-description key)
-               (key-description trace))))
+    (if (keymapp protected-keymap)
+        (let ((lookup (lookup-key protected-keymap key))
+              (trace (loophole--trace-key-to-find-non-keymap-entry
+                      key protected-keymap)))
+          (when (and (numberp lookup) trace)
+            (error "Key sequence %s starts with non-prefix key %s"
+                   (key-description key)
+                   (key-description trace)))))
     (set-keymap-parent map nil)
     (unwind-protect
         (letrec
@@ -1470,7 +1475,8 @@ with MAP-VARIABLE with taking care of protected keymap
 entry.  When KEY shades existing protected keymap entry,
 they will be removed."
   (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
-    (if (< 0 (length key))
+    (if (and (< 0 (length key))
+             (keymapp protected-keymap))
         (let ((non-prefix-key (loophole--trace-key-to-find-non-keymap-entry
                                (vconcat (butlast (append key nil) 1))
                                protected-keymap)))
@@ -2772,6 +2778,7 @@ from Loophole."
                                                  sub-element))
                                               (cddr element)))))))
                       ((or (null lookup)
+                           (not (keymapp protected-keymap))
                            (null (loophole--trace-key-to-find-non-keymap-entry
                                   key-sequence protected-keymap)))
                        element)))
@@ -2853,8 +2860,9 @@ from Loophole."
                  (merger-keymap (symbol-value merger-map-variable))
                  (form (cdr (assoc prefix-key valid-form))))
             (when (or (null (lookup-key merger-keymap prefix-key))
-                    (null (loophole--trace-key-to-find-non-keymap-entry
-                           prefix-key merger-keymap)))
+                      (not (keymapp merger-keymap))
+                      (null (loophole--trace-key-to-find-non-keymap-entry
+                             prefix-key merger-keymap)))
               (loophole--add-protected-keymap-entry
                merger-map-variable prefix-key entry)
               (if form
