@@ -1305,8 +1305,11 @@ otherwise, return nil."
             (lambda (reversal-key-list)
               (let ((entry (lookup-key keymap
                                        (vconcat (reverse reversal-key-list)))))
-                (cond ((or (null reversal-key-list) (null entry)) nil)
-                      ((or (keymapp entry) (numberp entry))
+                (cond ((or (null reversal-key-list)
+                           (null entry)
+                           (keymapp entry))
+                       nil)
+                      ((numberp entry)
                        (funcall find-non-keymap-entry (cdr reversal-key-list)))
                       (t (vconcat (reverse reversal-key-list))))))))
     (funcall find-non-keymap-entry (reverse (append key-sequence nil)))))
