@@ -1499,6 +1499,8 @@ This function `define-key' KEY and ENTRY in a keymap bound
 with MAP-VARIABLE with taking care of protected keymap
 entry.  When KEY shades existing protected keymap entry,
 they will be removed."
+  (or (loophole-registered-p map-variable)
+      (error "Specified argument is not valid map-variable: %s" map-variable))
   (let ((protected-keymap (get map-variable :loophole-protected-keymap)))
     (if (and (< 0 (length key))
              (keymapp protected-keymap))
