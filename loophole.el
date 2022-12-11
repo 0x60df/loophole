@@ -1538,8 +1538,8 @@ they will be removed."
                 ((memq protected-keymap parent)
                  (setcdr parent (delq protected-keymap (cdr parent)))
                  (if (= (length parent) 2)
-                     (set-keymap-parent map (cadr parent)))))
-          (put map-variable :loophole-protected-keymap nil))))))
+                     (set-keymap-parent map (cadr parent))))))
+        (put map-variable :loophole-protected-keymap nil)))))
 
 (defun loophole-toss-binding-form (key form)
   "Try to store FORM in a Loophole map of the next binding.
