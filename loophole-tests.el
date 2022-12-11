@@ -1917,4 +1917,3 @@ batch-mode, these assertions are skipped."
 (provide 'loophole-tests)
 
 ;;; loophole-tests.el ends here
-
