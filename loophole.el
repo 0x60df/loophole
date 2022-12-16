@@ -1572,8 +1572,9 @@ evaluated occasionally in future."
                                      &optional binding-keymap)
                    (unwind-protect
                        (let ((map-variable
-                              (apply bind-entry
-                                     binding-key binding-entry binding-keymap)))
+                              (apply bind-entry (list binding-key
+                                                      binding-entry
+                                                      binding-keymap))))
                          (if (and (loophole-key-equal key binding-key)
                                   (eq (eval form) binding-entry))
                              (put map-variable
