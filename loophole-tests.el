@@ -1913,6 +1913,39 @@ batch-mode, these assertions are skipped."
     (should-error (loophole--set-ordinary-entry
                    (intern "loophole-1-map") (cons 0 0) nil)
                   :type 'wrong-type-argument)))
+
+(ert-deftest loophole-test-toss-binding-form ()
+  "Test for `loophole-toss-binding-form'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (let ((key (vector ?a))
+          (form 'ctl-x-4-map))
+      (loophole-toss-binding-form key form)
+      (loophole-bind-entry key (eval form)
+                           (symbol-value (intern "loophole-1-map")))
+      (should (member (cons key form)
+                      (get (intern "loophole-1-map") :loophole-form-storage)))
+      (let (advice-is-remained)
+        (advice-mapc (lambda (advice _)
+                       (if (and (symbolp advice)
+                                (string-equal (symbol-name advice)
+                                              "loophole-one-time-advice"))
+                           (setq advice-is-remained t)))
+                     'loophole-bind-entry)
+        (should-not advice-is-remained))
+      (loophole-toss-binding-form key form)
+      (loophole-bind-entry key 1 (symbol-value (intern "loophole-2-map")))
+      (should-not
+       (member (cons key form)
+               (get (intern "loophole-2-map") :loophole-form-storage)))
+      (let (advice-is-remained)
+        (advice-mapc (lambda (advice _)
+                       (if (and (symbolp advice)
+                                (string-equal (symbol-name advice)
+                                              "loophole-one-time-advice"))
+                           (setq advice-is-remained t)))
+                     'loophole-bind-entry)
+        (should-not advice-is-remained)))))
 
 (provide 'loophole-tests)
 
