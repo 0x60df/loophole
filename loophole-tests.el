@@ -1950,6 +1950,27 @@ batch-mode, these assertions are skipped."
                            (setq advice-is-remained t)))
                      'loophole-bind-entry)
         (should-not advice-is-remained)))))
+
+(ert-deftest loophole-test-valid-form ()
+  "Test for `loophole--valid-form'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (let ((key (vector ?a))
+          (form 'ctl-x-4-map))
+      (loophole-toss-binding-form key form)
+      (loophole-bind-entry key (eval form)
+                           (symbol-value (intern "loophole-1-map")))
+      (should (equal (loophole--valid-form (intern "loophole-1-map"))
+                     (list (cons key form))))
+      (loophole-toss-binding-form key form)
+      (loophole-bind-entry key (eval form)
+                           (symbol-value (intern "loophole-1-map")))
+      (loophole--valid-form (intern "loophole-1-map"))
+      (should (equal (get (intern "loophole-1-map") :loophole-form-storage)
+                     (list (cons key form))))
+      (loophole-bind-entry key nil (symbol-value (intern "loophole-1-map")))
+      (loophole--valid-form (intern "loophole-1-map"))
+      (should-not (get (intern "loophole-1-map") :loophole-form-storage)))))
 
 (provide 'loophole-tests)
 
