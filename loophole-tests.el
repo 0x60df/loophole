@@ -2068,6 +2068,52 @@ batch-mode, these assertions are skipped."
                         change-major-mode-hook))
       (should-not (memq #'loophole--follow-killing-local-variable
                         kill-buffer-hook)))))
+
+(ert-deftest loophole-test-buffer-list ()
+  "Test for `loophole-buffer-list'."
+  (loophole--test-with-pseudo-environment
+    (let (buffer1 buffer2)
+      (with-temp-buffer
+        (loophole--test-set-pseudo-map-alist)
+        (setq buffer1 (current-buffer))
+        (with-temp-buffer
+          (setq buffer2 (current-buffer))
+          (set (intern "loophole-2-map-state") t)
+          (set (intern "loophole-test-b-map-state") t)
+          (set (intern "loophole-state") t)
+          (should-not (seq-difference (loophole-buffer-list)
+                                      (list buffer2 buffer1)))
+          (setq loophole--buffer-list (list buffer2 buffer1))
+          (should-not (seq-difference (loophole-buffer-list)
+                                      (list buffer2 buffer1)))
+          (with-temp-buffer
+            (setq loophole--buffer-list (list buffer2 buffer1 (current-buffer)))
+            (should-not (seq-difference (loophole-buffer-list)
+                                        (list buffer2 buffer1)))
+            (should-not (seq-difference loophole--buffer-list
+                                        (list buffer2 buffer1))))
+          (with-temp-buffer
+            (add-hook 'change-major-mode-hook
+                      #'loophole--follow-killing-local-variable nil t)
+            (add-hook 'kill-buffer-hook
+                      #'loophole--follow-killing-local-variable nil t)
+            (setq loophole--buffer-list (list buffer2 buffer1 (current-buffer)))
+            (loophole-buffer-list)
+            (should-not (memq #'loophole--follow-killing-local-variable
+                              change-major-mode-hook))
+            (should-not (memq #'loophole--follow-killing-local-variable
+                              kill-buffer-hook)))
+          (with-temp-buffer
+            (add-hook 'change-major-mode-hook
+                      #'loophole--follow-killing-local-variable nil t)
+            (add-hook 'kill-buffer-hook
+                      #'loophole--follow-killing-local-variable nil t)
+            (setq loophole--buffer-list t)
+            (loophole-buffer-list)
+            (should-not (memq #'loophole--follow-killing-local-variable
+                              change-major-mode-hook))
+            (should-not (memq #'loophole--follow-killing-local-variable
+                              kill-buffer-hook))))))))
 
 (provide 'loophole-tests)
 
