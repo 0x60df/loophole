@@ -1937,7 +1937,8 @@ batch-mode, these assertions are skipped."
                      'loophole-bind-entry)
         (should-not advice-is-remained))
       (loophole-toss-binding-form key form)
-      (loophole-bind-entry key 1 (symbol-value (intern "loophole-2-map")))
+      (loophole-bind-entry key #'ignore
+                           (symbol-value (intern "loophole-2-map")))
       (should-not
        (member (cons key form)
                (get (intern "loophole-2-map") :loophole-form-storage)))
