@@ -1598,6 +1598,61 @@ Invalid and duplicated forms are removed by side effect."
     (put map-variable :loophole-form-storage valid-form)
     valid-form))
 
+(defun loophole--follow-killing-local-variable ()
+  "Update `loophole--buffer-list' for killing local variable.
+This function is intended to be added to
+`change-major-mode-hook' and `kill-buffer-hook'.
+Only while Loophole mode is enabled, this functions is
+added to the hooks above."
+  (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))
+  (remove-hook 'change-major-mode-hook
+               #'loophole--follow-killing-local-variable t)
+  (remove-hook 'kill-buffer-hook
+               #'loophole--follow-killing-local-variable t))
+
+(defun loophole--follow-adding-local-variable (_symbol _newval operation where)
+  "Update `loophole--buffer-list' for adding local variable.
+This function is intented to be used for
+`add-variable-watcher'.  Only while Loophole mode is
+enabled, this function is added as variable watcher.
+When OPERATION is set and WHERE is non-nil, WHERE is added
+to `loophole--buffer-list'."
+  (when (and (eq operation 'set)
+             where
+             (not (memq where loophole--buffer-list)))
+    (push where loophole--buffer-list)
+    (with-current-buffer where
+      (add-hook 'change-major-mode-hook
+                #'loophole--follow-killing-local-variable nil t)
+      (add-hook 'kill-buffer-hook
+                #'loophole--follow-killing-local-variable nil t))))
+
+(defun loophole-buffer-list ()
+  "Return buffer list on which Loophole variables have local value.
+This function sanitize orphan hooks by side effect.
+`loophole--follow-killing-local-variable' on
+`change-major-mode-hook' and `kill-buffer-hook' is removed,
+if certain Loophole buffer no longer has local Loophole
+variable."
+  (let ((filter (lambda (buffer)
+                  (and (buffer-live-p buffer)
+                       (with-current-buffer buffer
+                         (let ((have-local-variable
+                                (seq-some
+                                 #'local-variable-p
+                                 (loophole-local-variable-if-set-list))))
+                           (unless have-local-variable
+                             (remove-hook
+                              'change-major-mode-hook
+                              #'loophole--follow-killing-local-variable t)
+                             (remove-hook
+                              'kill-buffer-hook
+                              #'loophole--follow-killing-local-variable t))
+                           have-local-variable))))))
+    (if (listp loophole--buffer-list)
+        (setq loophole--buffer-list (seq-filter filter loophole--buffer-list))
+      (seq-filter filter (buffer-list)))))
+
 (defun loophole--erase-local-timers (map-variable)
   "Cancel and remove all local timers for MAP-VARIABLE .
 This function is intended to be used in `loophole-globalize'
@@ -1660,61 +1715,6 @@ This function is intended to be used in `loophole-name'."
                                (loophole-disable map-variable)
                                (force-mode-line-update))))
                        (list new-map-variable (current-buffer))))))))))))
-
-(defun loophole--follow-adding-local-variable (_symbol _newval operation where)
-  "Update `loophole--buffer-list' for adding local variable.
-This function is intented to be used for
-`add-variable-watcher'.  Only while Loophole mode is
-enabled, this function is added as variable watcher.
-When OPERATION is set and WHERE is non-nil, WHERE is added
-to `loophole--buffer-list'."
-  (when (and (eq operation 'set)
-             where
-             (not (memq where loophole--buffer-list)))
-    (push where loophole--buffer-list)
-    (with-current-buffer where
-      (add-hook 'change-major-mode-hook
-                #'loophole--follow-killing-local-variable nil t)
-      (add-hook 'kill-buffer-hook
-                #'loophole--follow-killing-local-variable nil t))))
-
-(defun loophole--follow-killing-local-variable ()
-  "Update `loophole--buffer-list' for killing local variable.
-This function is intended to be added to
-`change-major-mode-hook' and `kill-buffer-hook'.
-Only while Loophole mode is enabled, this functions is
-added to the hooks above."
-  (setq loophole--buffer-list (delq (current-buffer) loophole--buffer-list))
-  (remove-hook 'change-major-mode-hook
-               #'loophole--follow-killing-local-variable t)
-  (remove-hook 'kill-buffer-hook
-               #'loophole--follow-killing-local-variable t))
-
-(defun loophole-buffer-list ()
-  "Return buffer list on which Loophole variables have local value.
-This function sanitize orphan hooks by side effect.
-`loophole--follow-killing-local-variable' on
-`change-major-mode-hook' and `kill-buffer-hook' is removed,
-if certain Loophole buffer no longer has local Loophole
-variable."
-  (let ((filter (lambda (buffer)
-                  (and (buffer-live-p buffer)
-                       (with-current-buffer buffer
-                         (let ((have-local-variable
-                                (seq-some
-                                 #'local-variable-p
-                                 (loophole-local-variable-if-set-list))))
-                           (unless have-local-variable
-                             (remove-hook
-                              'change-major-mode-hook
-                              #'loophole--follow-killing-local-variable t)
-                             (remove-hook
-                              'kill-buffer-hook
-                              #'loophole--follow-killing-local-variable t))
-                           have-local-variable))))))
-    (if (listp loophole--buffer-list)
-        (setq loophole--buffer-list (seq-filter filter loophole--buffer-list))
-      (seq-filter filter (buffer-list)))))
 
 ;;; Main functions
 
