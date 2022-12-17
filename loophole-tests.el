@@ -1971,6 +1971,28 @@ batch-mode, these assertions are skipped."
       (loophole-bind-entry key nil (symbol-value (intern "loophole-1-map")))
       (loophole--valid-form (intern "loophole-1-map"))
       (should-not (get (intern "loophole-1-map") :loophole-form-storage)))))
+
+(ert-deftest loophole-test-follow-killing-local-variable ()
+  "Test for `loophole--follow-killing-local-variable'."
+  (loophole--test-with-pseudo-environment
+    (with-temp-buffer
+      (setq loophole--buffer-list (list (current-buffer)))
+      (add-hook 'change-major-mode-hook
+                #'loophole--follow-killing-local-variable nil t)
+      (add-hook 'kill-buffer-hook
+                #'loophole--follow-killing-local-variable nil t)
+      (text-mode)
+      (should-not (memq (current-buffer) loophole--buffer-list))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                        change-major-mode-hook))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                        kill-buffer-hook))
+      (setq loophole--buffer-list (list (current-buffer)))
+      (add-hook 'change-major-mode-hook
+                #'loophole--follow-killing-local-variable nil t)
+      (add-hook 'kill-buffer-hook
+                #'loophole--follow-killing-local-variable nil t))
+    (should-not (memq (current-buffer) loophole--buffer-list))))
 
 (provide 'loophole-tests)
 
