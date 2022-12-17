@@ -1993,6 +1993,81 @@ batch-mode, these assertions are skipped."
       (add-hook 'kill-buffer-hook
                 #'loophole--follow-killing-local-variable nil t))
     (should-not (memq (current-buffer) loophole--buffer-list))))
+
+(ert-deftest loophole-test-follow-adding-local-variable ()
+  "Test for `loophole--follow-adding-local-variable'."
+  (loophole--test-with-pseudo-environment
+    (setq loophole--buffer-list nil)
+    (with-temp-buffer
+      (make-variable-buffer-local (intern "loophole-1"))
+      (add-variable-watcher (intern "loophole-1")
+                            #'loophole--follow-adding-local-variable)
+      (set (intern "loophole-1") t)
+      (should (memq (current-buffer) loophole--buffer-list))
+      (should (memq #'loophole--follow-killing-local-variable
+                    change-major-mode-hook))
+      (should (memq #'loophole--follow-killing-local-variable
+                    kill-buffer-hook))
+      (set (intern "loophole-1") t)
+      (should (= (length (seq-uniq loophole--buffer-list))
+                 (length loophole--buffer-list))))
+    (with-temp-buffer
+      (unwind-protect
+          (progn
+            (add-variable-watcher 'loophole--map-alist
+                                  #'loophole--follow-adding-local-variable)
+            (let ((loophole--map-alist))
+              (should-not (memq (current-buffer) loophole--buffer-list))
+              (should-not (memq #'loophole--follow-killing-local-variable
+                                change-major-mode-hook))
+              (should-not (memq #'loophole--follow-killing-local-variable
+                                kill-buffer-hook)))
+            (should-not (memq (current-buffer) loophole--buffer-list))
+            (should-not (memq #'loophole--follow-killing-local-variable
+                              change-major-mode-hook))
+            (should-not (memq #'loophole--follow-killing-local-variable
+                              kill-buffer-hook)))
+        (remove-variable-watcher 'loophole--map-alist
+                                 #'loophole--follow-adding-local-variable))
+      (make-variable-buffer-local (intern "loophole-2"))
+      (set (intern "loophole-2") t)
+      (add-variable-watcher (intern "loophole-2")
+                            #'loophole--follow-adding-local-variable)
+      (makunbound (intern "loophole-2"))
+      (should-not (memq (current-buffer) loophole--buffer-list))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                        change-major-mode-hook))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                        kill-buffer-hook))
+      (make-variable-buffer-local (intern "loophole-3"))
+      (add-variable-watcher (intern "loophole-3")
+                            #'loophole--follow-adding-local-variable)
+      (defvaralias (intern "loophole-4") (intern "loophole-3"))
+      (should-not (memq (current-buffer) loophole--buffer-list))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                        change-major-mode-hook))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                        kill-buffer-hook))
+      (add-variable-watcher (intern "loophole-5")
+                            #'loophole--follow-adding-local-variable)
+      (set (intern "loophole-5") t)
+      (should-not (memq (current-buffer) loophole--buffer-list))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                    change-major-mode-hook))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                    kill-buffer-hook)))
+    (setq loophole--buffer-list t)
+    (with-temp-buffer
+      (make-variable-buffer-local (intern "loophole-6"))
+      (add-variable-watcher (intern "loophole-6")
+                            #'loophole--follow-adding-local-variable)
+      (set (intern "loophole-6") t)
+      (should-not (memq #'loophole--follow-adding-local-variable
+                        (get-variable-watchers (intern "loophole-6"))))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                        change-major-mode-hook))
+      (should-not (memq #'loophole--follow-killing-local-variable
+                        kill-buffer-hook)))))
 
 (provide 'loophole-tests)
 
