@@ -1610,22 +1610,24 @@ added to the hooks above."
   (remove-hook 'kill-buffer-hook
                #'loophole--follow-killing-local-variable t))
 
-(defun loophole--follow-adding-local-variable (_symbol _newval operation where)
+(defun loophole--follow-adding-local-variable (symbol _newval operation where)
   "Update `loophole--buffer-list' for adding local variable.
 This function is intented to be used for
 `add-variable-watcher'.  Only while Loophole mode is
 enabled, this function is added as variable watcher.
 When OPERATION is set and WHERE is non-nil, WHERE is added
 to `loophole--buffer-list'."
-  (when (and (eq operation 'set)
-             where
-             (not (memq where loophole--buffer-list)))
-    (push where loophole--buffer-list)
-    (with-current-buffer where
-      (add-hook 'change-major-mode-hook
-                #'loophole--follow-killing-local-variable nil t)
-      (add-hook 'kill-buffer-hook
-                #'loophole--follow-killing-local-variable nil t))))
+  (if (listp loophole--buffer-list)
+      (when (and (eq operation 'set)
+                 where
+                 (not (memq where loophole--buffer-list)))
+        (push where loophole--buffer-list)
+        (with-current-buffer where
+          (add-hook 'change-major-mode-hook
+                    #'loophole--follow-killing-local-variable nil t)
+          (add-hook 'kill-buffer-hook
+                    #'loophole--follow-killing-local-variable nil t)))
+    (remove-variable-watcher symbol #'loophole--follow-adding-local-variable)))
 
 (defun loophole-buffer-list ()
   "Return buffer list on which Loophole variables have local value.
