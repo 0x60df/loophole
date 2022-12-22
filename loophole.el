@@ -1916,7 +1916,7 @@ set as non-nil."
       (loophole--erase-global-timer map-variable)
     (loophole--erase-local-timers map-variable))
   (if (loophole-global-editing-p)
-      (progn
+      (when (eq (default-value 'loophole--editing) map-variable)
         (loophole-stop-editing-timer)
         (loophole-stop-editing)
         (force-mode-line-update t))
