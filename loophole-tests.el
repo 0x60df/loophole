@@ -410,6 +410,7 @@ completing features of reading minibuffer functions like
         (exit-transient-map (make-symbol "exit-transient-map"))
         (return-events (make-symbol "return-events"))
         (yes-or-no-p (make-symbol "yes-or-no-p"))
+        (y-or-n-p (make-symbol "y-or-n-p"))
         (flatten-events (make-symbol "flatten-events"))
         (pseudo-standard-input (make-symbol "flatten-events"))
         (timer (make-symbol "timer")))
@@ -472,6 +473,22 @@ completing features of reading minibuffer functions like
                                   (list (concat "Only yes or no are allowed"
                                                 " for yes-or-no-p"
                                                 " in batch mode")))))))
+              (,y-or-n-p
+               (lambda (&rest _)
+                 (cond ((equal (seq-take (vconcat ,pseudo-standard-input) 1)
+                               (vector ?y))
+                        (setq ,pseudo-standard-input
+                              (seq-drop ,pseudo-standard-input 1))
+                        t)
+                       ((equal (seq-take (vconcat ,pseudo-standard-input) 1)
+                               (vector ?n))
+                        (setq ,pseudo-standard-input
+                              (seq-drop ,pseudo-standard-input 1))
+                        nil)
+                       (t (signal 'loophole-test-error
+                                  (list (concat "Only y or n are allowed"
+                                                " for y-or-n-p"
+                                                " in batch mode")))))))
               (,timer nil))
          (unwind-protect
              (progn
@@ -481,7 +498,8 @@ completing features of reading minibuffer functions like
                (when noninteractive
                  (advice-add 'read-from-minibuffer :override ,return-events)
                  (advice-add 'read-string :override ,return-events)
-                 (advice-add 'yes-or-no-p :override ,yes-or-no-p))
+                 (advice-add 'yes-or-no-p :override ,yes-or-no-p)
+                 (advice-add 'y-or-n-p :override ,y-or-n-p))
                (setq ,timer
                      (run-with-timer
                       loophole--test-wait-time nil
@@ -492,6 +510,7 @@ completing features of reading minibuffer functions like
                ,@body)
            (if (timerp ,timer) (cancel-timer ,timer))
            (when noninteractive
+             (advice-remove 'y-or-n-p ,y-or-n-p)
              (advice-remove 'yes-or-no-p ,yes-or-no-p)
              (advice-remove 'read-string ,return-events)
              (advice-remove 'read-from-minibuffer ,return-events))
