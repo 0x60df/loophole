@@ -1887,12 +1887,14 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
       (cond ((null parent)
              (set-keymap-parent (symbol-value map-variable) loophole-base-map))
             ((and (get map-variable :loophole-protected-keymap)
-                  (memq (get map-variable :loophole-protected-keymap) parent))
+                  (memq (get map-variable :loophole-protected-keymap) parent)
+                  (not (memq loophole-base-map parent)))
              (let ((grand-parent (keymap-parent parent)))
                (set-keymap-parent parent nil)
                (unwind-protect
                    (setcdr (last parent) (cons loophole-base-map nil))
                  (set-keymap-parent parent grand-parent))))
+            ((or (eq parent loophole-base-map) (memq loophole-base-map parent)))
             (t (set-keymap-parent (symbol-value map-variable)
                                   (make-composed-keymap
                                    (list parent loophole-base-map)))))))
