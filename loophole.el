@@ -1811,6 +1811,12 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                                     (y-or-n-p "Register without base map? "))))
      (list arg-map-variable arg-state-variable arg-tag
            arg-global arg-without-base-map)))
+  (or (keymapp (symbol-value map-variable))
+      (error "MAP-VARIABLE must hold keymap object: %s"
+             (symbol-value map-variable)))
+  (or (null tag)
+      (stringp tag)
+      (signal 'wrong-type-argument (list 'stringp tag)))
   (cond ((loophole-registered-p map-variable state-variable)
          (user-error "Specified variables are already registered: %s, %s"
                      map-variable state-variable))
