@@ -2571,19 +2571,17 @@ batch-mode, these assertions are skipped."
     (set (intern "loophole-18-map") (make-sparse-keymap))
     (set (intern "loophole-18-map-state") nil)
     (with-temp-buffer
-      (let ((buffer1 (current-buffer)))
+      (set (intern "loophole-18-map-state") nil)
+      (with-temp-buffer
         (set (intern "loophole-18-map-state") nil)
-        (with-temp-buffer
-          (let ((buffer2 (current-buffer)))
-            (set (intern "loophole-18-map-state") nil)
-            (setq-default loophole--buffer-list nil)
-            (loophole-register (intern "loophole-18-map")
-                               (intern "loophole-18-map-state")
-                               nil t)
-            (should-not loophole--buffer-list)
-            (should-not (memq #'loophole--follow-adding-local-variable
-                              (get-variable-watchers
-                               (intern "loophole-18-map-state"))))))))
+        (setq-default loophole--buffer-list nil)
+        (loophole-register (intern "loophole-18-map")
+                           (intern "loophole-18-map-state")
+                           nil t)
+        (should-not loophole--buffer-list)
+        (should-not (memq #'loophole--follow-adding-local-variable
+                          (get-variable-watchers
+                           (intern "loophole-18-map-state"))))))
     ;; Prompt and forcing
     (set (intern "loophole-19-map") (make-sparse-keymap))
     (set (intern "loophole-19-map-state") nil)
