@@ -458,11 +458,15 @@ completing features of reading minibuffer functions like
                    (concat head))))
               (,yes-or-no-p
                (lambda (&rest _)
-                 (cond ((equal (vconcat ,pseudo-standard-input)
-                               (vector ?y ?e ?s ?\r ))
+                 (cond ((equal (seq-take (vconcat ,pseudo-standard-input) 4)
+                               (vector ?y ?e ?s ?\r))
+                        (setq ,pseudo-standard-input
+                              (seq-drop ,pseudo-standard-input 4))
                         t)
-                       ((equal (vconcat ,pseudo-standard-input)
+                       ((equal (seq-take (vconcat ,pseudo-standard-input) 3)
                                (vector ?n ?o ?\r))
+                        (setq ,pseudo-standard-input
+                              (seq-drop ,pseudo-standard-input 3))
                         nil)
                        (t (signal 'loophole-test-error
                                   (list (concat "Only yes or no are allowed"
