@@ -1896,9 +1896,10 @@ MAP-VARIABLE is registered as GLOBAL and WITHOUT-BASE-MAP."
                   (memq (get map-variable :loophole-protected-keymap) parent)
                   (not (memq loophole-base-map parent)))
              (let ((grand-parent (keymap-parent parent)))
-               (set-keymap-parent parent nil)
                (unwind-protect
-                   (setcdr (last parent) (cons loophole-base-map nil))
+                   (progn
+                     (set-keymap-parent parent nil)
+                     (setcdr (last parent) (cons loophole-base-map nil)))
                  (set-keymap-parent parent grand-parent))))
             ((or (eq parent loophole-base-map) (memq loophole-base-map parent)))
             (t (set-keymap-parent (symbol-value map-variable)
@@ -1957,15 +1958,16 @@ set as non-nil."
              (set-keymap-parent (symbol-value map-variable) nil))
             ((memq loophole-base-map parent)
              (let ((grand-parent (keymap-parent parent)))
-               (set-keymap-parent parent nil)
                (unwind-protect
-                   (let ((others (remq loophole-base-map (cdr parent))))
-                     (set-keymap-parent
-                      (symbol-value map-variable)
-                      (cond ((or grand-parent (< 1 (length others)))
-                             (make-composed-keymap others grand-parent))
-                            ((zerop (length others)) nil)
-                            (t (car others)))))
+                   (progn
+                     (set-keymap-parent parent nil)
+                     (let ((others (remq loophole-base-map (cdr parent))))
+                       (set-keymap-parent
+                        (symbol-value map-variable)
+                        (cond ((or grand-parent (< 1 (length others)))
+                               (make-composed-keymap others grand-parent))
+                              ((zerop (length others)) nil)
+                              (t (car others))))))
                  (if (and grand-parent
                           (eq (keymap-parent (symbol-value map-variable))
                               parent))
