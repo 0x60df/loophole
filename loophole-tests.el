@@ -629,7 +629,7 @@ This function must be used in
   (should-not (loophole-key-equal (string ?A) (vector ?\S-a)))
   (should (loophole-key-equal (string ?\C-a) (vector ?\C-a)))
   (should (loophole-key-equal (string ?\e ?a) (vector ?\e ?a)))
-  (should (loophole-key-equal (string ?\e ?a) (string (+ ?a (lsh 2 6)))))
+  (should (loophole-key-equal (string ?\e ?a) (string (+ ?a (ash 2 6)))))
   (should (loophole-key-equal (string ?\e ?a) (vector ?\M-a)))
   (should (loophole-key-equal (string ?\e ?/) (vector ?\e ?/)))
   (should (loophole-key-equal (string ?\e ?/) (vector ?\M-/)))
