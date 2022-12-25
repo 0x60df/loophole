@@ -2318,7 +2318,11 @@ batch-mode, these assertions are skipped."
 ;;; Main functions
 
 (ert-deftest loophole-test-register ()
-  "Test for `loophole-register'."
+  "Test for `loophole-register'.
+This test has assertions for interactive behaviors of
+`loophole-register'.  When this test is run in
+batch-mode, these assertions are skipped."
+  :tags '(interactive)
   (loophole--test-with-pseudo-environment
     ;; Basic behavior
     (set (intern "loophole-1-map") (make-sparse-keymap))
@@ -2885,7 +2889,96 @@ batch-mode, these assertions are skipped."
                                          (intern "loophole-28-map-state")))
       (should-not (symbol-plist (intern "loophole-28-map")))
       (should (equal (keymap-parent (symbol-value (intern "loophole-28-map")))
-                     parent)))))
+                     parent)))
+    ;; Interactive spec
+    (let* ((oba (obarray-make))
+           (return-args (lambda (&rest args) args))
+           (replace-obarray-for-completing-read
+            (lambda (args)
+              (cons (car args)
+                    (cons oba (nthcdr 2 args)))))
+           (replace-obarray-for-intern
+            (lambda (args)
+              (if (cadr args)
+                  args
+                (let ((name (car args)))
+                  (if (or (member
+                           name
+                           (mapcar
+                            #'symbol-name
+                            loophole--test-barriered-symbol-list))
+                          (string-prefix-p "loophole" name))
+                      (list name oba)
+                    args))))))
+      (unwind-protect
+          (progn
+            (advice-add 'loophole-register :override return-args)
+            (advice-add 'completing-read
+                        :filter-args replace-obarray-for-completing-read)
+            (advice-add 'intern :filter-args replace-obarray-for-intern)
+            (set (intern "loophole-29-map" oba) (make-sparse-keymap))
+            (set (intern "loophole-29-map-state" oba) nil)
+            (loophole--test-with-keyboard-events
+                "loophole-29-maploophole-29-map-state"
+              (let ((args (call-interactively #'loophole-register)))
+                (should (eq (nth 0 args) (intern "loophole-29-map" oba)))
+                (should (eq (nth 1 args) (intern "loophole-29-map-state" oba)))
+                (should (equal (nth 2 args) (string ?2 ?9)))
+                (should-not (nth 3 args))
+                (should-not (nth 4 args))))
+            (unless noninteractive
+              (should (catch 'loophole-test-register
+                      (run-with-timer
+                       (* 0.2 loophole--test-wait-time)
+                       nil
+                       (lambda () (throw 'loophole-test-register t)))
+                      (loophole--test-with-keyboard-events
+                          "loophole-30-maploophole-30-map-state"
+                        (call-interactively #'loophole-register))
+                      nil)))
+            (let ((loophole-make-register-always-read-tag t))
+              (loophole--test-with-keyboard-events
+                  "loophole-29-maploophole-29-map-state30"
+                (let ((args (call-interactively #'loophole-register)))
+                  (should (eq (nth 0 args) (intern "loophole-29-map" oba)))
+                  (should (eq (nth 1 args)
+                              (intern "loophole-29-map-state" oba)))
+                  (should (equal (nth 2 args) (string ?3 ?0)))
+                  (should-not (nth 3 args))
+                  (should-not (nth 4 args)))))
+            (let ((current-prefix-arg '(4)))
+              (loophole--test-with-keyboard-events
+                  "loophole-29-maploophole-29-map-state30yy"
+                (let ((args (call-interactively #'loophole-register)))
+                  (should (eq (nth 0 args) (intern "loophole-29-map" oba)))
+                  (should (eq (nth 1 args)
+                              (intern "loophole-29-map-state" oba)))
+                  (should (equal (nth 2 args) (string ?3 ?0)))
+                  (should (nth 3 args))
+                  (should (nth 4 args)))))
+            (let ((current-prefix-arg 1))
+              (loophole--test-with-keyboard-events
+                  "loophole-29-maploophole-29-map-state30ny"
+                (let ((args (call-interactively #'loophole-register)))
+                  (should (eq (nth 0 args) (intern "loophole-29-map" oba)))
+                  (should (eq (nth 1 args)
+                              (intern "loophole-29-map-state" oba)))
+                  (should (equal (nth 2 args) (string ?3 ?0)))
+                  (should-not (nth 3 args))
+                  (should (nth 4 args)))))
+            (let ((current-prefix-arg '-))
+              (loophole--test-with-keyboard-events
+                  "loophole-29-maploophole-29-map-state30yn"
+                (let ((args (call-interactively #'loophole-register)))
+                  (should (eq (nth 0 args) (intern "loophole-29-map" oba)))
+                  (should (eq (nth 1 args)
+                              (intern "loophole-29-map-state" oba)))
+                  (should (equal (nth 2 args) (string ?3 ?0)))
+                  (should (nth 3 args))
+                  (should-not (nth 4 args))))))
+        (advice-remove 'intern replace-obarray-for-intern)
+        (advice-remove 'completing-read replace-obarray-for-completing-read)
+        (advice-remove 'loophole-register return-args)))))
 
 (provide 'loophole-tests)
 
