@@ -409,6 +409,7 @@ completing features of reading minibuffer functions like
         (enter-transient-map (make-symbol "enter-transient-map"))
         (exit-transient-map (make-symbol "exit-transient-map"))
         (return-events (make-symbol "return-events"))
+        (yes-or-no-p (make-symbol "yes-or-no-p"))
         (flatten-events (make-symbol "flatten-events"))
         (pseudo-standard-input (make-symbol "flatten-events"))
         (timer (make-symbol "timer")))
@@ -455,14 +456,28 @@ completing features of reading minibuffer functions like
                                            " in batch mode is not allowed"))))
                    (setq ,pseudo-standard-input tail)
                    (concat head))))
+              (,yes-or-no-p
+               (lambda (&rest _)
+                 (cond ((equal (vconcat ,pseudo-standard-input)
+                               (vector ?y ?e ?s ?\r ))
+                        t)
+                       ((equal (vconcat ,pseudo-standard-input)
+                               (vector ?n ?o ?\r))
+                        nil)
+                       (t (signal 'loophole-test-error
+                                  (list (concat "Only yes or no are allowed"
+                                                " for yes-or-no-p"
+                                                " in batch mode")))))))
               (,timer nil))
          (unwind-protect
              (progn
                (funcall ,enter-transient-map)
                (add-hook 'minibuffer-setup-hook ,exit-transient-map)
                (add-hook 'minibuffer-exit-hook ,enter-transient-map)
-               (if noninteractive
-                   (advice-add 'read-from-minibuffer :override ,return-events))
+               (when noninteractive
+                 (advice-add 'read-from-minibuffer :override ,return-events)
+                 (advice-add 'read-string :override ,return-events)
+                 (advice-add 'yes-or-no-p :override ,yes-or-no-p))
                (setq ,timer
                      (run-with-timer
                       loophole--test-wait-time nil
@@ -472,8 +487,10 @@ completing features of reading minibuffer functions like
                          (list "Test with keyboard events is timed out")))))
                ,@body)
            (if (timerp ,timer) (cancel-timer ,timer))
-           (if noninteractive
-               (advice-remove 'read-from-minibuffer ,return-events))
+           (when noninteractive
+             (advice-remove 'yes-or-no-p ,yes-or-no-p)
+             (advice-remove 'read-string ,return-events)
+             (advice-remove 'read-from-minibuffer ,return-events))
            (funcall ,exit-function)
            (remove-hook 'minibuffer-exit-hook ,enter-transient-map)
            (remove-hook 'minibuffer-setup-hook ,exit-transient-map))))))
