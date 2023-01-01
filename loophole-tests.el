@@ -1,6 +1,6 @@
 ;;; loophole-tests.el --- Tests for Loophole -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022 0x60DF
+;; Copyright (C) 2022,2023 0x60DF
 
 ;; Author: 0x60DF <0x60df@gmail.com>
 ;; URL: https://github.com/0x60df/loophole
