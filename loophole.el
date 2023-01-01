@@ -2001,23 +2001,22 @@ This function modifies both local and default value of
 a symbol local, only local value is modified; or if ONLY is
 a symbol default, only default value is modified."
   (interactive (list (loophole-read-map-variable "Prioritize keymap: ")))
-  (if (loophole-registered-p map-variable)
-      (let ((state-variable (get map-variable :loophole-state-variable)))
-        (unless (eq only 'default)
-          (setq loophole--map-alist
-                (cons `(,state-variable . ,(symbol-value map-variable))
-                      (seq-filter (lambda (cell)
-                                    (not (eq (car cell) state-variable)))
-                                  loophole--map-alist))))
-        (unless (eq only 'local)
-          (setq-default
-           loophole--map-alist
-           (cons `(,state-variable . ,(symbol-value map-variable))
-                 (seq-filter (lambda (cell)
-                               (not (eq (car cell) state-variable)))
-                             (default-value 'loophole--map-alist)))))
-        (run-hook-with-args 'loophole-after-prioritize-functions map-variable))
-    (user-error "Specified map-variable %s is not registered" map-variable)))
+  (or (loophole-registered-p map-variable)
+      (user-error "Specified map-variable %s is not registered" map-variable))
+  (let* ((state-variable (get map-variable :loophole-state-variable))
+         (filter-and-cons
+          (lambda (map-alist)
+            (cons `(,state-variable . ,(symbol-value map-variable))
+                  (seq-filter (lambda (cell)
+                                (not (eq (car cell) state-variable)))
+                              map-alist)))))
+    (unless (eq only 'default)
+      (setq loophole--map-alist (funcall filter-and-cons loophole--map-alist)))
+    (unless (eq only 'local)
+      (setq-default
+       loophole--map-alist
+       (funcall filter-and-cons (default-value 'loophole--map-alist))))
+    (run-hook-with-args 'loophole-after-prioritize-functions map-variable)))
 
 (defun loophole-globalize (map-variable)
   "Make MAP-VARIABLE global."
