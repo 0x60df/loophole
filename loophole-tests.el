@@ -3875,6 +3875,23 @@ batch-mode, these assertions are skipped."
                           (call-interactively #'loophole-disable))
                         nil))))
         (advice-remove 'loophole-disable return-args)))))
+
+(ert-deftest loophole-test-disable-latest ()
+  "Test for `loophole-disable-latest'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (loophole-disable-latest)
+    (should-not (symbol-value (intern "loophole-1-map-state")))
+    (loophole-prioritize (intern "loophole-test-a-map"))
+    (loophole-disable-latest)
+    (should-not (symbol-value (intern "loophole-test-a-map-state")))
+    (loophole-disable-latest)
+    (should-not (symbol-value (intern "loophole-2-map-state")))
+    (loophole-disable-latest)
+    (should-not (symbol-value (intern "loophole-test-b-map-state")))
+    (loophole-disable-latest)
+    (should-not (symbol-value (intern "loophole-state")))
+    (loophole-disable-latest)))
 
 (provide 'loophole-tests)
 
