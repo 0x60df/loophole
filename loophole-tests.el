@@ -3583,7 +3583,36 @@ batch-mode, these assertions are skipped."
     (should-error (loophole-globalize ?c) :type 'wrong-type-argument)
     (should-error (loophole-globalize (cons 0 0)) :type 'wrong-type-argument)
     (should-error (loophole-globalize (string ?s)) :type 'wrong-type-argument)
-    (should-error (loophole-globalize (vector ?v)) :type 'wrong-type-argument)))
+    (should-error (loophole-globalize (vector ?v)) :type 'wrong-type-argument)
+    (let ((return-args (lambda (&rest args) args)))
+      (unwind-protect
+          (progn
+            (advice-add 'loophole-globalize :override return-args)
+            (set (intern "loophole-9-map") (make-sparse-keymap))
+            (set (intern "loophole-9-map-state") nil)
+            (make-variable-buffer-local (intern "loophole-9-map-state"))
+            (loophole-register (intern "loophole-9-map")
+                               (intern "loophole-9-map-state"))
+            (loophole--test-with-keyboard-events
+                "loophole-9-map"
+              (let ((args (call-interactively #'loophole-globalize)))
+                (should (eq (nth 0 args) (intern "loophole-9-map")))))
+            (unless noninteractive
+              (set (intern "loophole-10-map") (make-sparse-keymap))
+              (set (intern "loophole-10-map-state") nil)
+              (loophole-register (intern "loophole-10-map")
+                                 (intern "loophole-10-map-state")
+                                 nil t)
+              (should (catch 'loophole-test-globalize
+                        (run-with-timer
+                         (* 0.2 loophole--test-wait-time)
+                         nil
+                         (lambda () (throw 'loophole-test-globalize t)))
+                        (loophole--test-with-keyboard-events
+                            "loophole-10-map"
+                          (call-interactively #'loophole-globalize))
+                        nil))))
+        (advice-remove 'loophole-globalize return-args)))))
 
 (ert-deftest loophole-test-localize ()
   "Test for `loophole-localize'."
@@ -3658,7 +3687,36 @@ batch-mode, these assertions are skipped."
     (should-error (loophole-localize ?c) :type 'wrong-type-argument)
     (should-error (loophole-localize (cons 0 0)) :type 'wrong-type-argument)
     (should-error (loophole-localize (string ?s)) :type 'wrong-type-argument)
-    (should-error (loophole-localize (vector ?v)) :type 'wrong-type-argument)))
+    (should-error (loophole-localize (vector ?v)) :type 'wrong-type-argument)
+    (let ((return-args (lambda (&rest args) args)))
+      (unwind-protect
+          (progn
+            (advice-add 'loophole-localize :override return-args)
+            (set (intern "loophole-8-map") (make-sparse-keymap))
+            (set (intern "loophole-8-map-state") nil)
+            (loophole-register (intern "loophole-8-map")
+                               (intern "loophole-8-map-state")
+                               nil t)
+            (loophole--test-with-keyboard-events
+                "loophole-8-map"
+              (let ((args (call-interactively #'loophole-localize)))
+                (should (eq (nth 0 args) (intern "loophole-8-map")))))
+            (unless noninteractive
+              (set (intern "loophole-9-map") (make-sparse-keymap))
+              (set (intern "loophole-9-map-state") nil)
+              (make-variable-buffer-local (intern "loophole-9-map-state"))
+              (loophole-register (intern "loophole-9-map")
+                                 (intern "loophole-9-map-state"))
+              (should (catch 'loophole-test-localize
+                        (run-with-timer
+                         (* 0.2 loophole--test-wait-time)
+                         nil
+                         (lambda () (throw 'loophole-test-localize t)))
+                        (loophole--test-with-keyboard-events
+                            "loophole-9-map"
+                          (call-interactively #'loophole-localize))
+                        nil))))
+        (advice-remove 'loophole-localize return-args)))))
 
 (provide 'loophole-tests)
 
