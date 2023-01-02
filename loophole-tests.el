@@ -3717,6 +3717,72 @@ batch-mode, these assertions are skipped."
                           (call-interactively #'loophole-localize))
                         nil))))
         (advice-remove 'loophole-localize return-args)))))
+
+(ert-deftest loophole-test-enable ()
+  "Test for `loophole-enable'."
+  (loophole--test-with-pseudo-environment
+    (set (intern "loophole-1-map") (make-sparse-keymap))
+    (set (intern "loophole-1-map-state") nil)
+    (loophole-register (intern "loophole-1-map")
+                       (intern "loophole-1-map-state"))
+    (with-temp-buffer
+      (loophole-enable (intern "loophole-1-map"))
+      (should (symbol-value (intern "loophole-1-map-state")))
+      (with-temp-buffer
+        (should-not (symbol-value (intern "loophole-1-map-state")))
+        (loophole-enable (intern "loophole-1-map"))
+        (should (symbol-value (intern "loophole-1-map-state")))))
+    (should-not (symbol-value (intern "loophole-1-map-state")))
+    (set (intern "loophole-2-map") (make-sparse-keymap))
+    (set (intern "loophole-2-map-state") nil)
+    (loophole-register (intern "loophole-2-map")
+                       (intern "loophole-2-map-state"))
+    (let* ((enabled nil)
+           (map-variable nil)
+           (loophole-after-enable-functions
+            (lambda (arg)
+              (setq enabled (symbol-value (loophole-state-variable arg)))
+              (setq map-variable arg))))
+      (loophole-enable (intern "loophole-2-map"))
+      (should enabled)
+      (should (eq map-variable (intern "loophole-2-map"))))
+    (set (intern "loophole-3-map") (make-sparse-keymap))
+    (set (intern "loophole-3-map-state") nil)
+    (should-error (loophole-enable (intern "loophole-3-map")) :type 'user-error)
+    (should-error (loophole-enable nil) :type 'user-error)
+    (should-error (loophole-enable 0) :type 'wrong-type-argument)
+    (should-error (loophole-enable 1.0) :type 'wrong-type-argument)
+    (should-error (loophole-enable ?c) :type 'wrong-type-argument)
+    (should-error (loophole-enable (cons 0 0)) :type 'wrong-type-argument)
+    (should-error (loophole-enable (string ?s)) :type 'wrong-type-argument)
+    (should-error (loophole-enable (vector ?v)) :type 'wrong-type-argument)
+    (let ((return-args (lambda (&rest args) args)))
+      (unwind-protect
+          (progn
+            (advice-add 'loophole-enable :override return-args)
+            (set (intern "loophole-8-map") (make-sparse-keymap))
+            (set (intern "loophole-8-map-state") nil)
+            (loophole-register (intern "loophole-8-map")
+                               (intern "loophole-8-map-state"))
+            (loophole--test-with-keyboard-events
+                "loophole-8-map"
+              (let ((args (call-interactively #'loophole-enable)))
+                (should (eq (nth 0 args) (intern "loophole-8-map")))))
+            (unless noninteractive
+              (set (intern "loophole-9-map") (make-sparse-keymap))
+              (set (intern "loophole-9-map-state") t)
+              (loophole-register (intern "loophole-9-map")
+                                 (intern "loophole-9-map-state"))
+              (should (catch 'loophole-test-enable
+                        (run-with-timer
+                         (* 0.2 loophole--test-wait-time)
+                         nil
+                         (lambda () (throw 'loophole-test-enable t)))
+                        (loophole--test-with-keyboard-events
+                            "loophole-9-map"
+                          (call-interactively #'loophole-enable))
+                        nil))))
+        (advice-remove 'loophole-enable return-args)))))
 
 (provide 'loophole-tests)
 
