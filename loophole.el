@@ -2137,7 +2137,8 @@ a symbol default, only default value is modified."
   "Disable the all keymaps."
   (interactive)
   (dolist (map-variable (loophole-map-variable-list))
-    (loophole-disable map-variable)))
+    (if (symbol-value (loophole-state-variable map-variable))
+        (loophole-disable map-variable))))
 
 (defun loophole-name (map-variable map-name &optional tag)
   "Name MAP-VARIABLE as MAP-NAME.
