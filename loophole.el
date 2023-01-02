@@ -2100,11 +2100,13 @@ a symbol default, only default value is modified."
           "Enable keymap temporarily: "
           (lambda (map-variable)
             (not (symbol-value (get map-variable :loophole-state-variable)))))))
-  (if (loophole-registered-p map-variable)
-      (let ((state-variable (get map-variable :loophole-state-variable)))
-        (set state-variable t)
-        (run-hook-with-args 'loophole-after-enable-functions map-variable))
-    (user-error "Specified map-variable %s is not registered" map-variable)))
+  (or (loophole-registered-p map-variable)
+      (user-error "Specified map-variable %s is not registered" map-variable))
+  (if (symbol-value (loophole-state-variable map-variable))
+      (message "Specified map-variable %s is already enabled" map-variable)
+    (let ((state-variable (get map-variable :loophole-state-variable)))
+      (set state-variable t)
+      (run-hook-with-args 'loophole-after-enable-functions map-variable))))
 
 (defun loophole-disable (map-variable)
   "Disable the keymap stored in MAP-VARIABLE."
@@ -2113,11 +2115,13 @@ a symbol default, only default value is modified."
           "Disable keymap temporarily: "
           (lambda (map-variable)
             (symbol-value (get map-variable :loophole-state-variable))))))
-  (if (loophole-registered-p map-variable)
-      (let ((state-variable (get map-variable :loophole-state-variable)))
-        (set state-variable nil)
-        (run-hook-with-args 'loophole-after-disable-functions map-variable))
-    (user-error "Specified map-variable %s is not registered" map-variable)))
+  (or (loophole-registered-p map-variable)
+      (user-error "Specified map-variable %s is not registered" map-variable))
+  (if (not (symbol-value (loophole-state-variable map-variable)))
+      (message "Specified map-variable %s is already disabled" map-variable)
+    (let ((state-variable (get map-variable :loophole-state-variable)))
+      (set state-variable nil)
+      (run-hook-with-args 'loophole-after-disable-functions map-variable))))
 
 (defun loophole-disable-latest ()
   "Disable the lastly added or prioritized active keymap."
