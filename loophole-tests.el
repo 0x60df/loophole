@@ -3903,6 +3903,33 @@ batch-mode, these assertions are skipped."
     (should-not (symbol-value (intern "loophole-test-a-map-state")))
     (should (symbol-value (intern "loophole-test-b-map-state")))
     (should (symbol-value (intern "loophole-state")))))
+
+(ert-deftest loophole-disable-all ()
+  "Test for `loophole-disable-all'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (with-temp-buffer
+      (loophole-enable (intern "loophole-1-map"))
+      (loophole-enable (intern "loophole-2-map"))
+      (loophole-enable (intern "loophole-test-a-map"))
+      (loophole-enable (intern "loophole"))
+      (loophole-disable-all)
+      (should-not (symbol-value (intern "loophole-1-map-state")))
+      (should-not (symbol-value (intern "loophole-test-a-map-state")))
+      (should-not (symbol-value (intern "loophole-2-map-state")))
+      (should-not (symbol-value (intern "loophole-test-b-map-state")))
+      (should-not (symbol-value (intern "loophole-state"))))
+    (should-not (symbol-value (intern "loophole-1-map-state")))
+    (should (symbol-value (intern "loophole-2-map-state")))
+    (should-not (symbol-value (intern "loophole-test-a-map-state")))
+    (should (symbol-value (intern "loophole-test-b-map-state")))
+    (should (symbol-value (intern "loophole-state")))
+    (loophole-disable-all)
+    (should-not (symbol-value (intern "loophole-1-map-state")))
+    (should-not (symbol-value (intern "loophole-test-a-map-state")))
+    (should-not (symbol-value (intern "loophole-2-map-state")))
+    (should-not (symbol-value (intern "loophole-test-b-map-state")))
+    (should-not (symbol-value (intern "loophole-state")))))
 
 (provide 'loophole-tests)
 
