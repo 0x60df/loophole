@@ -3904,7 +3904,7 @@ batch-mode, these assertions are skipped."
     (should (symbol-value (intern "loophole-test-b-map-state")))
     (should (symbol-value (intern "loophole-state")))))
 
-(ert-deftest loophole-disable-all ()
+(ert-deftest loophole-test-disable-all ()
   "Test for `loophole-disable-all'."
   (loophole--test-with-pseudo-environment
     (loophole--test-set-pseudo-map-alist)
