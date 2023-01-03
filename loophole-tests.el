@@ -4099,6 +4099,35 @@ batch-mode, these assertions are skipped."
       (loophole-stop-editing)
       (should stopped)
       (should (eq map-variable (intern "loophole-test-b-map"))))))
+
+(ert-deftest loophole-test-globalize-editing ()
+  "Test for `loophole-globalize-editing'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (with-temp-buffer
+      (loophole-start-editing (intern "loophole-test-a-map"))
+      (with-temp-buffer
+        (loophole-start-editing (intern "loophole-1-map"))
+        (loophole-globalize-editing)
+        (should (eq (loophole-editing) (intern "loophole-1-map"))))
+      (should (eq (loophole-editing) (intern "loophole-1-map")))
+      (should-not (local-variable-p 'loophole-editing)))
+    (loophole-localize-editing)
+    (let* ((globalized t)
+           (map-variable nil)
+           (loophole-after-globalize-editing-functions
+            (lambda (arg)
+              (setq globalized (loophole-global-editing-p))
+              (setq map-variable arg))))
+      (loophole-globalize-editing)
+      (should globalized)
+      (should (eq map-variable (intern "loophole-1-map"))))
+    (let* ((run nil)
+           (loophole-after-globalize-editing-functions
+            (lambda (_) (setq run t))))
+      (loophole-globalize-editing)
+      (should-not run)
+      (should (eq (loophole-editing) (intern "loophole-1-map"))))))
 
 (provide 'loophole-tests)
 
