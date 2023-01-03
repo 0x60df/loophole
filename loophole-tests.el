@@ -3930,6 +3930,92 @@ batch-mode, these assertions are skipped."
     (should-not (symbol-value (intern "loophole-2-map-state")))
     (should-not (symbol-value (intern "loophole-test-b-map-state")))
     (should-not (symbol-value (intern "loophole-state")))))
+
+(ert-deftest loophole-test-tag ()
+  "Test for `loophole-tag'."
+  (loophole--test-with-pseudo-environment
+    (set (intern "loophole-1-map") (make-sparse-keymap))
+    (set (intern "loophole-1-map-state") nil)
+    (loophole-register (intern "loophole-1-map")
+                       (intern "loophole-1-map-state")
+                       "1")
+    (loophole-tag (intern "loophole-1-map") (string ?o))
+    (should (string-equal (loophole-tag-string (intern "loophole-1-map"))
+                          (string ?o)))
+    (set (intern "loophole-2-map") (make-sparse-keymap))
+    (set (intern "loophole-2-map-state") nil)
+    (loophole-register (intern "loophole-2-map")
+                       (intern "loophole-2-map-state")
+                       "2")
+    (loophole-tag (intern "loophole-2-map") nil)
+    (should-not (loophole-tag-string (intern "loophole-2-map")))
+    (set (intern "loophole-3-map") (make-sparse-keymap))
+    (set (intern "loophole-3-map-state") nil)
+    (should-error (loophole-tag (intern "loophole-3-map") "t")
+                  :type 'user-error)
+    (should-error (loophole-tag nil nil) :type 'user-error)
+    (should-error (loophole-tag 0 nil) :type 'wrong-type-argument)
+    (should-error (loophole-tag 1.0 nil) :type 'wrong-type-argument)
+    (should-error (loophole-tag ?c nil) :type 'wrong-type-argument)
+    (should-error (loophole-tag (cons 0 0) nil) :type 'wrong-type-argument)
+    (should-error (loophole-tag (string ?s) nil) :type 'wrong-type-argument)
+    (should-error (loophole-tag (vector ?v) nil) :type 'wrong-type-argument)
+    (set (intern "loophole-4-map") (make-sparse-keymap))
+    (set (intern "loophole-4-map-state") nil)
+    (loophole-register (intern "loophole-4-map")
+                       (intern "loophole-4-map-state")
+                       (string ?4))
+    (should-error (loophole-tag (intern "loophole-4-map") 0)
+                  :type 'wrong-type-argument)
+    (should (string-equal (loophole-tag-string (intern "loophole-4-map"))
+                          (string ?4)))
+    (should-error (loophole-tag (intern "loophole-4-map") 1.0)
+                  :type 'wrong-type-argument)
+    (should (string-equal (loophole-tag-string (intern "loophole-4-map"))
+                          (string ?4)))
+    (should-error (loophole-tag (intern "loophole-4-map") ?c)
+                  :type 'wrong-type-argument)
+    (should (string-equal (loophole-tag-string (intern "loophole-4-map"))
+                          (string ?4)))
+    (should-error (loophole-tag (intern "loophole-4-map") (intern "s"))
+                  :type 'wrong-type-argument)
+    (should (string-equal (loophole-tag-string (intern "loophole-4-map"))
+                          (string ?4)))
+    (should-error (loophole-tag (intern "loophole-4-map") (cons 0 0))
+                  :type 'wrong-type-argument)
+    (should (string-equal (loophole-tag-string (intern "loophole-4-map"))
+                          (string ?4)))
+    (should-error (loophole-tag (intern "loophole-4-map") (vector ?v))
+                  :type 'wrong-type-argument)
+    (should (string-equal (loophole-tag-string (intern "loophole-4-map"))
+                          (string ?4)))
+    (let ((return-args (lambda (&rest args) args)))
+      (unwind-protect
+          (progn
+            (advice-add 'loophole-tag :override return-args)
+            (set (intern "loophole-5-map") (make-sparse-keymap))
+            (set (intern "loophole-5-map-state") nil)
+            (loophole-register (intern "loophole-5-map")
+                               (intern "loophole-5-map-state")
+                               (string ?5))
+            (loophole--test-with-keyboard-events
+                "loophole-5-mapf"
+              (let ((args (call-interactively #'loophole-tag)))
+                (should (eq (nth 0 args) (intern "loophole-5-map")))
+                (should (string-equal (nth 1 args) (string ?f)))))
+            (unless noninteractive
+              (set (intern "loophole-6-map") (make-sparse-keymap))
+              (set (intern "loophole-6-map-state") nil)
+              (should (catch 'loophole-test-tag
+                        (run-with-timer
+                         (* 0.2 loophole--test-wait-time)
+                         nil
+                         (lambda () (throw 'loophole-test-tag t)))
+                        (loophole--test-with-keyboard-events
+                            "loophole-6-maps"
+                          (call-interactively #'loophole-tag))
+                        nil))))
+        (advice-remove 'loophole-tag return-args)))))
 
 (provide 'loophole-tests)
 
