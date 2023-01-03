@@ -4016,6 +4016,57 @@ batch-mode, these assertions are skipped."
                           (call-interactively #'loophole-tag))
                         nil))))
         (advice-remove 'loophole-tag return-args)))))
+
+(ert-deftest loophole-test-start-editing ()
+  "Test for `loophole-start-editing'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (with-temp-buffer
+      (loophole-start-editing (intern "loophole-1-map"))
+      (should (eq (loophole-editing) (intern "loophole-1-map")))
+      (with-temp-buffer
+        (loophole-start-editing (intern "loophole-test-a-map"))
+        (should (eq (loophole-editing) (intern "loophole-test-a-map"))))
+      (should (eq (loophole-editing) (intern "loophole-1-map"))))
+    (should-not (loophole-editing))
+    (loophole-globalize-editing)
+    (with-temp-buffer
+      (loophole-start-editing (intern "loophole-2-map"))
+      (should (eq (loophole-editing) (intern "loophole-2-map")))
+      (with-temp-buffer
+        (should (eq (loophole-editing) (intern "loophole-2-map")))))
+    (should (eq (loophole-editing) (intern "loophole-2-map")))
+    (let* ((started t)
+           (map-variable nil)
+           (loophole-after-start-editing-functions
+            (lambda (arg)
+              (setq started
+                    (eq (loophole-editing) (intern "loophole-test-b-map")))
+              (setq map-variable arg))))
+      (loophole-start-editing (intern "loophole-test-b-map"))
+      (should started)
+      (should (eq map-variable (intern "loophole-test-b-map"))))
+    (should-error (loophole-start-editing (intern "loophole-3-map"))
+                  :type 'user-error)
+    (loophole-start-editing (intern "loophole-1-map"))
+    (should-not (eq (loophole-editing) (intern "loophole-3-map")))
+    (should-error (loophole-start-editing nil) :type 'user-error)
+    (should (loophole-editing))
+    (should-error (loophole-start-editing 0) :type 'wrong-type-argument)
+    (should-not (eql (default-value 'loophole--editing) 0))
+    (should-error (loophole-start-editing 1.0) :type 'wrong-type-argument)
+    (should-not (eql (default-value 'loophole--editing) 1.0))
+    (should-error (loophole-start-editing ?c) :type 'wrong-type-argument)
+    (should-not (eql (default-value 'loophole--editing) ?c))
+    (should-error (loophole-start-editing (cons 0 0))
+                  :type 'wrong-type-argument)
+    (should-not (equal (default-value 'loophole--editing) (cons 0 0)))
+    (should-error (loophole-start-editing (string ?s))
+                  :type 'wrong-type-argument)
+    (should-not (string-equal (default-value 'loophole--editing) (string ?s)))
+    (should-error (loophole-start-editing (vector ?v))
+                  :type 'wrong-type-argument)
+    (should-not (equal (default-value 'loophole--editing) (vector ?v)))))
 
 (provide 'loophole-tests)
 
