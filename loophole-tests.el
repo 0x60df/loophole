@@ -4090,7 +4090,7 @@ batch-mode, these assertions are skipped."
       (should-not (loophole-editing)))
     (loophole-localize-editing)
     (let* ((stopped t)
-           (map-variable)
+           (map-variable nil)
            (loophole-after-stop-editing-functions
             (lambda (arg)
               (setq stopped (not (loophole-editing)))
