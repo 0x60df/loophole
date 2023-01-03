@@ -4067,6 +4067,38 @@ batch-mode, these assertions are skipped."
     (should-error (loophole-start-editing (vector ?v))
                   :type 'wrong-type-argument)
     (should-not (equal (default-value 'loophole--editing) (vector ?v)))))
+
+(ert-deftest loophole-test-stop-editing ()
+  "Test for `loophole-stop-editing'."
+  (loophole--test-with-pseudo-environment
+    (loophole--test-set-pseudo-map-alist)
+    (with-temp-buffer
+      (loophole-start-editing (intern "loophole-1-map"))
+      (with-temp-buffer
+        (loophole-start-editing (intern "loophole-test-a-map"))
+        (loophole-stop-editing)
+        (should-not (loophole-editing)))
+      (should (eq (loophole-editing) (intern "loophole-1-map")))
+      (loophole-stop-editing)
+      (should-not (loophole-editing)))
+    (loophole-globalize-editing)
+    (with-temp-buffer
+      (loophole-start-editing (intern "loophole-2-map"))
+      (with-temp-buffer
+        (loophole-stop-editing)
+        (should-not (loophole-editing)))
+      (should-not (loophole-editing)))
+    (loophole-localize-editing)
+    (let* ((stopped t)
+           (map-variable)
+           (loophole-after-stop-editing-functions
+            (lambda (arg)
+              (setq stopped (not (loophole-editing)))
+              (setq map-variable arg))))
+      (loophole-start-editing (intern "loophole-test-b-map"))
+      (loophole-stop-editing)
+      (should stopped)
+      (should (eq map-variable (intern "loophole-test-b-map"))))))
 
 (provide 'loophole-tests)
 
