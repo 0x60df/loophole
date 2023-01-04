@@ -4254,6 +4254,28 @@ batch-mode, these assertions are skipped."
         (should (eq (loophole-generate) (intern "loophole-2-map")))
         (should (eq (loophole-generate) (intern "loophole-1-map")))
         (should (eq (loophole-generate) (intern "loophole-10-map")))))))
+
+(ert-deftest loophole-test-ready-map ()
+  "Test for `loophole-ready-map'."
+  (loophole--test-with-pseudo-environment
+    (should (eq (loophole-ready-map)
+                (symbol-value (intern "loophole-1-map"))))
+    (should (symbol-value (intern "loophole-1-map-state")))
+    (should (eq (loophole-editing)
+                (intern "loophole-1-map")))
+    (should (eq (loophole-ready-map)
+                (symbol-value (intern "loophole-1-map"))))
+    (loophole-stop-editing)
+    (should (eq (loophole-ready-map)
+                (symbol-value (intern "loophole-2-map"))))
+    (set (intern "loophole-test-a-map") (make-sparse-keymap))
+    (set (intern "loophole-test-a-map-state") nil)
+    (loophole-register (intern "loophole-test-a-map")
+                       (intern "loophole-test-a-map-state"))
+    (loophole-start-editing (intern "loophole-test-a-map"))
+    (should (eq (loophole-ready-map)
+                (symbol-value (intern "loophole-test-a-map"))))
+    (should-not (symbol-value (intern "loophole-test-a-map-state")))))
 
 (provide 'loophole-tests)
 
