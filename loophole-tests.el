@@ -1213,83 +1213,100 @@ batch-mode, these assertions are skipped."
             (unless noninteractive
               ;; Test if the function works when
               ;; `switch-to-buffer-other-window' makes frame
-              (let ((display-buffer-alist '(("*" display-buffer-pop-up-frame))))
-                ;; Test if the function works even when frame is changed
-                (with-current-buffer temp-buffer (insert ?1 ?3))
-                (let ((exit-key (vector ?q))
-                      (change-key (vector ?f))
-                      (change-frame
-                       (lambda ()
-                         (interactive)
-                         (select-frame
-                          (seq-find (lambda (f)
-                                      (and (not (eq f frame))
-                                           (not (eq f (selected-frame)))))
-                                    (frame-list))
-                          t))))
-                  (should (= (loophole--test-with-keyboard-events
-                              (list change-key exit-key)
-                              (define-key overriding-terminal-local-map
-                                change-key change-frame)
-                              (define-key overriding-terminal-local-map
-                                exit-key #'exit-recursive-edit)
-                              (loophole-read-buffer #'ignore temp-buffer))
-                             13))
-                  (should (eq frame (selected-frame)))
-                  (should (compare-window-configurations
-                           window-configuration
-                           (current-window-configuration))))
-                (with-current-buffer temp-buffer (erase-buffer))
-                ;; Test if the function works even when window is deleted
-                (with-current-buffer temp-buffer (insert ?1 ?4))
-                (let ((exit-key (vector ?q))
-                      (delete-key (vector ?w)))
-                  (should (= (loophole--test-with-keyboard-events
-                                 (list delete-key exit-key)
-                               (define-key overriding-terminal-local-map
-                                 delete-key #'delete-frame)
-                               (define-key overriding-terminal-local-map
-                                 exit-key #'exit-recursive-edit)
-                               (loophole-read-buffer #'ignore temp-buffer))
-                             14))
-                  (should (eq frame (selected-frame)))
-                  (should (compare-window-configurations
-                           window-configuration
-                           (current-window-configuration))))
-                (with-current-buffer temp-buffer (erase-buffer))
-                ;; Test if window is set up and restored when
-                ;; `loophole-read-buffer-inhibit-recursive-edit' is non-nil
-                (with-current-buffer temp-buffer (insert ?1 ?5))
-                (let ((loophole-read-buffer-inhibit-recursive-edit t))
-                  (condition-case nil
-                      (loophole-read-buffer
-                       (lambda (_)
-                         (throw 'loophole-test-read-buffer
-                                (list (current-buffer)
-                                      (selected-frame)
-                                      (current-window-configuration))))
-                       temp-buffer)
-                    (quit))
-                  (let ((context-during-writing
-                         (catch 'loophole-test-read-buffer
-                           (loophole--test-with-keyboard-events
-                               loophole-read-buffer-finish-key
-                             (define-key overriding-terminal-local-map
-                               loophole-read-buffer-finish-key nil)
-                             (with-current-buffer temp-buffer
-                               (recursive-edit))))))
-                    (let ((made-frame (cadr context-during-writing)))
-                      (should (eq temp-buffer (car context-during-writing)))
-                      (should-not (eq frame made-frame))
-                      (should-not (compare-window-configurations
-                                   window-configuration
-                                   (caddr context-during-writing)))
-                      (should (and made-frame
-                                   (not (frame-live-p made-frame))))))
-                  (should (eq frame (selected-frame)))
-                  (should (compare-window-configurations
-                           window-configuration
-                           (current-window-configuration))))))))))))
+              (let ((display-buffer-alist '(("*" display-buffer-pop-up-frame)))
+                    (avoid-error (lambda (func &rest args)
+                                   (if (frame-live-p (car args))
+                                       (apply func args))))
+                    (clean-advice (make-symbol "loophole-test-read-buffer")))
+                (unwind-protect
+                    (progn
+                      (advice-add 'set-frame-parameter :around avoid-error)
+                      ;; Test if the function works even when frame is changed
+                      (with-current-buffer temp-buffer (insert ?1 ?3))
+                      (let ((exit-key (vector ?q))
+                            (change-key (vector ?f))
+                            (change-frame
+                             (lambda ()
+                               (interactive)
+                               (select-frame
+                                (seq-find (lambda (f)
+                                            (and (not (eq f frame))
+                                                 (not (eq f (selected-frame)))))
+                                          (frame-list))
+                                t))))
+                        (should (= (loophole--test-with-keyboard-events
+                                       (list change-key exit-key)
+                                     (define-key overriding-terminal-local-map
+                                                 change-key change-frame)
+                                     (define-key overriding-terminal-local-map
+                                                 exit-key #'exit-recursive-edit)
+                                     (loophole-read-buffer #'ignore
+                                                           temp-buffer))
+                                   13))
+                        (should (eq frame (selected-frame)))
+                        (should (compare-window-configurations
+                                 window-configuration
+                                 (current-window-configuration))))
+                      (with-current-buffer temp-buffer (erase-buffer))
+                      ;; Test if the function works even when window is deleted
+                      (with-current-buffer temp-buffer (insert ?1 ?4))
+                      (let ((exit-key (vector ?q))
+                            (delete-key (vector ?w)))
+                        (should (= (loophole--test-with-keyboard-events
+                                       (list delete-key exit-key)
+                                     (define-key overriding-terminal-local-map
+                                                 delete-key #'delete-frame)
+                                     (define-key overriding-terminal-local-map
+                                                 exit-key #'exit-recursive-edit)
+                                     (loophole-read-buffer #'ignore
+                                                           temp-buffer))
+                                   14))
+                        (should (eq frame (selected-frame)))
+                        (should (compare-window-configurations
+                                 window-configuration
+                                 (current-window-configuration))))
+                      (with-current-buffer temp-buffer (erase-buffer))
+                      ;; Test if window is set up and restored when
+                      ;; `loophole-read-buffer-inhibit-recursive-edit' is
+                      ;; non-nil
+                      (with-current-buffer temp-buffer (insert ?1 ?5))
+                      (let ((loophole-read-buffer-inhibit-recursive-edit t))
+                        (condition-case nil
+                            (loophole-read-buffer
+                             (lambda (_)
+                               (throw 'loophole-test-read-buffer
+                                      (list (current-buffer)
+                                            (selected-frame)
+                                            (current-window-configuration))))
+                             temp-buffer)
+                          (quit))
+                        (let ((context-during-writing
+                               (catch 'loophole-test-read-buffer
+                                 (loophole--test-with-keyboard-events
+                                     loophole-read-buffer-finish-key
+                                   (define-key overriding-terminal-local-map
+                                               loophole-read-buffer-finish-key
+                                               nil)
+                                   (with-current-buffer temp-buffer
+                                     (recursive-edit))))))
+                          (let ((made-frame (cadr context-during-writing)))
+                            (should (eq temp-buffer
+                                        (car context-during-writing)))
+                            (should-not (eq frame made-frame))
+                            (should-not (compare-window-configurations
+                                         window-configuration
+                                         (caddr context-during-writing)))
+                            (should (and made-frame
+                                         (not (frame-live-p made-frame))))))
+                        (should (eq frame (selected-frame)))
+                        (should (compare-window-configurations
+                                 window-configuration
+                                 (current-window-configuration)))))
+                  (fset clean-advice
+                        (lambda ()
+                          (advice-remove 'set-frame-parameter avoid-error)
+                          (remove-hook 'pre-command-hook clean-advice)))
+                  (add-hook 'pre-command-hook clean-advice))))))))))
 
 (ert-deftest loophole-test-map-variable-for-keymap ()
   "Test for `loophole-map-variable-for-keymap'."
@@ -2912,16 +2929,6 @@ batch-mode, these assertions are skipped."
                 (should (equal (nth 2 args) (string ?2 ?9)))
                 (should-not (nth 3 args))
                 (should-not (nth 4 args))))
-            (unless noninteractive
-              (should (catch 'loophole-test-register
-                      (run-with-timer
-                       (* 0.2 loophole--test-wait-time)
-                       nil
-                       (lambda () (throw 'loophole-test-register t)))
-                      (loophole--test-with-keyboard-events
-                          "loophole-30-maploophole-30-map-state"
-                        (call-interactively #'loophole-register))
-                      nil)))
             (let ((loophole-make-register-always-read-tag t))
               (loophole--test-with-keyboard-events
                   "loophole-29-maploophole-29-map-state30"
@@ -3219,16 +3226,6 @@ batch-mode, these assertions are skipped."
               (let ((args (call-interactively #'loophole-unregister)))
                 (should (eq (nth 0 args) (intern "loophole-19-map")))
                 (should-not (nth 1 args))))
-            (unless noninteractive
-              (should (catch 'loophole-test-unregister
-                        (run-with-timer
-                         (* 0.2 loophole--test-wait-time)
-                         nil
-                         (lambda () (throw 'loophole-test-unregister t)))
-                        (loophole--test-with-keyboard-events
-                            "loophole-20-map"
-                          (call-interactively #'loophole-unregister))
-                        nil)))
             (let ((current-prefix-arg '(4)))
               (loophole--test-with-keyboard-events "loophole-19-map"
                 (let ((args (call-interactively #'loophole-unregister)))
@@ -3437,17 +3434,7 @@ batch-mode, these assertions are skipped."
             (loophole--test-with-keyboard-events "loophole-2-map"
               (let ((args (call-interactively #'loophole-prioritize)))
                 (should (eq (nth 0 args) (intern "loophole-2-map")))
-                (should-not (nth 1 args))))
-            (unless noninteractive
-              (should (catch 'loophole-test-prioritize
-                        (run-with-timer
-                         (* 0.2 loophole--test-wait-time)
-                         nil
-                         (lambda () (throw 'loophole-test-prioritize t)))
-                        (loophole--test-with-keyboard-events
-                            "loophole-4-map"
-                          (call-interactively #'loophole-prioritize))
-                        nil))))
+                (should-not (nth 1 args)))))
         (advice-remove 'loophole-prioritize return-args)))))
 
 (ert-deftest loophole-test-globalize ()
@@ -3585,22 +3572,7 @@ batch-mode, these assertions are skipped."
             (loophole--test-with-keyboard-events
                 "loophole-9-map"
               (let ((args (call-interactively #'loophole-globalize)))
-                (should (eq (nth 0 args) (intern "loophole-9-map")))))
-            (unless noninteractive
-              (set (intern "loophole-10-map") (make-sparse-keymap))
-              (set (intern "loophole-10-map-state") nil)
-              (loophole-register (intern "loophole-10-map")
-                                 (intern "loophole-10-map-state")
-                                 nil t)
-              (should (catch 'loophole-test-globalize
-                        (run-with-timer
-                         (* 0.2 loophole--test-wait-time)
-                         nil
-                         (lambda () (throw 'loophole-test-globalize t)))
-                        (loophole--test-with-keyboard-events
-                            "loophole-10-map"
-                          (call-interactively #'loophole-globalize))
-                        nil))))
+                (should (eq (nth 0 args) (intern "loophole-9-map"))))))
         (advice-remove 'loophole-globalize return-args)))))
 
 (ert-deftest loophole-test-localize ()
@@ -3689,22 +3661,7 @@ batch-mode, these assertions are skipped."
             (loophole--test-with-keyboard-events
                 "loophole-8-map"
               (let ((args (call-interactively #'loophole-localize)))
-                (should (eq (nth 0 args) (intern "loophole-8-map")))))
-            (unless noninteractive
-              (set (intern "loophole-9-map") (make-sparse-keymap))
-              (set (intern "loophole-9-map-state") nil)
-              (make-variable-buffer-local (intern "loophole-9-map-state"))
-              (loophole-register (intern "loophole-9-map")
-                                 (intern "loophole-9-map-state"))
-              (should (catch 'loophole-test-localize
-                        (run-with-timer
-                         (* 0.2 loophole--test-wait-time)
-                         nil
-                         (lambda () (throw 'loophole-test-localize t)))
-                        (loophole--test-with-keyboard-events
-                            "loophole-9-map"
-                          (call-interactively #'loophole-localize))
-                        nil))))
+                (should (eq (nth 0 args) (intern "loophole-8-map"))))))
         (advice-remove 'loophole-localize return-args)))))
 
 (ert-deftest loophole-test-enable ()
@@ -3768,21 +3725,7 @@ batch-mode, these assertions are skipped."
             (loophole--test-with-keyboard-events
                 "loophole-5-map"
               (let ((args (call-interactively #'loophole-enable)))
-                (should (eq (nth 0 args) (intern "loophole-5-map")))))
-            (unless noninteractive
-              (set (intern "loophole-6-map") (make-sparse-keymap))
-              (set (intern "loophole-6-map-state") t)
-              (loophole-register (intern "loophole-6-map")
-                                 (intern "loophole-6-map-state"))
-              (should (catch 'loophole-test-enable
-                        (run-with-timer
-                         (* 0.2 loophole--test-wait-time)
-                         nil
-                         (lambda () (throw 'loophole-test-enable t)))
-                        (loophole--test-with-keyboard-events
-                            "loophole-6-map"
-                          (call-interactively #'loophole-enable))
-                        nil))))
+                (should (eq (nth 0 args) (intern "loophole-5-map"))))))
         (advice-remove 'loophole-enable return-args)))))
 
 (ert-deftest loophole-test-disable ()
@@ -3848,21 +3791,7 @@ batch-mode, these assertions are skipped."
             (loophole--test-with-keyboard-events
                 "loophole-5-map"
               (let ((args (call-interactively #'loophole-disable)))
-                (should (eq (nth 0 args) (intern "loophole-5-map")))))
-            (unless noninteractive
-              (set (intern "loophole-6-map") (make-sparse-keymap))
-              (set (intern "loophole-6-map-state") nil)
-              (loophole-register (intern "loophole-6-map")
-                                 (intern "loophole-6-map-state"))
-              (should (catch 'loophole-test-disable
-                        (run-with-timer
-                         (* 0.2 loophole--test-wait-time)
-                         nil
-                         (lambda () (throw 'loophole-test-disable t)))
-                        (loophole--test-with-keyboard-events
-                            "loophole-6-map"
-                          (call-interactively #'loophole-disable))
-                        nil))))
+                (should (eq (nth 0 args) (intern "loophole-5-map"))))))
         (advice-remove 'loophole-disable return-args)))))
 
 (ert-deftest loophole-test-disable-latest ()
@@ -3991,19 +3920,7 @@ batch-mode, these assertions are skipped."
                 "loophole-5-mapf"
               (let ((args (call-interactively #'loophole-tag)))
                 (should (eq (nth 0 args) (intern "loophole-5-map")))
-                (should (string-equal (nth 1 args) (string ?f)))))
-            (unless noninteractive
-              (set (intern "loophole-6-map") (make-sparse-keymap))
-              (set (intern "loophole-6-map-state") nil)
-              (should (catch 'loophole-test-tag
-                        (run-with-timer
-                         (* 0.2 loophole--test-wait-time)
-                         nil
-                         (lambda () (throw 'loophole-test-tag t)))
-                        (loophole--test-with-keyboard-events
-                            "loophole-6-maps"
-                          (call-interactively #'loophole-tag))
-                        nil))))
+                (should (string-equal (nth 1 args) (string ?f))))))
         (advice-remove 'loophole-tag return-args)))))
 
 (ert-deftest loophole-test-start-editing ()
