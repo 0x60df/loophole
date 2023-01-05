@@ -613,6 +613,13 @@ This function must be used in
     (loophole--test-with-pseudo-environment
       (should (funcall meet-requirement))
       (loophole--test-set-sample-condition)
+      (should (funcall meet-requirement))
+      (with-temp-buffer
+        (loophole-prioritize (intern "loophole-test-a-map"))
+        (should (funcall meet-requirement))
+        (with-temp-buffer
+          (loophole-prioritize (intern "loophole-2-map"))
+          (should (funcall meet-requirement))))
       (should (funcall meet-requirement)))))
 
 (ert-deftest loophole-test-state-variable-list ()
@@ -632,6 +639,13 @@ This function must be used in
     (loophole--test-with-pseudo-environment
       (should (funcall meet-requirement))
       (loophole--test-set-sample-condition)
+      (should (funcall meet-requirement))
+      (with-temp-buffer
+        (loophole-prioritize (intern "loophole-test-a-map"))
+        (should (funcall meet-requirement))
+        (with-temp-buffer
+          (loophole-prioritize (intern "loophole-2-map"))
+          (should (funcall meet-requirement))))
       (should (funcall meet-requirement)))))
 
 (ert-deftest loophole-test-key-equal ()
@@ -664,14 +678,16 @@ This function must be used in
                          'loophole--timer-alist
                          'loophole--editing-timer)))
     (loophole--test-set-sample-condition)
-    (should (equal (loophole-local-variable-if-set-list)
-                   (list 'loophole--map-alist
-                         'loophole--editing
-                         'loophole--timer-alist
-                         'loophole--editing-timer
-                         (intern "loophole-2-map-state")
-                         (intern "loophole-test-b-map-state")
-                         (intern "loophole-state"))))))
+    (let ((assumed (list 'loophole--map-alist
+                                      'loophole--editing
+                                      'loophole--timer-alist
+                                      'loophole--editing-timer
+                                      (intern "loophole-2-map-state")
+                                      (intern "loophole-test-b-map-state")
+                                      (intern "loophole-state")))
+          (result (loophole-local-variable-if-set-list)))
+      (should-not (seq-difference result assumed))
+      (should-not (seq-difference assumed result)))))
 
 (ert-deftest loophole-test-read-key ()
   "Test for `loophole-read-key'."
@@ -1382,6 +1398,11 @@ batch-mode, these assertions are skipped."
                                        (intern "loophole-test-b-map-state")))
     (should-not (loophole-registered-p (intern "loophole")
                                        (intern "loophole-1-map-state")))
+    (loophole-unregister (intern "loophole-1-map"))
+    (should-not (loophole-registered-p (intern "loophole-1-map")))
+    (set (intern "loophole-3-map") (make-sparse-keymap))
+    (set (intern "loophole-3-map-state") nil)
+    (make-variable-buffer-local (intern "loophole-3-map-state"))
     (should-not (loophole-registered-p (intern "loophole-3-map")))
     (should-not (loophole-registered-p nil))
     (should-error (loophole-registered-p 0) :type 'wrong-type-argument)
@@ -1408,10 +1429,15 @@ batch-mode, these assertions are skipped."
 (ert-deftest loophole-test-priority-is-local-p ()
   "Test for `loophole-priority-is-local-p'."
   (loophole--test-with-pseudo-environment
+    (loophole--test-set-sample-condition)
     (should-not (loophole-priority-is-local-p))
-    (setq loophole--map-alist loophole--map-alist)
-    (should (loophole-priority-is-local-p))
-    (with-temp-buffer (should-not (loophole-priority-is-local-p)))))
+    (with-temp-buffer
+      (with-temp-buffer
+        (loophole-prioritize (intern "loophole-1-map"))
+        (should (loophole-priority-is-local-p)))
+      (should-not (loophole-priority-is-local-p))
+      (setq loophole--map-alist loophole--map-alist)
+      (should (loophole-priority-is-local-p)))))
 
 (ert-deftest loophole-test-global-p ()
   "Test for `loophole-global-p'."
@@ -1434,6 +1460,11 @@ batch-mode, these assertions are skipped."
   (loophole--test-with-pseudo-environment
     (should-not (loophole-global-editing-p))
     (loophole--test-set-sample-condition)
+    (loophole-start-editing (intern "loophole-2-map"))
+    (should-not (loophole-global-editing-p))
+    (loophole-globalize-editing)
+    (should (loophole-global-editing-p))
+    (loophole-localize-editing)
     (setq-default loophole--editing (intern "loophole-1-map"))
     (should (loophole-global-editing-p))
     (setq-default loophole--editing t)
@@ -1443,6 +1474,10 @@ batch-mode, these assertions are skipped."
   "Test for `loophole-suspending-p'."
   (loophole--test-with-pseudo-environment
     (should-not (loophole-suspending-p))
+    (loophole-suspend)
+    (should (loophole-suspending-p))
+    (loophole-resume)
+    (should-not (loophole-suspending-p))
     (setq emulation-mode-map-alists nil)
     (should (loophole-suspending-p))
     (setq emulation-mode-map-alists '(loophole--map-alist))
@@ -1451,14 +1486,19 @@ batch-mode, these assertions are skipped."
 (ert-deftest loophole-test-editing ()
   "Test for `loophole-editing'."
   (loophole--test-with-pseudo-environment
-    (should (null (loophole-editing)))
+    (should-not (loophole-editing))
     (loophole--test-set-sample-condition)
+    (with-temp-buffer
+      (loophole-start-editing (intern "loophole-2-map"))
+      (should (eq (loophole-editing) (intern "loophole-2-map")))
+      (loophole-stop-editing)
+      (should-not (loophole-editing)))
     (setq-default loophole--editing (intern "loophole-1-map"))
-    (should (eq (loophole-editing)
-                (intern "loophole-1-map")))
-    (setq loophole--editing (intern "loophole-1-map"))
-    (should (eq (loophole-editing)
-                (intern "loophole-1-map")))))
+    (should (eq (loophole-editing) (intern "loophole-1-map")))
+    (with-temp-buffer
+      (setq-default loophole--editing t)
+      (setq loophole--editing (intern "loophole-test-a-map"))
+      (should (eq (loophole-editing) (intern "loophole-test-a-map"))))))
 
 (ert-deftest loophole-test-tag-string ()
   "Test for `loophole-tag-string'."
@@ -1470,6 +1510,10 @@ batch-mode, these assertions are skipped."
                    (string ?a)))
     (should (equal (loophole-tag-string (intern "loophole"))
                    (string ?l ?o ?o ?p)))
+    (loophole-tag (intern "loophole-test-a-map") nil)
+    (should-not (loophole-tag-string (intern "loophole-test-a-map")))
+    (loophole-tag (intern "loophole-2-map") (string ?9))
+    (should (equal (loophole-tag-string (intern "loophole-2-map")) (string ?9)))
     (should-error (loophole-tag-string (intern "loophole-3-map"))
                   :type 'error :exclude-subtypes t)
     (should-error (loophole-tag-string nil) :type 'error :exclude-subtypes t)
@@ -2147,6 +2191,18 @@ batch-mode, these assertions are skipped."
       (should-not
        (member (cons key form)
                (get (intern "loophole-2-map") :loophole-form-storage)))
+      (let (advice-is-remained)
+        (advice-mapc (lambda (advice _)
+                       (if (and (symbolp advice)
+                                (string-equal (symbol-name advice)
+                                              "loophole-one-time-advice"))
+                           (setq advice-is-remained t)))
+                     'loophole-bind-entry)
+        (should-not advice-is-remained))
+      (loophole-toss-binding-form key form)
+      (loophole-bind-entry key (eval form))
+      (should (member (cons key form)
+                      (get (intern "loophole-3-map") :loophole-form-storage)))
       (let (advice-is-remained)
         (advice-mapc (lambda (advice _)
                        (if (and (symbolp advice)
