@@ -1100,6 +1100,7 @@ batch-mode, these assertions are skipped."
                          7))))
           ;; Test window setup and restoration
           (let* ((frame (selected-frame))
+                 (other-frame (prog1 (make-frame) (select-frame frame)))
                  (window-configuration (current-window-configuration frame)))
             (let ((display-buffer-alist nil))
               ;; Test if window is set up and restored
@@ -1133,14 +1134,7 @@ batch-mode, these assertions are skipped."
                 (let ((exit-key (vector ?q))
                       (change-key (vector ?f))
                       (change-frame
-                       (lambda ()
-                         (interactive)
-                         (select-frame
-                          (seq-find (lambda (f)
-                                      (and (not (eq f frame))
-                                           (not (eq f (selected-frame)))))
-                                    (frame-list))
-                          t))))
+                       (lambda () (interactive) (select-frame other-frame t))))
                   (should (= (loophole--test-with-keyboard-events
                                  (list change-key exit-key)
                                (define-key overriding-terminal-local-map
@@ -1244,12 +1238,7 @@ batch-mode, these assertions are skipped."
                             (change-frame
                              (lambda ()
                                (interactive)
-                               (select-frame
-                                (seq-find (lambda (f)
-                                            (and (not (eq f frame))
-                                                 (not (eq f (selected-frame)))))
-                                          (frame-list))
-                                t))))
+                               (select-frame other-frame t))))
                         (should (= (loophole--test-with-keyboard-events
                                        (list change-key exit-key)
                                      (define-key overriding-terminal-local-map
@@ -1264,7 +1253,7 @@ batch-mode, these assertions are skipped."
                                  window-configuration
                                  (current-window-configuration))))
                       (with-current-buffer temp-buffer (erase-buffer))
-                      ;; Test if the function works even when window is deleted
+                      ;; Test if the function works even when frame is deleted
                       (with-current-buffer temp-buffer (insert ?1 ?4))
                       (let ((exit-key (vector ?q))
                             (delete-key (vector ?w)))
