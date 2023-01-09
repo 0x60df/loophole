@@ -1138,7 +1138,7 @@ batch-mode, these assertions are skipped."
                             (change-key (vector ?f))
                             (change-frame
                              (lambda () (interactive)
-                               (select-frame other-frame t))))
+                               (select-frame-set-input-focus other-frame t))))
                         (should (= (loophole--test-with-keyboard-events
                                     (list change-key exit-key)
                                     (define-key overriding-terminal-local-map
@@ -1247,7 +1247,8 @@ batch-mode, these assertions are skipped."
                                   (change-frame
                                    (lambda ()
                                      (interactive)
-                                     (select-frame other-frame t))))
+                                     (select-frame-set-input-focus
+                                      other-frame t))))
                               (should (= (loophole--test-with-keyboard-events
                                           (list change-key exit-key)
                                           (define-key
