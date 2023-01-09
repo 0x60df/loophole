@@ -1100,132 +1100,136 @@ batch-mode, these assertions are skipped."
                          7))))
           ;; Test window setup and restoration
           (let* ((frame (selected-frame))
-                 (other-frame (prog1 (make-frame) (select-frame frame))))
-            (unwind-protect
-                (let ((window-configuration
-                       (current-window-configuration frame)))
-                  (let ((display-buffer-alist nil))
-                    ;; Test if window is set up and restored
-                    (with-current-buffer temp-buffer (insert ?8))
-                    (let ((throw-key (vector ?t))
-                          (throw-context
-                           (lambda ()
-                             (interactive)
-                             (throw 'loophole-test-read-buffer
-                                    (list (current-buffer)
-                                          (selected-frame)
-                                          (current-window-configuration))))))
-                      (let ((context-during-writing
-                             (catch 'loophole-test-read-buffer
-                               (loophole--test-with-keyboard-events throw-key
-                                 (define-key overriding-terminal-local-map
-                                             throw-key throw-context)
-                                 (loophole-read-buffer #'ignore temp-buffer)))))
-                        (should (eq temp-buffer (car context-during-writing)))
-                        (should (eq frame (cadr context-during-writing)))
-                        (should-not (compare-window-configurations
-                                     window-configuration
-                                     (caddr context-during-writing))))
-                      (should (eq frame (selected-frame)))
-                      (should (compare-window-configurations
-                               window-configuration
-                               (current-window-configuration))))
-                    (with-current-buffer temp-buffer (erase-buffer))
-                    ;; Test if the function works even when frame is changed
-                    (with-current-buffer temp-buffer (insert ?9))
-                    (unless noninteractive
+                 (window-configuration
+                  (current-window-configuration frame))
+                 (display-buffer-alist nil))
+            ;; Test if window is set up and restored
+            (with-current-buffer temp-buffer (insert ?8))
+            (let ((throw-key (vector ?t))
+                  (throw-context
+                   (lambda ()
+                     (interactive)
+                     (throw 'loophole-test-read-buffer
+                            (list (current-buffer)
+                                  (selected-frame)
+                                  (current-window-configuration))))))
+              (let ((context-during-writing
+                     (catch 'loophole-test-read-buffer
+                       (loophole--test-with-keyboard-events throw-key
+                         (define-key overriding-terminal-local-map
+                                     throw-key throw-context)
+                         (loophole-read-buffer #'ignore temp-buffer)))))
+                (should (eq temp-buffer (car context-during-writing)))
+                (should (eq frame (cadr context-during-writing)))
+                (should-not (compare-window-configurations
+                             window-configuration
+                             (caddr context-during-writing))))
+              (should (eq frame (selected-frame)))
+              (should (compare-window-configurations
+                       window-configuration
+                       (current-window-configuration))))
+            (with-current-buffer temp-buffer (erase-buffer))
+            ;; Test if the function works even when window is changed
+            (with-current-buffer temp-buffer (insert ?1 ?0))
+            (let ((exit-key (vector ?q))
+                  (change-key (vector ?w))
+                  (change-window
+                   (lambda ()
+                     (interactive)
+                     (select-window
+                      (seq-find (lambda (w)
+                                  (not (eq w (selected-window))))
+                                (window-list))
+                      t))))
+              (should (= (loophole--test-with-keyboard-events
+                             (list change-key exit-key)
+                           (define-key overriding-terminal-local-map
+                                       change-key change-window)
+                           (define-key overriding-terminal-local-map
+                                       exit-key #'exit-recursive-edit)
+                           (loophole-read-buffer #'ignore temp-buffer))
+                         10))
+              (should (eq frame (selected-frame)))
+              (should (compare-window-configurations
+                       window-configuration
+                       (current-window-configuration))))
+            (with-current-buffer temp-buffer (erase-buffer))
+            ;; Test if the function works even when window is deleted
+            (with-current-buffer temp-buffer (insert ?1 ?1))
+            (let ((exit-key (vector ?q))
+                  (delete-key (vector ?w)))
+              (should (= (loophole--test-with-keyboard-events
+                             (list delete-key exit-key)
+                           (define-key overriding-terminal-local-map
+                                       delete-key #'delete-window)
+                           (define-key overriding-terminal-local-map
+                                       exit-key #'exit-recursive-edit)
+                           (loophole-read-buffer #'ignore temp-buffer))
+                         11))
+              (should (eq frame (selected-frame)))
+              (should (compare-window-configurations
+                       window-configuration
+                       (current-window-configuration))))
+            (with-current-buffer temp-buffer (erase-buffer))
+            ;; Test if window is set up and restored when
+            ;; `loophole-read-buffer-inhibit-recursive-edit' is non-nil
+            (with-current-buffer temp-buffer (insert ?1 ?2))
+            (let ((loophole-read-buffer-inhibit-recursive-edit t))
+              (condition-case nil
+                  (loophole-read-buffer
+                   (lambda (_)
+                     (throw 'loophole-test-read-buffer
+                            (list (current-buffer)
+                                  (selected-frame)
+                                  (current-window-configuration))))
+                   temp-buffer)
+                (quit))
+              (let ((context-during-writing
+                     (catch 'loophole-test-read-buffer
+                       (loophole--test-with-keyboard-events
+                           loophole-read-buffer-finish-key
+                         (define-key overriding-terminal-local-map
+                                     loophole-read-buffer-finish-key nil)
+                         (with-current-buffer temp-buffer
+                           (recursive-edit))))))
+                (should (eq temp-buffer (car context-during-writing)))
+                (should (eq frame (cadr context-during-writing)))
+                (should-not (compare-window-configurations
+                             window-configuration
+                             (caddr context-during-writing))))
+              (should (eq frame (selected-frame)))
+              (should (compare-window-configurations
+                       window-configuration
+                       (current-window-configuration))))
+            (with-current-buffer temp-buffer (erase-buffer)))
+          (unless noninteractive
+            (let* ((frame (selected-frame))
+                   (other-frame (prog1 (make-frame) (select-frame frame))))
+              (unwind-protect
+                  (let ((window-configuration
+                         (current-window-configuration frame)))
+                    (let ((display-buffer-alist nil))
+                      ;; Test if the function works even when frame is changed
+                      (with-current-buffer temp-buffer (insert ?9))
                       (let ((exit-key (vector ?q))
                             (change-key (vector ?f))
                             (change-frame
                              (lambda () (interactive)
                                (select-frame-set-input-focus other-frame t))))
                         (should (= (loophole--test-with-keyboard-events
-                                    (list change-key exit-key)
-                                    (define-key overriding-terminal-local-map
-                                                change-key change-frame)
-                                    (define-key overriding-terminal-local-map
-                                                exit-key #'exit-recursive-edit)
-                                    (loophole-read-buffer #'ignore temp-buffer))
+                                       (list change-key exit-key)
+                                     (define-key overriding-terminal-local-map
+                                                 change-key change-frame)
+                                     (define-key overriding-terminal-local-map
+                                                 exit-key #'exit-recursive-edit)
+                                     (loophole-read-buffer #'ignore
+                                                           temp-buffer))
                                    9))
                         (should (eq frame (selected-frame)))
                         (should (compare-window-configurations
                                  window-configuration
-                                 (current-window-configuration)))))
-                    (with-current-buffer temp-buffer (erase-buffer))
-                    ;; Test if the function works even when window is changed
-                    (with-current-buffer temp-buffer (insert ?1 ?0))
-                    (let ((exit-key (vector ?q))
-                          (change-key (vector ?w))
-                          (change-window
-                           (lambda ()
-                             (interactive)
-                             (select-window
-                              (seq-find (lambda (w)
-                                          (not (eq w (selected-window))))
-                                        (window-list))
-                              t))))
-                      (should (= (loophole--test-with-keyboard-events
-                                  (list change-key exit-key)
-                                  (define-key overriding-terminal-local-map
-                                              change-key change-window)
-                                  (define-key overriding-terminal-local-map
-                                              exit-key #'exit-recursive-edit)
-                                  (loophole-read-buffer #'ignore temp-buffer))
-                                 10))
-                      (should (eq frame (selected-frame)))
-                      (should (compare-window-configurations
-                               window-configuration
-                               (current-window-configuration))))
-                    (with-current-buffer temp-buffer (erase-buffer))
-                    ;; Test if the function works even when window is deleted
-                    (with-current-buffer temp-buffer (insert ?1 ?1))
-                    (let ((exit-key (vector ?q))
-                          (delete-key (vector ?w)))
-                      (should (= (loophole--test-with-keyboard-events
-                                  (list delete-key exit-key)
-                                  (define-key overriding-terminal-local-map
-                                              delete-key #'delete-window)
-                                  (define-key overriding-terminal-local-map
-                                              exit-key #'exit-recursive-edit)
-                                  (loophole-read-buffer #'ignore temp-buffer))
-                                 11))
-                      (should (eq frame (selected-frame)))
-                      (should (compare-window-configurations
-                               window-configuration
-                               (current-window-configuration))))
-                    (with-current-buffer temp-buffer (erase-buffer))
-                    ;; Test if window is set up and restored when
-                    ;; `loophole-read-buffer-inhibit-recursive-edit' is non-nil
-                    (with-current-buffer temp-buffer (insert ?1 ?2))
-                    (let ((loophole-read-buffer-inhibit-recursive-edit t))
-                      (condition-case nil
-                          (loophole-read-buffer
-                           (lambda (_)
-                             (throw 'loophole-test-read-buffer
-                                    (list (current-buffer)
-                                          (selected-frame)
-                                          (current-window-configuration))))
-                           temp-buffer)
-                        (quit))
-                      (let ((context-during-writing
-                             (catch 'loophole-test-read-buffer
-                               (loophole--test-with-keyboard-events
-                                loophole-read-buffer-finish-key
-                                (define-key overriding-terminal-local-map
-                                            loophole-read-buffer-finish-key nil)
-                                (with-current-buffer temp-buffer
-                                  (recursive-edit))))))
-                        (should (eq temp-buffer (car context-during-writing)))
-                        (should (eq frame (cadr context-during-writing)))
-                        (should-not (compare-window-configurations
-                                     window-configuration
-                                     (caddr context-during-writing))))
-                      (should (eq frame (selected-frame)))
-                      (should (compare-window-configurations
-                               window-configuration
-                               (current-window-configuration))))
-                    (with-current-buffer temp-buffer (erase-buffer)))
-                  (unless noninteractive
+                                 (current-window-configuration))))
+                      (with-current-buffer temp-buffer (erase-buffer)))
                     ;; Test if the function works when
                     ;; `switch-to-buffer-other-window' makes frame
                     (let ((display-buffer-alist
@@ -1250,15 +1254,15 @@ batch-mode, these assertions are skipped."
                                      (select-frame-set-input-focus
                                       other-frame t))))
                               (should (= (loophole--test-with-keyboard-events
-                                          (list change-key exit-key)
-                                          (define-key
-                                           overriding-terminal-local-map
-                                           change-key change-frame)
-                                          (define-key
-                                           overriding-terminal-local-map
-                                           exit-key #'exit-recursive-edit)
-                                          (loophole-read-buffer #'ignore
-                                                                temp-buffer))
+                                             (list change-key exit-key)
+                                           (define-key
+                                            overriding-terminal-local-map
+                                            change-key change-frame)
+                                           (define-key
+                                            overriding-terminal-local-map
+                                            exit-key #'exit-recursive-edit)
+                                           (loophole-read-buffer #'ignore
+                                                                 temp-buffer))
                                          13))
                               (should (eq frame (selected-frame)))
                               (should (compare-window-configurations
@@ -1271,15 +1275,15 @@ batch-mode, these assertions are skipped."
                             (let ((exit-key (vector ?q))
                                   (delete-key (vector ?w)))
                               (should (= (loophole--test-with-keyboard-events
-                                          (list delete-key exit-key)
-                                          (define-key
-                                           overriding-terminal-local-map
-                                           delete-key #'delete-frame)
-                                          (define-key
-                                           overriding-terminal-local-map
-                                           exit-key #'exit-recursive-edit)
-                                          (loophole-read-buffer #'ignore
-                                                                temp-buffer))
+                                             (list delete-key exit-key)
+                                           (define-key
+                                            overriding-terminal-local-map
+                                            delete-key #'delete-frame)
+                                           (define-key
+                                            overriding-terminal-local-map
+                                            exit-key #'exit-recursive-edit)
+                                           (loophole-read-buffer #'ignore
+                                                                 temp-buffer))
                                          14))
                               (should (eq frame (selected-frame)))
                               (should (compare-window-configurations
@@ -1305,13 +1309,13 @@ batch-mode, these assertions are skipped."
                               (let ((context-during-writing
                                      (catch 'loophole-test-read-buffer
                                        (loophole--test-with-keyboard-events
-                                        loophole-read-buffer-finish-key
-                                        (define-key
-                                         overriding-terminal-local-map
-                                         loophole-read-buffer-finish-key
-                                         nil)
-                                        (with-current-buffer temp-buffer
-                                          (recursive-edit))))))
+                                           loophole-read-buffer-finish-key
+                                         (define-key
+                                          overriding-terminal-local-map
+                                          loophole-read-buffer-finish-key
+                                          nil)
+                                         (with-current-buffer temp-buffer
+                                           (recursive-edit))))))
                                 (let ((made-frame
                                        (cadr context-during-writing)))
                                   (should (eq temp-buffer
@@ -1331,12 +1335,12 @@ batch-mode, these assertions are skipped."
                               (lambda ()
                                 (advice-remove 'set-frame-parameter avoid-error)
                                 (remove-hook 'pre-command-hook clean-advice)))
-                        (add-hook 'pre-command-hook clean-advice)))))
-              (let ((delay 0.5))
-                ;; Timer is used to avoid segmentation fault
-                (run-with-timer delay nil
-                                (lambda (frame) (delete-frame frame t))
-                                other-frame)))))))))
+                        (add-hook 'pre-command-hook clean-advice))))
+                (let ((delay 0.5))
+                  ;; Timer is used to avoid segmentation fault
+                  (run-with-timer delay nil
+                                  (lambda (frame) (delete-frame frame t))
+                                  other-frame))))))))))
 
 (ert-deftest loophole-test-map-variable-for-keymap ()
   "Test for `loophole-map-variable-for-keymap'."
