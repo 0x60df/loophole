@@ -1229,7 +1229,7 @@ batch-mode, these assertions are skipped."
             (unless noninteractive
               ;; Test if the function works when
               ;; `switch-to-buffer-other-window' makes frame
-              (let ((display-buffer-alist '(("*" display-buffer-pop-up-frame)))
+              (let ((display-buffer-alist '((t display-buffer-pop-up-frame)))
                     (avoid-error (lambda (func &rest args)
                                    (if (frame-live-p (car args))
                                        (apply func args))))
